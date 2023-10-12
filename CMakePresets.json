@@ -1,0 +1,124 @@
+{
+  "version": 7,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 27,
+    "patch": 0
+  },
+  "include": [],
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Default",
+      "description": "Default build using Ninja",
+      "generator": "Ninja Multi-Config",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_PRESET": "${presetName}"
+      }
+    },
+    {
+      "name": "host",
+      "displayName": "Host",
+      "description": "Build for host using Ninja",
+      "toolchainFile": "cmake/toolchain/host-clang.cmake",
+      "inherits": [
+        "default"
+      ],
+      "environment": {
+        "CMAKE_TOOLCHAIN_PATH" : "/opt/homebrew/opt/llvm"
+      },
+      "cacheVariables": {
+        "EMBEDDED_CPP_MCU" : "host",
+        "EMBEDDED_CPP_BOARD" : "host"
+      }
+    },
+    {
+      "name": "arm",
+      "displayName": "ARM",
+      "description": "Build for ARM using Ninja",
+      "hidden": true,
+      "inherits": [
+        "default"
+      ],
+      "environment": {
+        "CMAKE_TOOLCHAIN_PATH" : "/Applications/ArmGNUToolchain/12.3.rel1/arm-none-eabi"
+      }
+    },
+    {
+      "name": "arm-cm4",
+      "displayName": "ARM CM4",
+      "description": "Build for ARM CM4 using Ninja",
+      "toolchainFile": "cmake/toolchain/armgcc-cm4.cmake",
+      "hidden": true,
+      "inherits": [
+        "default",
+        "arm"
+      ],
+      "cacheVariables": {
+        "EMBEDDED_CPP_MCU" : "arm_cm4"
+      }
+    },
+    {
+      "name": "arm-cm7",
+      "displayName": "ARM CM7",
+      "description": "Build for ARM CM7 using Ninja",
+      "toolchainFile": "cmake/toolchain/armgcc-cm7.cmake",
+      "hidden": true,
+      "inherits": [
+        "default",
+        "arm"
+      ],
+      "cacheVariables": {
+        "EMBEDDED_CPP_MCU" : "arm_cm7"
+      }
+    },
+    {
+      "name": "stm32f3_discovery",
+      "displayName": "STM32F3 Discovery",
+      "description": "Build for STM32F3 Discovery using Ninja",
+      "inherits": [
+        "arm-cm4"
+      ],
+      "cacheVariables": {
+        "EMBEDDED_CPP_BOARD" : "stm32f3_discovery"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "displayName": "Default",
+      "description": "Default build using Ninja",
+      "configurePreset": "default"
+    },
+    {
+      "name": "host",
+      "displayName": "Host",
+      "description": "Host build using Ninja",
+      "configurePreset": "host"
+    },
+    {
+      "name": "stm32f3_discovery",
+      "displayName": "STM32F3 Discovery",
+      "description": "STM32F3 Discovery build using Ninja",
+      "configurePreset": "stm32f3_discovery"
+    },
+    {
+      "name": "arm-cm7",
+      "displayName": "ARM CM7",
+      "description": "ARM CM7 build using Ninja",
+      "configurePreset": "arm-cm7"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "default",
+      "displayName": "Default",
+      "description": "Default test using Ninja",
+      "configurePreset": "default",
+      "output": {"outputOnFailure": true},
+      "execution": {"noTestsAction": "error", "stopOnFailure": true}
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../find_compiler.cmake")
+
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_PROCESSOR arm)
+set(CMAKE_CROSSCOMPILING 1)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+set(TARGET_TRIPLET "arm-none-eabi-")
+
+# Find the compiler path
+find_compiler(ARM_COMPILER_PATH ARM_COMPILER_EXT "${TARGET_TRIPLET}gcc")
+
+# where is the target environment located
+set(CMAKE_FIND_ROOT_PATH ${ARM_COMPILER_PATH})
+
+# adjust the default behavior of the FIND_XXX() commands:
+# search programs in the host environment
+# set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+
+set(CMAKE_C_COMPILER ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}gcc${ARM_COMPILER_EXT})
+set(CMAKE_CXX_COMPILER ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}g++${ARM_COMPILER_EXT})
+set(CMAKE_ASM_COMPILER ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}gcc${ARM_COMPILER_EXT})
+set(CMAKE_LINKER ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}gcc${ARM_COMPILER_EXT})
+set(CMAKE_SIZE_UTIL ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}size${ARM_COMPILER_EXT})
+set(CMAKE_OBJCOPY ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}objcopy${ARM_COMPILER_EXT})
+set(CMAKE_OBJDUMP ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}objdump${ARM_COMPILER_EXT})
+set(CMAKE_NM_UTIL ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}gcc-nm${ARM_COMPILER_EXT})
+set(CMAKE_AR ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}gcc-ar${ARM_COMPILER_EXT})
+set(CMAKE_RANLIB ${ARM_COMPILER_PATH}/${TARGET_TRIPLET}gcc-ranlib${ARM_COMPILER_EXT})
+
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+
+# Compiler and linker flags
+set(CMAKE_COMMON_FLAGS "${MCPU_FLAGS} ${VFP_FLAGS} -g3 -fstack-usage -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-builtin -fno-common -Wall -Wshadow -Wdouble-promotion -Werror -Wundef -Wformat=2 -Wno-unused-parameter")
+
+SET(CMAKE_ASM_OPTIONS "-x assembler-with-cpp")
+set(CMAKE_C_FLAGS_INIT "${CMAKE_COMMON_FLAGS}")
+set(CMAKE_CXX_FLAGS_INIT "${CMAKE_COMMON_FLAGS}")
+set(CMAKE_ASM_FLAGS_INIT "${CMAKE_COMMON_FLAGS} ${CMAKE_ASM_OPTIONS}")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "${LD_FLAGS} --specs=nano.specs -Wl,--gc-sections,-print-memory-usage,--no-warn-rwx-segments")
+
+set(CMAKE_C_FLAGS_DEBUG_INIT "-O0")
+set(CMAKE_CXX_ASM_FLAGS_DEBUG_INIT "-O0")
+set(CMAKE_ASM_FLAGS_DEBUG_INIT "")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG_INIT "")
+
+set(CMAKE_C_FLAGS_RELEASE_INIT "-Os -flto")
+set(CMAKE_CXX_FLAGS_RELEASE_INIT "-Os -flto")
+set(CMAKE_ASM_FLAGS_RELEASE_INIT "")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE_INIT "-flto")
+
+# // Make sure the executable comes after the shared libaries, for symbol resolution
+# set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> -o <TARGET> <LINK_LIBRARIES> <OBJECTS> ")
