@@ -4,9 +4,9 @@
 #include <zmq.hpp>
 // #include <zmqpp/zmqpp.hpp>
 
+#include "app.hpp"
 #include "host_board.hpp"
-#include "i2c.hpp"
-#include "pin.hpp"
+
 
 auto main() -> int {
 
@@ -17,11 +17,12 @@ auto main() -> int {
   zmq::socket_ref sref = sock;
 
   board::HostBoard board{sref};
-  board.Initialize();
-  auto status = board.UserLed1().SetHigh();
-  if (!status) {
-    std::cout << "Failed to set LED" << std::endl;
+  if (!app::app_main(board)) {
+    std::cout << "app_main failed" << std::endl;
+    return 1;
   }
+
+
   zmq::message_t msg;
   auto res = sock.recv(msg, zmq::recv_flags::none);
   if (res) {

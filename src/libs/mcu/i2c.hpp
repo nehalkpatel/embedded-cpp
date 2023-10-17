@@ -7,15 +7,8 @@
 
 namespace mcu {
 
-// static constexpr uint8_t kI2CBufferSize = 32;
-
 struct I2CController {
-  explicit I2CController() = default;
   virtual ~I2CController() = default;
-  I2CController(const I2CController&) = delete;
-  I2CController(I2CController&&) = delete;
-  auto operator=(const I2CController&) -> I2CController& = delete;
-  auto operator=(I2CController&&) -> I2CController& = delete;
 
   virtual auto SendData(uint16_t address, std::span<const uint8_t> data)
       -> std::expected<void, int> = 0;

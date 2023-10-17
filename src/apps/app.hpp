@@ -3,17 +3,8 @@
 #include <expected>
 
 #include "board.hpp"
+#include "error.hpp"
 
 namespace app {
-
-template <typename T>
-  struct App {
-    std::expected<void, int> Run() {
-      return static_cast<T*>(this)->Run();
-    }
-    std::expected<void, int> Init() {
-      return static_cast<T*>(this)->Init();
-    }
-  };
-
-} // namespace app
+  auto app_main(board::Board& board) -> std::expected<void, Error>;
+}  // namespace app

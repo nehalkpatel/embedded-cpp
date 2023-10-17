@@ -4,12 +4,15 @@
 #include "board.hpp"
 
 namespace app {
-struct Blinky : public App<Blinky> {
+
+class Blinky {
+ public:
   Blinky(board::Board& board) : board_(board) {}
-  auto Run() -> std::expected<void, int>;
-  auto Init() -> std::expected<void, int>;
+  auto Init() -> std::expected<void, Error>;
+  auto Run() -> std::expected<void, Error>;
 
  private:
   board::Board& board_;
 };
+
 }  // namespace app
