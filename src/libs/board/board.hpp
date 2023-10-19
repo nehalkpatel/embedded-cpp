@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <expected>
 
-#include "error.hpp"
-#include "i2c.hpp"
-#include "pin.hpp"
+#include "libs/common/error.hpp"
+#include "libs/mcu/i2c.hpp"
+#include "libs/mcu/pin.hpp"
 
 namespace board {
 

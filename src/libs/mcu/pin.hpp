@@ -2,7 +2,7 @@
 
 #include <expected>
 
-#include "error.hpp"
+#include "libs/common/error.hpp"
 
 namespace mcu {
 

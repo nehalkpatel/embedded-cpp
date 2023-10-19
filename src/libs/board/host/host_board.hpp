@@ -3,10 +3,10 @@
 #include <cstdint>
 #include <expected>
 
-#include "board.hpp"
-#include "error.hpp"
-#include "host_i2c.hpp"
-#include "host_pin.hpp"
+#include "libs/board/board.hpp"
+#include "libs/common/error.hpp"
+#include "libs/mcu/host/host_i2c.hpp"
+#include "libs/mcu/host/host_pin.hpp"
 
 namespace board {
 

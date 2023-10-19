@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "pin.hpp"
+#include "libs/mcu/pin.hpp"
 #include "zmq.hpp"
 
 namespace mcu {

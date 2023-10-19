@@ -26,7 +26,7 @@ target_compile_options(stm32f3_hal INTERFACE ${COMMON_COMPILE_OPTIONS})
 target_compile_options(stm32f3_sys INTERFACE ${COMMON_COMPILE_OPTIONS})
   # target_link_options(stm32f3_sys PUBLIC -lc -lstdc++)
 
-  target_include_directories(stm32f3_hal PUBLIC
+  target_include_directories(stm32f3_hal INTERFACE
     ${stm32cubef3_SOURCE_DIR}/Drivers/STM32F3xx_HAL_Driver/Inc
     ${stm32cubef3_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32F3xx/Include
     ${stm32cubef3_SOURCE_DIR}/Drivers/CMSIS/Core/Include

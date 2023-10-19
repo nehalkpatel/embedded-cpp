@@ -1,7 +1,7 @@
 #pragma once
 
-#include "app.hpp"
-#include "board.hpp"
+#include "apps/app.hpp"
+#include "libs/board/board.hpp"
 
 namespace app {
 

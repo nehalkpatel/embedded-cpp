@@ -2,10 +2,10 @@
 
 #include <expected>
 
-#include "app.hpp"
-#include "board.hpp"
-#include "error.hpp"
-#include "pin.hpp"
+#include "apps/app.hpp"
+#include "libs/board/board.hpp"
+#include "libs/common/error.hpp"
+#include "libs/mcu/pin.hpp"
 
 namespace app {
 

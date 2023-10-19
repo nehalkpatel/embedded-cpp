@@ -7,8 +7,8 @@
 #include <span>
 #include <unordered_map>
 
-#include "i2c.hpp"
-#include "pin.hpp"
+#include "libs/mcu/i2c.hpp"
+#include "libs/mcu/pin.hpp"
 
 namespace mcu {
 

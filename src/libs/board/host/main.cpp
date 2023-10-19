@@ -4,8 +4,8 @@
 #include <zmq.hpp>
 // #include <zmqpp/zmqpp.hpp>
 
-#include "app.hpp"
-#include "host_board.hpp"
+#include "apps/app.hpp"
+#include "libs/board/host/host_board.hpp"
 
 
 auto main() -> int {
