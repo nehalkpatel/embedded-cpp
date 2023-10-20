@@ -1,6 +1,8 @@
 #include "blinky.hpp"
 
+#include <chrono>
 #include <expected>
+#include <thread>
 
 #include "apps/app.hpp"
 #include "libs/board/board.hpp"
@@ -8,6 +10,7 @@
 #include "libs/mcu/pin.hpp"
 
 namespace app {
+using namespace std::chrono_literals;
 
 auto app_main(board::Board& board) -> std::expected<void, Error> {
   Blinky blinky{board};
@@ -21,9 +24,20 @@ auto app_main(board::Board& board) -> std::expected<void, Error> {
 }
 
 auto Blinky::Run() -> std::expected<void, Error> {
+  auto state = mcu::PinState::kHigh;
   auto status = board_.UserLed1().SetHigh();
-  if (!status) {
-    return std::unexpected(status.error());
+  while (1) {
+    if (!status) {
+      return std::unexpected(status.error());
+    }
+    std::this_thread::sleep_for(500ms);
+    if (state == mcu::PinState::kHigh) {
+      state = mcu::PinState::kLow;
+      status = board_.UserLed1().SetLow();
+    } else {
+      state = mcu::PinState::kHigh;
+      status = board_.UserLed1().SetHigh();
+    }
   }
   return {};
 }
