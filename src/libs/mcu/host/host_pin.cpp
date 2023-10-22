@@ -1,5 +1,7 @@
 #include "host_pin.hpp"
 
+#include <expected>
+#include <iostream>
 #include <string>
 
 #include "nlohmann/json.hpp"
@@ -11,7 +13,7 @@ using json = nlohmann::json;
 NLOHMANN_JSON_SERIALIZE_ENUM(PinState, {
                                            {PinState::kHigh, "High"},
                                            {PinState::kLow, "Low"},
-                                           {PinState::kHighZ, "Hi-Z"},
+                                           {PinState::kHighZ, "Hi_Z"},
                                        })
 
 
@@ -39,6 +41,16 @@ NLOHMANN_JSON_SERIALIZE_ENUM(PinState, {
     if (sref_.send(zmq::buffer(j_pin.dump()), zmq::send_flags::dontwait) < 0) {
       return std::unexpected(Error::kUnknown);
     }
+    zmq::message_t msg;
+    if (sref_.recv(msg, zmq::recv_flags::none) < 0) {
+      return std::unexpected(Error::kUnknown);
+    }
+    json j = json::parse(msg.to_string());
+    std::cout << "j: " << j << std::endl;
+
+    if (j["status"] != "Ok") {
+      return std::unexpected(Error::kUnknown);
+    }
     return {};
   }
   auto HostPin::GetState() -> std::expected<PinState, Error> {
@@ -51,6 +63,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(PinState, {
       return std::unexpected(Error::kUnknown);
     }
     json j = json::parse(msg.to_string());
+    std::cout << "j: " << j << std::endl;
     return j["state"].get<PinState>();
   }
 }  // namespace mcu

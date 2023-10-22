@@ -24,18 +24,16 @@ auto app_main(board::Board& board) -> std::expected<void, Error> {
 }
 
 auto Blinky::Run() -> std::expected<void, Error> {
-  auto state = mcu::PinState::kHigh;
   auto status = board_.UserLed1().SetHigh();
   while (1) {
     if (!status) {
       return std::unexpected(status.error());
     }
     mcu::delay(500ms);
-    if (state == mcu::PinState::kHigh) {
-      state = mcu::PinState::kLow;
+    auto state = board_.UserLed1().Get();
+    if (state && state.value() == mcu::PinState::kHigh) {
       status = board_.UserLed1().SetLow();
     } else {
-      state = mcu::PinState::kHigh;
       status = board_.UserLed1().SetHigh();
     }
   }
