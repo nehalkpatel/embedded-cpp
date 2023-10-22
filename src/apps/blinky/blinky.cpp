@@ -2,11 +2,11 @@
 
 #include <chrono>
 #include <expected>
-#include <thread>
 
 #include "apps/app.hpp"
 #include "libs/board/board.hpp"
 #include "libs/common/error.hpp"
+#include "libs/mcu/delay.hpp"
 #include "libs/mcu/pin.hpp"
 
 namespace app {
@@ -30,7 +30,7 @@ auto Blinky::Run() -> std::expected<void, Error> {
     if (!status) {
       return std::unexpected(status.error());
     }
-    std::this_thread::sleep_for(500ms);
+    mcu::delay(500ms);
     if (state == mcu::PinState::kHigh) {
       state = mcu::PinState::kLow;
       status = board_.UserLed1().SetLow();
