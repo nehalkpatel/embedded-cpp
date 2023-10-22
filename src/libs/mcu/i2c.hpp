@@ -7,7 +7,8 @@
 
 namespace mcu {
 
-struct I2CController {
+class I2CController {
+ public:
   virtual ~I2CController() = default;
 
   virtual auto SendData(uint16_t address, std::span<const uint8_t> data)
@@ -21,8 +22,7 @@ struct I2CController {
                                  void (*callback)(std::expected<void, int>))
       -> std::expected<void, int> = 0;
   virtual auto ReceiveDataInterrupt(
-      uint16_t address,
-      size_t size,
+      uint16_t address, size_t size,
       void (*callback)(std::expected<std::span<uint8_t>, int>))
       -> std::expected<void, int> = 0;
 
@@ -30,8 +30,7 @@ struct I2CController {
                            void (*callback)(std::expected<void, int>))
       -> std::expected<void, int> = 0;
   virtual auto ReceiveDataDma(
-      uint16_t address,
-      size_t size,
+      uint16_t address, size_t size,
       void (*callback)(std::expected<std::span<uint8_t>, int>))
       -> std::expected<void, int> = 0;
 };

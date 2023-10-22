@@ -9,7 +9,8 @@ namespace mcu {
 enum class PinDirection { kInput, kOutput };
 enum class PinState { kLow, kHigh, kHighZ };
 
-struct Pin {
+class Pin {
+  public:
   virtual ~Pin() = default;
 
   virtual auto Configure(PinDirection direction) -> std::expected<void, Error> = 0;

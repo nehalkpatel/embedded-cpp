@@ -7,7 +7,8 @@
 
 namespace mcu {
 
-struct HostPin : public mcu::Pin {
+class HostPin : public mcu::Pin {
+ public:
   explicit HostPin(const std::string name, zmq::socket_ref sref)
       : name_(name), sref_(sref) {}
   ~HostPin() override = default;
