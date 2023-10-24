@@ -6,5 +6,5 @@
 #include "libs/common/error.hpp"
 
 namespace app {
-auto app_main(board::Board& board) -> std::expected<void, Error>;
+auto app_main(board::Board& board) -> std::expected<void, common::Error>;
 }  // namespace app

@@ -18,49 +18,49 @@ NLOHMANN_JSON_SERIALIZE_ENUM(PinState, {
 
 
   auto HostPin::Configure(PinDirection direction)
-      -> std::expected<void, Error> {
+      -> std::expected<void, common::Error> {
     direction_ = direction;
     return {};
   }
-  auto HostPin::SetHigh() -> std::expected<void, Error> {
+  auto HostPin::SetHigh() -> std::expected<void, common::Error> {
     if (direction_ == PinDirection::kInput) {
-      return std::unexpected(Error::kInvalidOperation);
+      return std::unexpected(common::Error::kInvalidOperation);
     }
     return SendState(PinState::kHigh);
   }
-  auto HostPin::SetLow() -> std::expected<void, Error> {
+  auto HostPin::SetLow() -> std::expected<void, common::Error> {
     if (direction_ == PinDirection::kInput) {
-      return std::unexpected(Error::kInvalidOperation);
+      return std::unexpected(common::Error::kInvalidOperation);
     }
     return SendState(PinState::kLow);
   }
-  auto HostPin::Get() -> std::expected<PinState, Error> { return GetState(); }
+  auto HostPin::Get() -> std::expected<PinState, common::Error> { return GetState(); }
   
-  auto HostPin::SendState(PinState state) -> std::expected<void, Error> {
+  auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
     json j_pin = {{"type", "request"}, {"object", "pin"}, {"operation", "set"}, {"pin", name_}, {"state", state}};
     if (sref_.send(zmq::buffer(j_pin.dump()), zmq::send_flags::dontwait) < 0) {
-      return std::unexpected(Error::kUnknown);
+      return std::unexpected(common::Error::kUnknown);
     }
     zmq::message_t msg;
     if (sref_.recv(msg, zmq::recv_flags::none) < 0) {
-      return std::unexpected(Error::kUnknown);
+      return std::unexpected(common::Error::kUnknown);
     }
     json j = json::parse(msg.to_string());
     std::cout << "j: " << j << std::endl;
 
     if (j["status"] != "Ok") {
-      return std::unexpected(Error::kUnknown);
+      return std::unexpected(common::Error::kUnknown);
     }
     return {};
   }
-  auto HostPin::GetState() -> std::expected<PinState, Error> {
+  auto HostPin::GetState() -> std::expected<PinState, common::Error> {
     json j_pin = {{"type", "request"}, {"object", "pin"}, {"operation", "get"}, {"pin", name_}};
     if (sref_.send(zmq::buffer(j_pin.dump()), zmq::send_flags::dontwait) < 0) {
-      return std::unexpected(Error::kUnknown);
+      return std::unexpected(common::Error::kUnknown);
     }
     zmq::message_t msg;
     if (sref_.recv(msg, zmq::recv_flags::none) < 0) {
-      return std::unexpected(Error::kUnknown);
+      return std::unexpected(common::Error::kUnknown);
     }
     json j = json::parse(msg.to_string());
     std::cout << "j: " << j << std::endl;

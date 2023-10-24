@@ -13,10 +13,10 @@ class Pin {
   public:
   virtual ~Pin() = default;
 
-  virtual auto Configure(PinDirection direction) -> std::expected<void, Error> = 0;
-  virtual auto SetHigh() -> std::expected<void, Error> = 0;
-  virtual auto SetLow() -> std::expected<void, Error> = 0;
-  virtual auto Get() -> std::expected<PinState, Error> = 0;
+  virtual auto Configure(PinDirection direction) -> std::expected<void, common::Error> = 0;
+  virtual auto SetHigh() -> std::expected<void, common::Error> = 0;
+  virtual auto SetLow() -> std::expected<void, common::Error> = 0;
+  virtual auto Get() -> std::expected<PinState, common::Error> = 0;
 };
 
 }  // namespace mcu

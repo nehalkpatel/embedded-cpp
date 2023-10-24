@@ -18,7 +18,7 @@ struct HostBoard : public Board {
   auto operator=(HostBoard&&) -> HostBoard& = delete;
   ~HostBoard() override = default;
 
-  auto Init() -> std::expected<void, Error> override;
+  auto Init() -> std::expected<void, common::Error> override;
   auto UserLed1() -> mcu::Pin& override;
   auto UserButton1() -> mcu::Pin& override;
   auto I2C1() -> mcu::I2CController& override;

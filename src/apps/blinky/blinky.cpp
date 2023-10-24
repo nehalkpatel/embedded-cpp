@@ -12,18 +12,18 @@
 namespace app {
 using namespace std::chrono_literals;
 
-auto app_main(board::Board& board) -> std::expected<void, Error> {
+auto app_main(board::Board& board) -> std::expected<void, common::Error> {
   Blinky blinky{board};
   if (!blinky.Init()) {
-    return std::unexpected(Error::kUnknown);
+    return std::unexpected(common::Error::kUnknown);
   }
   if (!blinky.Run()) {
-    return std::unexpected(Error::kUnknown);
+    return std::unexpected(common::Error::kUnknown);
   }
   return {};
 }
 
-auto Blinky::Run() -> std::expected<void, Error> {
+auto Blinky::Run() -> std::expected<void, common::Error> {
   auto status = board_.UserLed1().SetHigh();
   while (1) {
     if (!status) {
@@ -40,6 +40,6 @@ auto Blinky::Run() -> std::expected<void, Error> {
   return {};
 }
 
-auto Blinky::Init() -> std::expected<void, Error> { return board_.Init(); }
+auto Blinky::Init() -> std::expected<void, common::Error> { return board_.Init(); }
 
 }  // namespace app

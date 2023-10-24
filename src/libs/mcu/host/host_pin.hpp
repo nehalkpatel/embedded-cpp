@@ -6,7 +6,7 @@
 #include "zmq.hpp"
 
 namespace mcu {
-
+  
 class HostPin : public mcu::Pin {
  public:
   explicit HostPin(const std::string name, zmq::socket_ref sref)
@@ -17,14 +17,14 @@ class HostPin : public mcu::Pin {
   auto operator=(const HostPin&) -> HostPin& = delete;
   auto operator=(HostPin&&) -> HostPin& = delete;
 
-  auto Configure(PinDirection direction) -> std::expected<void, Error> override;
-  auto SetHigh() -> std::expected<void, Error> override;
-  auto SetLow() -> std::expected<void, Error> override;
-  auto Get() -> std::expected<PinState, Error> override;
+  auto Configure(PinDirection direction) -> std::expected<void, common::Error> override;
+  auto SetHigh() -> std::expected<void, common::Error> override;
+  auto SetLow() -> std::expected<void, common::Error> override;
+  auto Get() -> std::expected<PinState, common::Error> override;
 
  private:
-  auto SendState(PinState state) -> std::expected<void, Error>;
-  auto GetState() -> std::expected<PinState, Error>;
+  auto SendState(PinState state) -> std::expected<void, common::Error>;
+  auto GetState() -> std::expected<PinState, common::Error>;
 
   const std::string name_;
   zmq::socket_ref sref_;

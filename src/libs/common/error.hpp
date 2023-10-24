@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+namespace common {
+
 enum class Error : uint32_t {
   kOk = 0,
   kUnknown,
@@ -9,3 +11,5 @@ enum class Error : uint32_t {
   kInvalidState,
   kInvalidOperation,
 };
+
+}  // namespace common
