@@ -8,7 +8,11 @@ from enum import Enum
 
 class Pins:
     direction = Enum("direction", ["IN", "OUT"])
-    state = Enum("state", ["High", "Low", "Hi_Z"])
+    state = Enum("state", ["Low", "High", "Hi_Z"])
+    status = Enum(
+        "status",
+        ["Ok", "Unknown", "InvalidArgument", "InvalidState", "InvalidOperation"],
+    )
 
     def __init__(self):
         self.pins = {}
@@ -22,18 +26,20 @@ class Pins:
                 {
                     "type": "response",
                     "object": "pin",
-                    "pin": message["pin"],
-                    "state": self.pins[message["pin"]]["state"].name,
+                    "name": message["name"],
+                    "state": self.pins[message["name"]]["state"].name,
+                    "status": Pins.status.Ok.name,
                 }
             )
         elif message["operation"] == "set":
-            self.pins[message["pin"]]["state"] = Pins.state[message["state"]]
+            self.pins[message["name"]]["state"] = Pins.state[message["state"]]
             return json.dumps(
                 {
                     "type": "response",
                     "object": "pin",
-                    "pin": message["pin"],
-                    "status": "Ok",
+                    "name": message["name"],
+                    "state": self.pins[message["name"]]["state"].name,
+                    "status": Pins.status.Ok.name,
                 }
             )
         else:
@@ -41,8 +47,9 @@ class Pins:
                 {
                     "type": "response",
                     "object": "pin",
-                    "pin": message["pin"],
-                    "status": "Unknown operation",
+                    "name": message["name"],
+                    "state": self.pins[message["name"]]["state"].name,
+                    "status": Pins.status.InvalidOperation.name,
                 }
             )
 

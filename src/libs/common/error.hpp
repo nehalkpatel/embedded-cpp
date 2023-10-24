@@ -5,7 +5,7 @@
 namespace common {
 
 enum class Error : uint32_t {
-  kOk = 0,
+  kOk = 1,
   kUnknown,
   kInvalidArgument,
   kInvalidState,

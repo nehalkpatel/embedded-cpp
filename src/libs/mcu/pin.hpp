@@ -6,8 +6,8 @@
 
 namespace mcu {
 
-enum class PinDirection { kInput, kOutput };
-enum class PinState { kLow, kHigh, kHighZ };
+enum class PinDirection { kInput = 1, kOutput };
+enum class PinState { kLow = 1, kHigh, kHighZ };
 
 class Pin {
   public:

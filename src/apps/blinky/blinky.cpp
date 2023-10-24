@@ -31,7 +31,10 @@ auto Blinky::Run() -> std::expected<void, common::Error> {
     }
     mcu::delay(500ms);
     auto state = board_.UserLed1().Get();
-    if (state && state.value() == mcu::PinState::kHigh) {
+    if (!state) {
+      return std::unexpected(state.error());
+    }
+    if (state.value() == mcu::PinState::kHigh) {
       status = board_.UserLed1().SetLow();
     } else {
       status = board_.UserLed1().SetHigh();
