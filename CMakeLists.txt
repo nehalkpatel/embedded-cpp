@@ -18,7 +18,6 @@ set(COMMON_COMPILE_OPTIONS
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(COMMON_COMPILE_OPTIONS ${COMMON_COMPILE_OPTIONS}
-    # -Weverything
     -Wno-c++98-compat
     -Wno-exit-time-destructors
     -Wno-global-constructors
