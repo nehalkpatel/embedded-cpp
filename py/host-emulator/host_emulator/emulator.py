@@ -11,7 +11,13 @@ class Pins:
     state = Enum("state", ["Low", "High", "Hi_Z"])
     status = Enum(
         "status",
-        ["Ok", "Unknown", "InvalidArgument", "InvalidState", "InvalidOperation"],
+        [
+            "Ok",
+            "Unknown",
+            "InvalidArgument",
+            "InvalidState",
+            "InvalidOperation",
+        ],
     )
 
     def __init__(self):
@@ -21,22 +27,22 @@ class Pins:
         self.pins[name] = {"direction": direction, "state": state}
 
     def handle_request(self, message):
-        if message["operation"] == "get":
+        if message["operation"] == "Get":
             return json.dumps(
                 {
-                    "type": "response",
-                    "object": "pin",
+                    "type": "Response",
+                    "object": "Pin",
                     "name": message["name"],
                     "state": self.pins[message["name"]]["state"].name,
                     "status": Pins.status.Ok.name,
                 }
             )
-        elif message["operation"] == "set":
+        elif message["operation"] == "Set":
             self.pins[message["name"]]["state"] = Pins.state[message["state"]]
             return json.dumps(
                 {
-                    "type": "response",
-                    "object": "pin",
+                    "type": "Response",
+                    "object": "Pin",
                     "name": message["name"],
                     "state": self.pins[message["name"]]["state"].name,
                     "status": Pins.status.Ok.name,
@@ -45,8 +51,8 @@ class Pins:
         else:
             return json.dumps(
                 {
-                    "type": "response",
-                    "object": "pin",
+                    "type": "Response",
+                    "object": "Pin",
                     "name": message["name"],
                     "state": self.pins[message["name"]]["state"].name,
                     "status": Pins.status.InvalidOperation.name,
@@ -58,9 +64,9 @@ class Pins:
         return None
 
     def handle_message(self, message):
-        if message["type"] == "request":
+        if message["type"] == "Request":
             return self.handle_request(message)
-        elif message["type"] == "response":
+        elif message["type"] == "Response":
             return self.handle_response(message)
 
 
@@ -79,7 +85,7 @@ class DeviceEmulator:
             if message.startswith(b"{") and message.endswith(b"}"):
                 # JSON message
                 json_message = json.loads(message)
-                if json_message["object"] == "pin":
+                if json_message["object"] == "Pin":
                     response = self.pins.handle_message(json_message)
                     if response:
                         print(f"Sending response: {response}")
