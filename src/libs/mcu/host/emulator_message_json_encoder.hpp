@@ -56,7 +56,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(PinEmulatorRequest, type, object, name,
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(PinEmulatorResponse, type, object, name,
                                    state, status)
-  
+
 template <typename T>
 inline auto Encode(std::string& str, const T& obj) -> void {
   str = nlohmann::json(obj).dump();
@@ -66,6 +66,5 @@ template <typename T>
 inline auto Decode(const std::string& str, T& obj) -> void {
   obj = nlohmann::json::parse(str).get<T>();
 };
-
 
 }  // namespace mcu

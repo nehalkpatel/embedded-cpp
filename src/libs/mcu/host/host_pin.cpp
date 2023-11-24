@@ -1,15 +1,19 @@
 #include "host_pin.hpp"
 
 #include <expected>
+#include <string>
 
-#include "host_emulator_messages.hpp" 
-#include "emulator_message_json_encoder.hpp" 
+#include "emulator_message_json_encoder.hpp"
+#include "host_emulator_messages.hpp"
+#include "libs/common/error.hpp"
+#include "libs/mcu/pin.hpp"
 #include "zmq.hpp"
 
 namespace mcu {
 using json = nlohmann::json;
 
-auto HostPin::Configure(PinDirection direction) -> std::expected<void, common::Error> {
+auto HostPin::Configure(PinDirection direction)
+    -> std::expected<void, common::Error> {
   direction_ = direction;
   return {};
 }
@@ -25,10 +29,12 @@ auto HostPin::SetLow() -> std::expected<void, common::Error> {
   }
   return SendState(PinState::kLow);
 }
-auto HostPin::Get() -> std::expected<PinState, common::Error> { return GetState(); }
+auto HostPin::Get() -> std::expected<PinState, common::Error> {
+  return GetState();
+}
 
 auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
-  PinEmulatorRequest req = {
+  const PinEmulatorRequest req = {
       .name = name_,
       .operation = OperationType::kSet,
       .state = state,
@@ -54,7 +60,7 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
 }
 
 auto HostPin::GetState() -> std::expected<PinState, common::Error> {
-  PinEmulatorRequest req = {
+  const PinEmulatorRequest req = {
       .name = name_,
       .operation = OperationType::kGet,
   };

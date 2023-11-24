@@ -32,8 +32,7 @@ class HostI2CController final : public mcu::I2CController {
                                  void (*callback)(std::expected<void, int>))
       -> std::expected<void, int> override;
   virtual auto ReceiveDataInterrupt(
-      uint16_t address,
-      size_t size,
+      uint16_t address, size_t size,
       void (*callback)(std::expected<std::span<uint8_t>, int>))
       -> std::expected<void, int> override;
 
@@ -41,8 +40,7 @@ class HostI2CController final : public mcu::I2CController {
                            void (*callback)(std::expected<void, int>))
       -> std::expected<void, int> override;
   virtual auto ReceiveDataDma(
-      uint16_t address,
-      size_t size,
+      uint16_t address, size_t size,
       void (*callback)(std::expected<std::span<uint8_t>, int>))
       -> std::expected<void, int> override;
 

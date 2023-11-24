@@ -25,7 +25,7 @@ auto app_main(board::Board& board) -> std::expected<void, common::Error> {
 
 auto Blinky::Run() -> std::expected<void, common::Error> {
   auto status = board_.UserLed1().SetHigh();
-  while (1) {
+  while (true) {
     if (!status) {
       return std::unexpected(status.error());
     }
@@ -43,6 +43,8 @@ auto Blinky::Run() -> std::expected<void, common::Error> {
   return {};
 }
 
-auto Blinky::Init() -> std::expected<void, common::Error> { return board_.Init(); }
+auto Blinky::Init() -> std::expected<void, common::Error> {
+  return board_.Init();
+}
 
 }  // namespace app

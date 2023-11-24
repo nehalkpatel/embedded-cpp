@@ -1,5 +1,11 @@
 #include "host_i2c.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <expected>
+#include <span>
+
 namespace mcu {
 auto HostI2CController::SendData(uint16_t address,
                                  std::span<const uint8_t> data)

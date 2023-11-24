@@ -22,17 +22,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     -Wno-exit-time-destructors
     -Wno-global-constructors
     -Wno-weak-vtables
+    -fno-rtti
   )
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   set(COMMON_COMPILE_OPTIONS ${COMMON_COMPILE_OPTIONS}
     -Wno-unknown-pragmas
+    -fno-rtti
   )
 endif()
-
-add_subdirectory(src)
-add_subdirectory(external)
 
 include(FetchContent)
 
@@ -54,13 +53,50 @@ FetchContent_Declare(
   GIT_TAG v1.17.1
 )
 
+FetchContent_Declare(
+  CmakeScripts
+  GIT_REPOSITORY https://github.com/StaflSystems/cmake-scripts.git
+  GIT_TAG main
+)
+FetchContent_GetProperties(CmakeScripts)
+
+if(NOT cmakescripts_POPULATED)
+  FetchContent_Populate(CmakeScripts)
+  set(CMAKE_MODULE_PATH ${cmakescripts_SOURCE_DIR} ${CMAKE_MODULE_PATH})
+endif()
+
+# ZeroMQ itself, so we are not dependent on the system version
+# Use this to get the latest version, once the issue is fixed. TODO: pin this version.
+# FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/nehalkpatel/libzmq.git GIT_TAG fix/4629-compile-warning)
+option(ZMQ_BUILD_TESTS OFF)
+FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/zeromq/libzmq.git GIT_TAG b268effd886c9ea45f8a6f37f8d62b4bb045ad37)
+
+# CPPZMQ header-only library; uses ZeroMQ
+option(CPPZMQ_BUILD_TESTS OFF)
+FetchContent_Declare(cppzmq GIT_REPOSITORY https://github.com/zeromq/cppzmq.git GIT_TAG v4.10.0)
+
+# FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz)
+FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json GIT_TAG v3.11.2)
+
 FetchContent_MakeAvailable(etl)
+
+add_subdirectory(external)
+
+include(tools)
+# include(code-coverage)
+
+clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
+add_subdirectory(src)
+reset_clang_tidy()
 
 if(CMAKE_PRESET STREQUAL "host")
   # For Windows: Prevent overriding the parent project's compiler/linker settings
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
+
   FetchContent_MakeAvailable(googletest)
+  FetchContent_MakeAvailable(zeromq)
+  FetchContent_MakeAvailable(cppzmq)
+  FetchContent_MakeAvailable(json)
 endif()
 
 if(CMAKE_PRESET STREQUAL "arm-cm7")
@@ -68,4 +104,6 @@ if(CMAKE_PRESET STREQUAL "arm-cm7")
 endif()
 
 # process test/CMakeLists.txt
+clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
 add_subdirectory(test)
+reset_clang_tidy()

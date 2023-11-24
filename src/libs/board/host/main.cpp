@@ -1,5 +1,3 @@
-#include <array>
-#include <expected>
 #include <iostream>
 #include <zmq.hpp>
 // #include <zmqpp/zmqpp.hpp>
@@ -7,27 +5,32 @@
 #include "apps/app.hpp"
 #include "libs/board/host/host_board.hpp"
 
-
 auto main() -> int {
+  try {
+    zmq::context_t ctx;
+    zmq::socket_t sock(ctx, zmq::socket_type::pair);
+    sock.connect("ipc:///tmp/device_emulator.ipc");
+    const zmq::socket_ref sref = sock;
+    // sock.send(zmq::str_buffer("Hello, world"), zmq::send_flags::dontwait);
 
-  zmq::context_t ctx;
-  zmq::socket_t sock(ctx, zmq::socket_type::pair);
-  sock.connect("ipc:///tmp/device_emulator.ipc");
-  // sock.send(zmq::str_buffer("Hello, world"), zmq::send_flags::dontwait);
-  zmq::socket_ref sref = sock;
+    board::HostBoard board{sref};
 
-  board::HostBoard board{sref};
-  if (!app::app_main(board)) {
-    std::cout << "app_main failed" << std::endl;
-    return 1;
+    if (!app::app_main(board)) {
+      std::cout << "app_main failed" << '\n';
+      exit(EXIT_FAILURE);
+    }
+
+    zmq::message_t msg;
+    auto res = sock.recv(msg, zmq::recv_flags::none);
+    if (res) {
+      std::cout << "Received message: " << msg.to_string_view() << '\n';
+    }
+  } catch (std::exception& exc) {
+    std::cerr << exc.what() << '\n';
+    exit(EXIT_FAILURE);
   }
 
-
-  zmq::message_t msg;
-  auto res = sock.recv(msg, zmq::recv_flags::none);
-  if (res) {
-    std::cout << "Received message: " << msg.to_string_view() << std::endl;
-  }
+  return (EXIT_SUCCESS);
   // zmqpp::context context;
   // zmqpp::socket puller(context, zmqpp::socket_type::pull);
   // puller.bind("inproc://test");
@@ -52,5 +55,4 @@ auto main() -> int {
   // std::cout << "i2c_data: " << static_cast<int>(i2c_data.value()[0])
             // << static_cast<int>(i2c_data.value()[1]) << std::endl;
   */
-  return 0;
 }
