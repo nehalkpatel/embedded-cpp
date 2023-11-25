@@ -10,6 +10,7 @@ enum class Error : uint32_t {
   kInvalidArgument,
   kInvalidState,
   kInvalidOperation,
+  kOperationFailed,
 };
 
 }  // namespace common

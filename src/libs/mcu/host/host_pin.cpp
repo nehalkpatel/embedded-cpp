@@ -1,6 +1,7 @@
 #include "host_pin.hpp"
 
 #include <expected>
+#include <span>
 #include <string>
 
 #include "emulator_message_json_encoder.hpp"
@@ -41,13 +42,14 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
   };
   std::string str;
   Encode(str, req);
-  if (sref_.send(zmq::buffer(str), zmq::send_flags::dontwait) < 0) {
+  if (!transport_.Send(str)) {
     return std::unexpected(common::Error::kUnknown);
   }
-  zmq::message_t msg;
-  if (sref_.recv(msg, zmq::recv_flags::none) < 0) {
+  auto rx_bytes = transport_.Receive();
+  if (!rx_bytes) {
     return std::unexpected(common::Error::kUnknown);
   }
+  const zmq::message_t msg{rx_bytes.value()};
 
   PinEmulatorResponse resp;
   Decode(msg.to_string(), resp);
@@ -66,13 +68,14 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
   };
   std::string str;
   Encode(str, req);
-  if (sref_.send(zmq::buffer(str), zmq::send_flags::dontwait) < 0) {
+  if (!transport_.Send(str)) {
     return std::unexpected(common::Error::kUnknown);
   }
-  zmq::message_t msg;
-  if (sref_.recv(msg, zmq::recv_flags::none) < 0) {
+  auto rx_bytes = transport_.Receive();
+  if (!rx_bytes) {
     return std::unexpected(common::Error::kUnknown);
   }
+  const zmq::message_t msg{rx_bytes.value()};
 
   PinEmulatorResponse resp;
   Decode(msg.to_string(), resp);

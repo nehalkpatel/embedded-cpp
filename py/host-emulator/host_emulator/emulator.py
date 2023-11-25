@@ -80,6 +80,7 @@ class DeviceEmulator:
 
     def run(self):
         while True:
+            print("Waiting for message...")
             message = self.socket.recv()
             print(f"Received request: {message}")
             if message.startswith(b"{") and message.endswith(b"}"):
@@ -91,6 +92,8 @@ class DeviceEmulator:
                         print(f"Sending response: {response}")
                         self.socket.send_string(response)
                         print("")
+            else:
+                print(f"Received unknown message: {message}")
 
 
 def main():

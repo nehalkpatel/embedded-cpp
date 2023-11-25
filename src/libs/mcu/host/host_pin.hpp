@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "libs/mcu/host/transport.hpp"
 #include "libs/mcu/pin.hpp"
 #include "zmq.hpp"
 
@@ -9,8 +10,8 @@ namespace mcu {
 
 class HostPin : public mcu::Pin {
  public:
-  explicit HostPin(const std::string name, zmq::socket_ref sref)
-      : name_(name), sref_(sref) {}
+  explicit HostPin(const std::string name, Transport& transport)
+      : name_(name), transport_(transport) {}
   ~HostPin() override = default;
   HostPin(const HostPin&) = delete;
   HostPin(HostPin&&) = delete;
@@ -28,7 +29,7 @@ class HostPin : public mcu::Pin {
   auto GetState() -> std::expected<PinState, common::Error>;
 
   const std::string name_;
-  zmq::socket_ref sref_;
+  Transport& transport_;
   PinDirection direction_;
 };
 
