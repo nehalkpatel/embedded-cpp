@@ -8,7 +8,6 @@
 #include "host_emulator_messages.hpp"
 #include "libs/common/error.hpp"
 #include "libs/mcu/pin.hpp"
-#include "zmq.hpp"
 
 namespace mcu {
 using json = nlohmann::json;
@@ -49,10 +48,9 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
   if (!rx_bytes) {
     return std::unexpected(common::Error::kUnknown);
   }
-  const zmq::message_t msg{rx_bytes.value()};
 
   PinEmulatorResponse resp;
-  Decode(msg.to_string(), resp);
+  Decode(rx_bytes.value(), resp);
 
   if (resp.status != common::Error::kOk) {
     return std::unexpected(resp.status);
@@ -75,10 +73,8 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
   if (!rx_bytes) {
     return std::unexpected(common::Error::kUnknown);
   }
-  const zmq::message_t msg{rx_bytes.value()};
-
   PinEmulatorResponse resp;
-  Decode(msg.to_string(), resp);
+  Decode(rx_bytes.value(), resp);
 
   return resp.state;
 }

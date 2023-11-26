@@ -85,9 +85,6 @@ add_subdirectory(external)
 include(tools)
 # include(code-coverage)
 
-clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
-add_subdirectory(src)
-reset_clang_tidy()
 
 if(CMAKE_PRESET STREQUAL "host")
   # For Windows: Prevent overriding the parent project's compiler/linker settings
@@ -97,13 +94,14 @@ if(CMAKE_PRESET STREQUAL "host")
   FetchContent_MakeAvailable(zeromq)
   FetchContent_MakeAvailable(cppzmq)
   FetchContent_MakeAvailable(json)
+  enable_testing()
 endif()
 
 if(CMAKE_PRESET STREQUAL "arm-cm7")
   FetchContent_MakeAvailable(stm32cubef7)
 endif()
 
-# process test/CMakeLists.txt
 clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
+add_subdirectory(src)
 add_subdirectory(test)
 reset_clang_tidy()

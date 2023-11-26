@@ -26,11 +26,11 @@
         "default"
       ],
       "environment": {
-        "CMAKE_TOOLCHAIN_PATH" : "/opt/homebrew/opt/llvm"
+        "CMAKE_TOOLCHAIN_PATH": "/opt/homebrew/opt/llvm"
       },
       "cacheVariables": {
-        "EMBEDDED_CPP_MCU" : "host",
-        "EMBEDDED_CPP_BOARD" : "host"
+        "EMBEDDED_CPP_MCU": "host",
+        "EMBEDDED_CPP_BOARD": "host"
       }
     },
     {
@@ -42,7 +42,7 @@
         "default"
       ],
       "environment": {
-        "CMAKE_TOOLCHAIN_PATH" : "/Applications/ArmGNUToolchain/12.3.rel1/arm-none-eabi"
+        "CMAKE_TOOLCHAIN_PATH": "/Applications/ArmGNUToolchain/12.3.rel1/arm-none-eabi"
       }
     },
     {
@@ -56,7 +56,7 @@
         "arm"
       ],
       "cacheVariables": {
-        "EMBEDDED_CPP_MCU" : "arm_cm4"
+        "EMBEDDED_CPP_MCU": "arm_cm4"
       }
     },
     {
@@ -70,7 +70,7 @@
         "arm"
       ],
       "cacheVariables": {
-        "EMBEDDED_CPP_MCU" : "arm_cm7"
+        "EMBEDDED_CPP_MCU": "arm_cm7"
       }
     },
     {
@@ -81,7 +81,7 @@
         "arm-cm4"
       ],
       "cacheVariables": {
-        "EMBEDDED_CPP_BOARD" : "stm32f3_discovery"
+        "EMBEDDED_CPP_BOARD": "stm32f3_discovery"
       }
     }
   ],
@@ -117,8 +117,27 @@
       "displayName": "Default",
       "description": "Default test using Ninja",
       "configurePreset": "default",
-      "output": {"outputOnFailure": true},
-      "execution": {"noTestsAction": "error", "stopOnFailure": true}
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      },
+      "hidden": true
+    },
+    {
+      "name": "host",
+      "displayName": "Unit Tests",
+      "description": "Unit test using CTest",
+      "configurePreset": "host",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
     }
   ]
 }
