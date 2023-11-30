@@ -1,8 +1,6 @@
 #include "zmq_transport.hpp"
 
 #include <expected>
-#include <iostream>
-#include <span>
 #include <zmq.hpp>
 
 #include "transport.hpp"
@@ -25,7 +23,6 @@ auto ZmqTransport::Send(std::string_view data)
 
 auto ZmqTransport::Receive() -> std::expected<std::string, common::Error> {
   zmq::message_t msg;
-  std::cout.flush();
   if (socket_.recv(msg, zmq::recv_flags::none) != msg.size()) {
     return std::unexpected(common::Error::kOperationFailed);
   }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <expected>
-#include <span>
 #include <zmq.hpp>
 
 #include "libs/common/error.hpp"

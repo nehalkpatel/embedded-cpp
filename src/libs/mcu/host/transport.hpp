@@ -1,7 +1,6 @@
 #pragma once
 
 #include <expected>
-#include <span>
 
 #include "libs/common/error.hpp"
 
