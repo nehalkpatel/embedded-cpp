@@ -39,9 +39,7 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
       .operation = OperationType::kSet,
       .state = state,
   };
-  std::string str;
-  Encode(str, req);
-  if (!transport_.Send(str)) {
+  if (!transport_.Send(Encode(req))) {
     return std::unexpected(common::Error::kUnknown);
   }
   auto rx_bytes = transport_.Receive();
@@ -49,8 +47,7 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
     return std::unexpected(common::Error::kUnknown);
   }
 
-  PinEmulatorResponse resp;
-  Decode(rx_bytes.value(), resp);
+  const auto resp = Decode<PinEmulatorResponse>(rx_bytes.value());
 
   if (resp.status != common::Error::kOk) {
     return std::unexpected(resp.status);
@@ -64,17 +61,14 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
       .name = name_,
       .operation = OperationType::kGet,
   };
-  std::string str;
-  Encode(str, req);
-  if (!transport_.Send(str)) {
+  if (!transport_.Send(Encode(req))) {
     return std::unexpected(common::Error::kUnknown);
   }
   auto rx_bytes = transport_.Receive();
   if (!rx_bytes) {
     return std::unexpected(common::Error::kUnknown);
   }
-  PinEmulatorResponse resp;
-  Decode(rx_bytes.value(), resp);
+  const auto resp = Decode<PinEmulatorResponse>(rx_bytes.value());
 
   return resp.state;
 }

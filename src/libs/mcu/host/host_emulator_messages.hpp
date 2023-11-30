@@ -18,6 +18,10 @@ struct PinEmulatorRequest {
   std::string name;
   OperationType operation;
   PinState state;
+  bool operator==(const PinEmulatorRequest& other) const {
+    return type == other.type && object == other.object && name == other.name &&
+           operation == other.operation && state == other.state;
+  }
 };
 
 struct PinEmulatorResponse {
@@ -26,6 +30,10 @@ struct PinEmulatorResponse {
   std::string name;
   PinState state;
   common::Error status;
+  bool operator==(const PinEmulatorResponse& other) const {
+    return type == other.type && object == other.object && name == other.name &&
+           state == other.state && status == other.status;
+  }
 };
 
 }  // namespace mcu

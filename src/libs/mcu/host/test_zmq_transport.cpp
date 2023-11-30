@@ -4,6 +4,9 @@
 
 #include "zmq_transport.hpp"
 
+namespace mcu {
+namespace {
+
 class ZmqTransportTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -29,10 +32,13 @@ class ZmqTransportTest : public ::testing::Test {
 };
 
 TEST_F(ZmqTransportTest, SendReceive) {
-  mcu::ZmqTransport transport{"ipc:///tmp/device_emulator.ipc"};
+  ZmqTransport transport{"ipc:///tmp/device_emulator.ipc"};
   auto result = transport.Send("Hello");
   ASSERT_TRUE(result);
   auto response = transport.Receive();
   ASSERT_TRUE(response);
   ASSERT_EQ(response.value(), "World");
 }
+
+}  // namespace
+}  // namespace mcu

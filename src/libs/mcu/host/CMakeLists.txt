@@ -14,6 +14,7 @@ add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main)
 
 add_executable(test_host_transport test_zmq_transport.cpp)
+add_executable(test_messages test_messages.cpp)
 
 target_link_libraries(test_host_transport
  PRIVATE
@@ -22,6 +23,13 @@ target_link_libraries(test_host_transport
   cppzmq # needed because zmq_transport.hpp includes zmq.hpp
   )
 
+target_link_libraries(test_messages
+ PRIVATE
+  GTest::GTest
+  nlohmann_json::nlohmann_json
+  )
+
 
 include(GoogleTest)
 gtest_discover_tests(test_host_transport)
+gtest_discover_tests(test_messages)
