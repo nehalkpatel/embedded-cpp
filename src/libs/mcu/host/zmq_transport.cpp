@@ -25,13 +25,9 @@ ZmqTransport::~ZmqTransport() {
     running_ = false;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    // to_emulator_socket_.close();
 
     from_emulator_context_.shutdown();
-    // to_emulator_context_.shutdown();
-
     from_emulator_context_.close();
-    // to_emulator_context_.close();
 
     if (server_thread_.joinable()) {
       server_thread_.join();
