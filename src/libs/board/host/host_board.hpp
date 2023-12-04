@@ -12,7 +12,9 @@
 namespace board {
 
 struct HostBoard : public Board {
-  HostBoard() : zmq_transport_{"ipc:///tmp/device_emulator.ipc"} {}
+  HostBoard()
+      : zmq_transport_{"ipc:///tmp/device_emulator.ipc",
+                       "ipc:///tmp/emulator_device.ipc"} {}
   HostBoard(const HostBoard&) = delete;
   HostBoard(HostBoard&&) = delete;
   auto operator=(const HostBoard&) -> HostBoard& = delete;
