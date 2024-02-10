@@ -1,13 +1,12 @@
 #pragma once
 
-#include "apps/app.hpp"
 #include "libs/board/board.hpp"
 
 namespace app {
 
 class Blinky {
  public:
-  Blinky(board::Board& board) : board_(board) {}
+  explicit Blinky(board::Board& board) : board_(board) {}
   auto Init() -> std::expected<void, common::Error>;
   auto Run() -> std::expected<void, common::Error>;
 
@@ -16,3 +15,4 @@ class Blinky {
 };
 
 }  // namespace app
+

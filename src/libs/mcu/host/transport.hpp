@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <expected>
 
 #include "libs/common/error.hpp"

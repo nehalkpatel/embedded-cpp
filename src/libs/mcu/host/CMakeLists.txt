@@ -8,6 +8,7 @@ target_link_libraries(host_transport PRIVATE cppzmq)
 target_compile_options(host_mcu PRIVATE ${COMMON_COMPILE_OPTIONS})
 set_target_properties(host_mcu PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(host_mcu INTERFACE mcu PRIVATE host_transport nlohmann_json::nlohmann_json)
+target_compile_features(host_mcu PUBLIC cxx_std_23)
 
 FetchContent_MakeAvailable(googletest)
 add_library(GTest::GTest INTERFACE IMPORTED)

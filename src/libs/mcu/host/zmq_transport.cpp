@@ -5,8 +5,6 @@
 #include <thread>
 #include <zmq.hpp>
 
-#include "transport.hpp"
-
 namespace mcu {
 // NOLINTNEXTLINE
 ZmqTransport::ZmqTransport(const std::string& to_emulator,

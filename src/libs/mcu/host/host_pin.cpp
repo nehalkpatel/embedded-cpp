@@ -1,8 +1,6 @@
 #include "host_pin.hpp"
 
 #include <expected>
-#include <span>
-#include <string>
 
 #include "emulator_message_json_encoder.hpp"
 #include "host_emulator_messages.hpp"

@@ -7,7 +7,7 @@ auto main() -> int {
   try {
     board::HostBoard board{};
 
-    if (!app::app_main(board)) {
+    if (!app::AppMain(board)) {
       std::cout << "app_main failed" << '\n';
       exit(EXIT_FAILURE);
     }

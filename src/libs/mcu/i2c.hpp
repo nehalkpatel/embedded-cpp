@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <expected>
 #include <span>
-#include <unordered_map>
 
 namespace mcu {
 

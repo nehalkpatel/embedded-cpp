@@ -23,6 +23,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     -Wno-global-constructors
     -Wno-weak-vtables
     -fno-rtti
+    -stdlib=libc++
   )
 endif()
 

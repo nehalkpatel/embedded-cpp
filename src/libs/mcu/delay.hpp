@@ -3,6 +3,7 @@
 #pragma once
 
 namespace mcu {
-  auto delay(std::chrono::microseconds us) -> void;
+auto Delay(std::chrono::microseconds usecs) -> void;
 
 }  // namespace mcu
+

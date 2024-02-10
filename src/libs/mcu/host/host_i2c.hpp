@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <expected>
@@ -8,7 +7,6 @@
 #include <unordered_map>
 
 #include "libs/mcu/i2c.hpp"
-#include "libs/mcu/pin.hpp"
 
 namespace mcu {
 
@@ -27,19 +25,19 @@ class HostI2CController final : public mcu::I2CController {
   auto ReceiveData(uint16_t address, size_t size)
       -> std::expected<std::span<uint8_t>, int> override;
 
-  virtual auto SendDataInterrupt(uint16_t address,
+  auto SendDataInterrupt(uint16_t address,
                                  std::span<const uint8_t> data,
                                  void (*callback)(std::expected<void, int>))
       -> std::expected<void, int> override;
-  virtual auto ReceiveDataInterrupt(
+  auto ReceiveDataInterrupt(
       uint16_t address, size_t size,
       void (*callback)(std::expected<std::span<uint8_t>, int>))
       -> std::expected<void, int> override;
 
-  virtual auto SendDataDma(uint16_t address, std::span<const uint8_t> data,
+  auto SendDataDma(uint16_t address, std::span<const uint8_t> data,
                            void (*callback)(std::expected<void, int>))
       -> std::expected<void, int> override;
-  virtual auto ReceiveDataDma(
+  auto ReceiveDataDma(
       uint16_t address, size_t size,
       void (*callback)(std::expected<std::span<uint8_t>, int>))
       -> std::expected<void, int> override;

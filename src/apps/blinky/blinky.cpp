@@ -12,7 +12,7 @@
 namespace app {
 using namespace std::chrono_literals;
 
-auto app_main(board::Board& board) -> std::expected<void, common::Error> {
+auto AppMain(board::Board& board) -> std::expected<void, common::Error> {
   Blinky blinky{board};
   if (!blinky.Init()) {
     return std::unexpected(common::Error::kUnknown);
@@ -29,7 +29,7 @@ auto Blinky::Run() -> std::expected<void, common::Error> {
     if (!status) {
       return std::unexpected(status.error());
     }
-    mcu::delay(500ms);
+    mcu::Delay(500ms);
     auto state = board_.UserLed1().Get();
     if (!state) {
       return std::unexpected(state.error());

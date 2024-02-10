@@ -10,8 +10,8 @@ namespace mcu {
 
 class HostPin : public mcu::Pin {
  public:
-  explicit HostPin(const std::string name, Transport& transport)
-      : name_(name), transport_(transport) {}
+  explicit HostPin(std::string name, Transport& transport)
+      : name_{std::move(name)}, transport_{transport} {}
   ~HostPin() override = default;
   HostPin(const HostPin&) = delete;
   HostPin(HostPin&&) = delete;
