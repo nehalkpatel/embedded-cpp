@@ -41,7 +41,7 @@ class ZmqTransportTest : public ::testing::Test {
     socket.bind(endpoint);
     while (running_) {
       std::array<zmq::pollitem_t, 1> items = {
-          {static_cast<void*>(socket), 0, ZMQ_POLLIN, 0}};
+        {{static_cast<void*>(socket), 0, ZMQ_POLLIN, 0}}};
 
       const int ret = zmq::poll(items.data(), 1, std::chrono::milliseconds{50});
 
@@ -96,3 +96,4 @@ TEST(ZmqTransport, ClientMessage) {
 
 }  // namespace
 }  // namespace mcu
+

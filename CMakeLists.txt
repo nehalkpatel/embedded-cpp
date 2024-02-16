@@ -25,6 +25,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     -fno-rtti
     -stdlib=libc++
   )
+  # Needed to make clang-tidy and ensure all the built libs use
+  # the same C++ stdlib implementation
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
