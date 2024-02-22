@@ -16,9 +16,6 @@ target_link_libraries(GTest::GTest INTERFACE gtest_main)
 add_executable(test_host_transport test_zmq_transport.cpp)
 target_compile_options(test_host_transport PRIVATE ${COMMON_COMPILE_OPTIONS})
 
-add_executable(test_messages test_messages.cpp)
-target_compile_options(test_messages PRIVATE ${COMMON_COMPILE_OPTIONS})
-
 target_link_libraries(test_host_transport
  PRIVATE
   GTest::GTest
@@ -26,13 +23,25 @@ target_link_libraries(test_host_transport
   cppzmq # needed because zmq_transport.hpp includes zmq.hpp
   )
 
+add_executable(test_messages test_messages.cpp)
+target_compile_options(test_messages PRIVATE ${COMMON_COMPILE_OPTIONS})
+
 target_link_libraries(test_messages
  PRIVATE
   GTest::GTest
   nlohmann_json::nlohmann_json
   )
 
+add_executable(test_message_dispatcher test_message_dispatcher.cpp)
+target_compile_options(test_message_dispatcher PRIVATE ${COMMON_COMPILE_OPTIONS})
+
+target_link_libraries(test_message_dispatcher
+ PRIVATE
+  GTest::GTest
+  )
+
 
 include(GoogleTest)
 gtest_discover_tests(test_host_transport)
 gtest_discover_tests(test_messages)
+gtest_discover_tests(test_message_dispatcher)

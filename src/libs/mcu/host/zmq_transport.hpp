@@ -5,13 +5,14 @@
 #include <zmq.hpp>
 
 #include "libs/common/error.hpp"
+#include "message_dispatcher.hpp"
 #include "transport.hpp"
 
 namespace mcu {
 class ZmqTransport : public Transport {
  public:
-  ZmqTransport(const std::string& to_emulator,
-               const std::string& from_emulator);
+  ZmqTransport(const std::string& to_emulator, const std::string& from_emulator,
+               MessageDispatcher& dispatcher);
   ZmqTransport(const ZmqTransport&) = delete;
   ZmqTransport(ZmqTransport&&) = delete;
   auto operator=(const ZmqTransport&) -> ZmqTransport& = delete;
@@ -31,7 +32,7 @@ class ZmqTransport : public Transport {
   zmq::context_t from_emulator_context_{1};
 
   std::atomic<bool> running_{true};
+  MessageDispatcher& dispatcher_;
   std::thread server_thread_;
 };
 }  // namespace mcu
-

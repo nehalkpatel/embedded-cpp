@@ -2,6 +2,7 @@
 
 #include <thread>
 
+#include "message_dispatcher.hpp"
 #include "zmq_transport.hpp"
 
 namespace mcu {
@@ -71,8 +72,10 @@ class ZmqTransportTest : public ::testing::Test {
 };
 
 TEST_F(ZmqTransportTest, SendReceive) {
+  ReceiverMap receiver_map{};
+  MessageDispatcher dispatcher{receiver_map};
   ZmqTransport transport{"ipc:///tmp/device_emulator.ipc",
-                         "ipc:///tmp/emulator_device.ipc"};
+                         "ipc:///tmp/emulator_device.ipc", dispatcher};
   auto result = transport.Send("Hello");
   ASSERT_TRUE(result);
   auto response = transport.Receive();
@@ -81,8 +84,10 @@ TEST_F(ZmqTransportTest, SendReceive) {
 }
 
 TEST(ZmqTransport, ClientMessage) {
+  ReceiverMap receiver_map{};
+  MessageDispatcher dispatcher{receiver_map};
   const ZmqTransport transport{"ipc:///tmp/device_emulator.ipc",
-                               "ipc:///tmp/emulator_device.ipc"};
+                               "ipc:///tmp/emulator_device.ipc", dispatcher};
   zmq::context_t context{1};
   zmq::socket_t socket{context, zmq::socket_type::pair};
   socket.connect("ipc:///tmp/emulator_device.ipc");

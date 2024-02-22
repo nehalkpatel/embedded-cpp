@@ -5,10 +5,14 @@
 #include <thread>
 #include <zmq.hpp>
 
+#include "message_dispatcher.hpp"
+
 namespace mcu {
 // NOLINTNEXTLINE
 ZmqTransport::ZmqTransport(const std::string& to_emulator,
-                           const std::string& from_emulator) {
+                           const std::string& from_emulator,
+                           MessageDispatcher& dispatcher)
+    : dispatcher_{dispatcher} {
   to_emulator_socket_.connect(to_emulator.c_str());
   if (to_emulator_socket_.handle() == nullptr) {
     throw std::runtime_error("Failed to connect to endpoint");
@@ -65,7 +69,7 @@ void ZmqTransport::ServerThread(const std::string& endpoint) {
           socket.send(zmq::str_buffer("World"), zmq::send_flags::none);
         }
       } else {
-        socket.send(zmq::str_buffer("Unknown"), zmq::send_flags::none);
+        dispatcher_.DispatchMessage(request.to_string());
       }
     }
   }
