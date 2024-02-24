@@ -35,4 +35,5 @@ class ZmqTransport : public Transport {
   MessageDispatcher& dispatcher_;
   std::thread server_thread_;
 };
+
 }  // namespace mcu

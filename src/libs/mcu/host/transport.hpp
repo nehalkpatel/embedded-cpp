@@ -16,4 +16,3 @@ class Transport {
  private:
 };
 }  // namespace mcu
-
