@@ -13,8 +13,8 @@ struct Board {
   virtual ~Board() = default;
 
   virtual auto Init() -> std::expected<void, common::Error> = 0;
-  virtual auto UserLed1() -> mcu::Pin& = 0;
-  virtual auto UserButton1() -> mcu::Pin& = 0;
+  virtual auto UserLed1() -> mcu::OutputPin& = 0;
+  virtual auto UserButton1() -> mcu::InputPin& = 0;
   virtual auto I2C1() -> mcu::I2CController& = 0;
 };
 }  // namespace board

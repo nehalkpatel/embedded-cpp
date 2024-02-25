@@ -14,7 +14,7 @@ auto HostBoard::Init() -> std::expected<void, common::Error> {
   }
   return std::unexpected(common::Error::kUnknown);
 }
-auto HostBoard::UserLed1() -> mcu::Pin& { return user_led_1_; }
-auto HostBoard::UserButton1() -> mcu::Pin& { return user_button_1_; }
+auto HostBoard::UserLed1() -> mcu::OutputPin& { return user_led_1_; }
+auto HostBoard::UserButton1() -> mcu::InputPin& { return user_button_1_; }
 auto HostBoard::I2C1() -> mcu::I2CController& { return i2c1_; }
 }  // namespace board

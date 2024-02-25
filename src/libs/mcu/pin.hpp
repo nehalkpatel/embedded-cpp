@@ -9,14 +9,25 @@ namespace mcu {
 enum class PinDirection { kInput = 1, kOutput };
 enum class PinState { kLow = 1, kHigh, kHighZ };
 
-class Pin {
+class InputPin {
  public:
-  virtual ~Pin() = default;
+  virtual ~InputPin() = default;
+  virtual auto Get() -> std::expected<PinState, common::Error> = 0;
+};
+
+class OutputPin : public virtual InputPin {
+ public:
+  virtual ~OutputPin() = default;
+
+  virtual auto SetHigh() -> std::expected<void, common::Error> = 0;
+  virtual auto SetLow() -> std::expected<void, common::Error> = 0;
+};
+
+class BidirectionalPin : public virtual InputPin, public virtual OutputPin {
+ public:
+  virtual ~BidirectionalPin() = default;
 
   virtual auto Configure(PinDirection direction)
       -> std::expected<void, common::Error> = 0;
-  virtual auto SetHigh() -> std::expected<void, common::Error> = 0;
-  virtual auto SetLow() -> std::expected<void, common::Error> = 0;
-  virtual auto Get() -> std::expected<PinState, common::Error> = 0;
 };
 }  // namespace mcu

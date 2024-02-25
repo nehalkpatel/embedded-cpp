@@ -24,8 +24,8 @@ class HostBoard : public Board {
   ~HostBoard() override = default;
 
   auto Init() -> std::expected<void, common::Error> override;
-  auto UserLed1() -> mcu::Pin& override;
-  auto UserButton1() -> mcu::Pin& override;
+  auto UserLed1() -> mcu::OutputPin& override;
+  auto UserButton1() -> mcu::InputPin& override;
   auto I2C1() -> mcu::I2CController& override;
 
  private:

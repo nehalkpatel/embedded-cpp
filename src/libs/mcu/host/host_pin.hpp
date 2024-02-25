@@ -8,7 +8,7 @@
 
 namespace mcu {
 
-class HostPin final : public Pin, public Receiver {
+class HostPin final : public BidirectionalPin, public Receiver {
  public:
   explicit HostPin(std::string name, Transport& transport)
       : name_{std::move(name)}, transport_{transport} {}
