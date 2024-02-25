@@ -6,6 +6,11 @@
 #include <expected>
 #include <span>
 
+#include "libs/common/error.hpp"
+#include "libs/mcu/host/emulator_message_json_encoder.hpp"
+#include "libs/mcu/host/host_emulator_messages.hpp"
+#include "libs/mcu/i2c.hpp"
+
 namespace mcu {
 auto HostI2CController::SendData(uint16_t address,
                                  std::span<const uint8_t> data)
@@ -49,6 +54,12 @@ auto HostI2CController::ReceiveDataDma(
     -> std::expected<void, int> {
   callback(ReceiveData(address, size));
   return {};
+}
+
+auto HostI2CController::Receive(const std::string_view& message)
+    -> std::expected<std::string, common::Error> {
+  static_cast<void>(message);
+  return std::unexpected(common::Error::kUnhandled);
 }
 
 }  // namespace mcu

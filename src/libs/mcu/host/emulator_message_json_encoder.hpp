@@ -1,11 +1,11 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
 #include <string>
 
-#include "host_emulator_messages.hpp"
 #include "libs/common/error.hpp"
+#include "libs/mcu/host/host_emulator_messages.hpp"
 #include "libs/mcu/pin.hpp"
-#include "nlohmann/json.hpp"
 
 namespace common {
 
@@ -63,7 +63,7 @@ inline auto Encode(const T& obj) -> std::string {
 };
 
 template <typename T>
-inline auto Decode(const std::string& str) -> T {
+inline auto Decode(const std::string_view& str) -> T {
   return nlohmann::json::parse(str).get<T>();
 };
 

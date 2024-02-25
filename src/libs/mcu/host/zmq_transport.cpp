@@ -5,13 +5,13 @@
 #include <thread>
 #include <zmq.hpp>
 
-#include "message_dispatcher.hpp"
+#include "dispatcher.hpp"
 
 namespace mcu {
 // NOLINTNEXTLINE
 ZmqTransport::ZmqTransport(const std::string& to_emulator,
                            const std::string& from_emulator,
-                           MessageDispatcher& dispatcher)
+                           Dispatcher& dispatcher)
     : dispatcher_{dispatcher} {
   to_emulator_socket_.connect(to_emulator.c_str());
   if (to_emulator_socket_.handle() == nullptr) {
@@ -69,7 +69,15 @@ void ZmqTransport::ServerThread(const std::string& endpoint) {
           socket.send(zmq::str_buffer("World"), zmq::send_flags::none);
         }
       } else {
-        dispatcher_.DispatchMessage(request.to_string());
+        auto response = dispatcher_.Dispatch(request.to_string());
+        if (response) {
+          zmq::message_t reply{response.value().data(),
+                               response.value().size()};
+          socket.send(reply, zmq::send_flags::none);
+        } else {
+          zmq::message_t reply{"Unhandled", 9};
+          socket.send(reply, zmq::send_flags::none);
+        }
       }
     }
   }

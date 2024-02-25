@@ -11,6 +11,7 @@ enum class Error : uint32_t {
   kInvalidState,
   kInvalidOperation,
   kOperationFailed,
+  kUnhandled,
 };
 
 }  // namespace common

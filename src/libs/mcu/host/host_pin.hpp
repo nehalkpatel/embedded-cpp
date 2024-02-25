@@ -2,13 +2,13 @@
 
 #include <string>
 
+#include "libs/mcu/host/receiver.hpp"
 #include "libs/mcu/host/transport.hpp"
 #include "libs/mcu/pin.hpp"
-#include "transport.hpp"
 
 namespace mcu {
 
-class HostPin : public mcu::Pin {
+class HostPin final : public Pin, public Receiver {
  public:
   explicit HostPin(std::string name, Transport& transport)
       : name_{std::move(name)}, transport_{transport} {}
@@ -23,6 +23,9 @@ class HostPin : public mcu::Pin {
   auto SetHigh() -> std::expected<void, common::Error> override;
   auto SetLow() -> std::expected<void, common::Error> override;
   auto Get() -> std::expected<PinState, common::Error> override;
+
+  auto Receive(const std::string_view& message)
+      -> std::expected<std::string, common::Error> override;
 
  private:
   auto SendState(PinState state) -> std::expected<void, common::Error>;

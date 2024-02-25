@@ -2,9 +2,9 @@
 
 #include <expected>
 
-#include "emulator_message_json_encoder.hpp"
-#include "host_emulator_messages.hpp"
 #include "libs/common/error.hpp"
+#include "libs/mcu/host/emulator_message_json_encoder.hpp"
+#include "libs/mcu/host/host_emulator_messages.hpp"
 #include "libs/mcu/pin.hpp"
 
 namespace mcu {
@@ -70,4 +70,43 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
 
   return resp.state;
 }
+
+// Messages received from the external application will always be
+// requests. HostPin will only send responses.
+auto HostPin::Receive(const std::string_view& message)
+    -> std::expected<std::string, common::Error> {
+  const auto json_pin = json::parse(message);
+  if (json_pin["name"] != name_) {
+    return {};
+  }
+  if (json_pin["type"] == MessageType::kRequest) {
+    const auto req = Decode<PinEmulatorRequest>(message);
+    if (req.operation == OperationType::kGet) {
+      const PinEmulatorResponse resp = {
+          .type = MessageType::kResponse,
+          .object = ObjectType::kPin,
+          .name = name_,
+          .state = direction_ == PinDirection::kInput ? GetState().value()
+                                                      : PinState::kHigh,
+          .status = common::Error::kOk,
+      };
+      return Encode(resp);
+    }
+    if (req.operation == OperationType::kSet) {
+      if (direction_ == PinDirection::kInput) {
+        const PinEmulatorResponse resp = {
+            .status = common::Error::kInvalidOperation,
+        };
+        return Encode(resp);
+      }
+      if (req.state == PinState::kHigh) {
+        SetHigh();
+      } else {
+        SetLow();
+      }
+    }
+  }
+  return {};
+}
+
 }  // namespace mcu

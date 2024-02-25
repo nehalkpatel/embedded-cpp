@@ -32,10 +32,10 @@ target_link_libraries(test_messages
   nlohmann_json::nlohmann_json
   )
 
-add_executable(test_message_dispatcher test_message_dispatcher.cpp)
-target_compile_options(test_message_dispatcher PRIVATE ${COMMON_COMPILE_OPTIONS})
+add_executable(test_dispatcher test_dispatcher.cpp)
+target_compile_options(test_dispatcher PRIVATE ${COMMON_COMPILE_OPTIONS})
 
-target_link_libraries(test_message_dispatcher
+target_link_libraries(test_dispatcher
  PRIVATE
   GTest::GTest
   )
@@ -44,4 +44,4 @@ target_link_libraries(test_message_dispatcher
 include(GoogleTest)
 gtest_discover_tests(test_host_transport)
 gtest_discover_tests(test_messages)
-gtest_discover_tests(test_message_dispatcher)
+gtest_discover_tests(test_dispatcher)
