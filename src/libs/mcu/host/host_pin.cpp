@@ -51,6 +51,7 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
     return std::unexpected(resp.status);
   }
 
+  state_ = state;
   return {};
 }
 
@@ -68,6 +69,7 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
   }
   const auto resp = Decode<PinEmulatorResponse>(rx_bytes.value());
 
+  state_ = resp.state;
   return resp.state;
 }
 
@@ -77,7 +79,7 @@ auto HostPin::Receive(const std::string_view& message)
     -> std::expected<std::string, common::Error> {
   const auto json_pin = json::parse(message);
   if (json_pin["name"] != name_) {
-    return {};
+    return std::unexpected(common::Error::kInvalidArgument);
   }
   if (json_pin["type"] == MessageType::kRequest) {
     const auto req = Decode<PinEmulatorRequest>(message);
@@ -92,21 +94,19 @@ auto HostPin::Receive(const std::string_view& message)
       };
       return Encode(resp);
     }
+    // Set from the external world is only allowed if the pin is an input
+    // with respect to the MCU
     if (req.operation == OperationType::kSet) {
-      if (direction_ == PinDirection::kInput) {
+      if (direction_ == PinDirection::kOutput) {
         const PinEmulatorResponse resp = {
             .status = common::Error::kInvalidOperation,
         };
         return Encode(resp);
       }
-      if (req.state == PinState::kHigh) {
-        SetHigh();
-      } else {
-        SetLow();
-      }
+      state_ = req.state;
     }
   }
-  return {};
+  return std::unexpected(common::Error::kInvalidOperation);
 }
 
 }  // namespace mcu

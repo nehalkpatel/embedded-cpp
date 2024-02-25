@@ -34,6 +34,7 @@ class HostPin final : public Pin, public Receiver {
   const std::string name_;
   Transport& transport_;
   PinDirection direction_;
+  PinState state_;
 };
 
 }  // namespace mcu
