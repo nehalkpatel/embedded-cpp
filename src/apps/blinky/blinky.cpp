@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <expected>
+#include <functional>
 
 #include "apps/app.hpp"
 #include "libs/board/board.hpp"
@@ -44,7 +45,12 @@ auto Blinky::Run() -> std::expected<void, common::Error> {
 }
 
 auto Blinky::Init() -> std::expected<void, common::Error> {
-  return board_.Init();
+  auto status = board_.Init();
+  if (status) {
+    return board_.UserButton1().SetInterruptHandler(
+        []() { return; }, mcu::PinTransition::kRising);
+  }
+  return status;
 }
 
 }  // namespace app
