@@ -1,12 +1,18 @@
 #!/usr/bin/env python
 
 import json
+import sys
 import zmq
 
 from enum import Enum
+from threading import Thread
 
 
-class Pins:
+class UnhandledMessageException(Exception):
+    pass
+
+
+class Pin:
     direction = Enum("direction", ["IN", "OUT"])
     state = Enum("state", ["Low", "High", "Hi_Z"])
     status = Enum(
@@ -20,11 +26,10 @@ class Pins:
         ],
     )
 
-    def __init__(self):
-        self.pins = {}
-
-    def add_pin(self, name, direction, state):
-        self.pins[name] = {"direction": direction, "state": state}
+    def __init__(self, name, direction, state):
+        self.name = name
+        self.direction = direction
+        self.state = state
 
     def handle_request(self, message):
         if message["operation"] == "Get":
@@ -33,19 +38,19 @@ class Pins:
                     "type": "Response",
                     "object": "Pin",
                     "name": message["name"],
-                    "state": self.pins[message["name"]]["state"].name,
-                    "status": Pins.status.Ok.name,
+                    "state": self.state.name,
+                    "status": Pin.status.Ok.name,
                 }
             )
         elif message["operation"] == "Set":
-            self.pins[message["name"]]["state"] = Pins.state[message["state"]]
+            self.state = Pin.state[message["state"]]
             return json.dumps(
                 {
                     "type": "Response",
                     "object": "Pin",
-                    "name": message["name"],
-                    "state": self.pins[message["name"]]["state"].name,
-                    "status": Pins.status.Ok.name,
+                    "name": self.name,
+                    "state": self.state.name,
+                    "status": Pin.status.Ok.name,
                 }
             )
         else:
@@ -53,9 +58,9 @@ class Pins:
                 {
                     "type": "Response",
                     "object": "Pin",
-                    "name": message["name"],
-                    "state": self.pins[message["name"]]["state"].name,
-                    "status": Pins.status.InvalidOperation.name,
+                    "name": self.name,
+                    "state": self.state.name,
+                    "status": Pin.status.InvalidOperation.name,
                 }
             )
 
@@ -72,33 +77,62 @@ class Pins:
 
 class DeviceEmulator:
     def __init__(self):
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.PAIR)
-        self.socket.bind("ipc:///tmp/device_emulator.ipc")
-        self.pins = Pins()
-        self.pins.add_pin("LED 1", Pins.direction.OUT, Pins.state.Low)
+        print("Creating DeviceEmulator")
+        self.emulator_thread = Thread(target=self.run)
+        self.led_1 = Pin("LED 1", Pin.direction.OUT, Pin.state.Low)
+        self.button_1 = Pin("Button 1", Pin.direction.IN, Pin.state.Low)
+        self.pins = [self.led_1, self.button_1]
+        self.running = False
+        self.to_device_context = zmq.Context()
+        self.to_device_socket = self.to_device_context.socket(zmq.PAIR)
+        self.to_device_socket.connect("ipc:///tmp/emulator_device.ipc")
 
     def run(self):
-        while True:
-            print("Waiting for message...")
-            message = self.socket.recv()
-            print(f"Received request: {message}")
-            if message.startswith(b"{") and message.endswith(b"}"):
-                # JSON message
-                json_message = json.loads(message)
-                if json_message["object"] == "Pin":
-                    response = self.pins.handle_message(json_message)
-                    if response:
-                        print(f"Sending response: {response}")
-                        self.socket.send_string(response)
-                        print("")
-            else:
-                print(f"Received unknown message: {message}")
+        print("Starting emulator thread")
+        try:
+            self.from_device_context = zmq.Context()
+            self.from_device_socket = self.from_device_context.socket(zmq.PAIR)
+            self.from_device_socket.bind("ipc:///tmp/device_emulator.ipc")
+            self.running = True
+            while self.running:
+                print("Waiting for message...")
+                message = self.from_device_socket.recv()
+                print(f"Received request: {message}")
+                if message.startswith(b"{") and message.endswith(b"}"):
+                    # JSON message
+                    json_message = json.loads(message)
+                    if json_message["object"] == "Pin":
+                        for pin in self.pins:
+                            response = pin.handle_message(json_message)
+                            if response:
+                                print(f"Sending response: {response}")
+                                self.from_device_socket.send_string(response)
+                                print("")
+                                break
+                            raise UnhandledMessageException(message)
+                else:
+                    raise UnhandledMessageException(message)
+        finally:
+            self.from_device_socket.close()
+            self.from_device_context.term()
+
+    def stop(self):
+        self.running = False
+        self.emulator_thread.join()
 
 
 def main():
     emulator = DeviceEmulator()
-    emulator.run()
+    try:
+        emulator.emulator_thread.start()
+        while emulator.running:
+            emulator.emulator_thread.join(0.5)
+    except (KeyboardInterrupt, SystemExit):
+        print("main Received keyboard interrupt")
+        emulator.stop()
+        emulator.to_device_socket.close()
+        emulator.to_device_context.term()
+        sys.exit(0)
 
 
 if __name__ == "__main__":
