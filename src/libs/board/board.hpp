@@ -14,6 +14,7 @@ struct Board {
 
   virtual auto Init() -> std::expected<void, common::Error> = 0;
   virtual auto UserLed1() -> mcu::OutputPin& = 0;
+  virtual auto UserLed2() -> mcu::OutputPin& = 0;
   virtual auto UserButton1() -> mcu::InputPin& = 0;
   virtual auto I2C1() -> mcu::I2CController& = 0;
 };

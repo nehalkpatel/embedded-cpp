@@ -101,15 +101,21 @@ class Pin:
         return None
 
     def set_on_request(self, on_request):
+        print(f"[Pin Handler] Setting on_request for {self.name}: {on_request}")
         self.on_request = on_request
 
     def set_on_response(self, on_response):
+        print(f"[Pin Handler] Setting on_response for {self.name}: {on_response}")
         self.on_response = on_response
 
     def handle_message(self, message):
+        if message["object"] != "Pin":
+            return None
+        if message["name"] != self.name:
+            return None
         if message["type"] == "Request":
             return self.handle_request(message)
-        elif message["type"] == "Response":
+        if message["type"] == "Response":
             return self.handle_response(message)
 
 
@@ -124,13 +130,19 @@ class DeviceEmulator:
         self.led_1 = Pin(
             "LED 1", Pin.direction.OUT, Pin.state.Low, self.to_device_socket
         )
+        self.led_2 = Pin(
+            "LED 2", Pin.direction.OUT, Pin.state.Low, self.to_device_socket
+        )
         self.button_1 = Pin(
             "Button 1", Pin.direction.IN, Pin.state.Low, self.to_device_socket
         )
-        self.pins = [self.led_1, self.button_1]
+        self.pins = [self.led_1, self.led_2, self.button_1]
 
     def UserLed1(self):
         return self.led_1
+
+    def UserLed2(self):
+        return self.led_2
 
     def UserButton1(self):
         return self.button_1
@@ -151,15 +163,17 @@ class DeviceEmulator:
                     json_message = json.loads(message)
                     if json_message["object"] == "Pin":
                         for pin in self.pins:
-                            response = pin.handle_message(json_message)
-                            if response:
+                            if response := pin.handle_message(json_message):
                                 print(f"[Emulator] Sending response: {response}")
                                 from_device_socket.send_string(response)
                                 print("")
                                 break
-                            raise UnhandledMessageException(message)
+                        else:
+                            raise UnhandledMessageException(message, " - Pin not found")
+                    else:
+                        raise UnhandledMessageException(message, " - not Pin")
                 else:
-                    raise UnhandledMessageException(message)
+                    raise UnhandledMessageException(message, " - not JSON")
         finally:
             from_device_socket.close()
             from_device_context.term()

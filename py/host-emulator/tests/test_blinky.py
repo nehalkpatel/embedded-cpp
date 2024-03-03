@@ -12,6 +12,13 @@ user_led1_stats = {
     "set": 0,
 }
 
+user_led2_stats = {
+    "high": 0,
+    "low": 0,
+    "get": 0,
+    "set": 0,
+}
+
 user_button1_stats = {
     "pressed": 0,
     "released": 0,
@@ -54,6 +61,7 @@ def blinky(request):
 
 
 def on_user_led1_request(message):
+    print(f"[Test] LED1 Handler Received request: {message}")
     if message["operation"] == "Get":
         user_led1_stats["get"] += 1
 
@@ -67,8 +75,23 @@ def on_user_led1_request(message):
         user_led1_stats["low"] += 1
 
 
+def on_user_led2_request(message):
+    print(f"[Test] LED2 Handler Received request: {message}")
+    if message["operation"] == "Get":
+        user_led2_stats["get"] += 1
+
+    if message["operation"] == "Set":
+        user_led2_stats["set"] += 1
+
+    if message["state"] == "High":
+        user_led2_stats["high"] += 1
+
+    if message["state"] == "Low":
+        user_led2_stats["low"] += 1
+
+
 def on_user_button1_response(message):
-    print(f"[Test] Handler Received response: {message}")
+    print(f"[Test] Button1 Handler Received response: {message}")
     if message["state"] == "Low":
         user_button1_stats["pressed"] += 1
 
@@ -91,6 +114,7 @@ def test_blinky_start_stop(emulator, blinky):
 def test_blinky_blink(emulator, blinky):
     try:
         emulator.UserLed1().set_on_request(on_user_led1_request)
+        emulator.UserLed2().set_on_request(on_user_led2_request)
 
         sleep(0.75)
 
@@ -99,6 +123,10 @@ def test_blinky_blink(emulator, blinky):
         assert user_led1_stats["high"] > 0
         assert user_led1_stats["low"] > 0
 
+        assert user_led2_stats["get"] == 0
+        assert user_led2_stats["set"] == 0
+        assert user_led2_stats["high"] == 0
+        assert user_led2_stats["low"] == 0
     finally:
         emulator.stop()
         blinky.terminate()
@@ -106,7 +134,9 @@ def test_blinky_blink(emulator, blinky):
 
 
 def test_blinky_button_press(emulator, blinky):
+    # Blinky is configured to set LED2 to high on a rising edge for Button1
     try:
+        emulator.UserLed2().set_on_request(on_user_led2_request)
         emulator.UserButton1().set_on_response(on_user_button1_response)
 
         emulator.UserButton1().set_state(Pin.state.Low)
@@ -114,6 +144,11 @@ def test_blinky_button_press(emulator, blinky):
 
         assert user_button1_stats["pressed"] > 0
         assert user_button1_stats["released"] > 0
+
+        assert user_led2_stats["get"] == 0
+        assert user_led2_stats["set"] == 1
+        assert user_led2_stats["high"] == 1
+        assert user_led2_stats["low"] == 0
 
     finally:
         emulator.stop()

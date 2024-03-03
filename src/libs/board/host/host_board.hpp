@@ -25,6 +25,7 @@ class HostBoard : public Board {
 
   auto Init() -> std::expected<void, common::Error> override;
   auto UserLed1() -> mcu::OutputPin& override;
+  auto UserLed2() -> mcu::OutputPin& override;
   auto UserButton1() -> mcu::InputPin& override;
   auto I2C1() -> mcu::I2CController& override;
 
@@ -35,6 +36,7 @@ class HostBoard : public Board {
 
   const mcu::ReceiverMap receiver_map_{
       {IsJson, user_led_1_},
+      {IsJson, user_led_2_},
       {IsJson, user_button_1_},
   };
   mcu::Dispatcher dispatcher_{receiver_map_};
@@ -42,6 +44,7 @@ class HostBoard : public Board {
                                    "ipc:///tmp/emulator_device.ipc",
                                    dispatcher_};
   mcu::HostPin user_led_1_{"LED 1", zmq_transport_};
+  mcu::HostPin user_led_2_{"LED 2", zmq_transport_};
   mcu::HostPin user_button_1_{"Button 1", zmq_transport_};
   mcu::HostI2CController i2c1_{};
 };

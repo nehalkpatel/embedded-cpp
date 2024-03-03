@@ -10,11 +10,15 @@ namespace board {
 auto HostBoard::Init() -> std::expected<void, common::Error> {
   auto res = user_led_1_.Configure(mcu::PinDirection::kOutput);
   if (res) {
+    res = user_led_2_.Configure(mcu::PinDirection::kOutput);
+  }
+  if (res) {
     return user_button_1_.Configure(mcu::PinDirection::kInput);
   }
   return std::unexpected(common::Error::kUnknown);
 }
 auto HostBoard::UserLed1() -> mcu::OutputPin& { return user_led_1_; }
+auto HostBoard::UserLed2() -> mcu::OutputPin& { return user_led_2_; }
 auto HostBoard::UserButton1() -> mcu::InputPin& { return user_button_1_; }
 auto HostBoard::I2C1() -> mcu::I2CController& { return i2c1_; }
 }  // namespace board
