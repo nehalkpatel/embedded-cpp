@@ -63,20 +63,22 @@ void ZmqTransport::ServerThread(const std::string& endpoint) {
     } else if (ret > 0) {
       zmq::message_t request;
       if (socket.recv(request, zmq::recv_flags::none)) {
+        std::cout << "Received: " << request.to_string() << '\n';
         const std::string_view request_str{
             static_cast<const char*>(request.data()), request.size()};
         if (request_str == "Hello") {
           socket.send(zmq::str_buffer("World"), zmq::send_flags::none);
-        }
-      } else {
-        auto response = dispatcher_.Dispatch(request.to_string());
-        if (response) {
-          zmq::message_t reply{response.value().data(),
-                               response.value().size()};
-          socket.send(reply, zmq::send_flags::none);
         } else {
-          zmq::message_t reply{"Unhandled", 9};
-          socket.send(reply, zmq::send_flags::none);
+          std::cout << "Dispatching\n";
+          auto response = dispatcher_.Dispatch(request.to_string());
+          if (response) {
+            zmq::message_t reply{response.value().data(),
+                                 response.value().size()};
+            socket.send(reply, zmq::send_flags::none);
+          } else {
+            zmq::message_t reply{"Unhandled", 9};
+            socket.send(reply, zmq::send_flags::none);
+          }
         }
       }
     }

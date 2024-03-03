@@ -112,24 +112,23 @@ auto HostPin::Receive(const std::string_view& message)
   if (json_pin["type"] == MessageType::kResponse) {
     return std::unexpected(common::Error::kInvalidOperation);
   }
+  PinEmulatorResponse resp = {
+      .type = MessageType::kResponse,
+      .object = ObjectType::kPin,
+      .name = name_,
+      .state = state_,
+      .status = common::Error::kInvalidOperation,
+  };
   const auto req = Decode<PinEmulatorRequest>(message);
   if (req.operation == OperationType::kGet) {
-    const PinEmulatorResponse resp = {
-        .type = MessageType::kResponse,
-        .object = ObjectType::kPin,
-        .name = name_,
-        .state = state_,
-        .status = common::Error::kOk,
-    };
+    resp.status = common::Error::kOk;
     return Encode(resp);
   }
   // Set from the external world is only allowed if the pin is an input
   // with respect to the MCU
   if (req.operation == OperationType::kSet) {
     if (direction_ == PinDirection::kOutput) {
-      const PinEmulatorResponse resp = {
-          .status = common::Error::kInvalidOperation,
-      };
+      resp.status = common::Error::kInvalidOperation;
       return Encode(resp);
     }
     // The external entity pushed a pin update to the MCU.
@@ -137,9 +136,8 @@ auto HostPin::Receive(const std::string_view& message)
     const PinState prev_state{state_};
     state_ = req.state;
     CheckAndInvokeHandler(prev_state, req.state);
-    const PinEmulatorResponse resp = {
-        .status = common::Error::kOk,
-    };
+    resp.state = state_;
+    resp.status = common::Error::kOk;
     return Encode(resp);
   }
   return std::unexpected(common::Error::kInvalidOperation);
