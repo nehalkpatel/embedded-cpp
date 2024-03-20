@@ -48,7 +48,8 @@ auto Blinky::Init() -> std::expected<void, common::Error> {
   auto status = board_.Init();
   if (status) {
     return board_.UserButton1().SetInterruptHandler(
-        [this]() { board_.UserLed2().SetHigh(); }, mcu::PinTransition::kRising);
+        [this]() { static_cast<void>(board_.UserLed2().SetHigh());  },
+        mcu::PinTransition::kRising);
   }
   return status;
 }
