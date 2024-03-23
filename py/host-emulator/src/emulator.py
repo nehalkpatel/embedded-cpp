@@ -101,11 +101,15 @@ class Pin:
         return None
 
     def set_on_request(self, on_request):
-        print(f"[Pin Handler] Setting on_request for {self.name}: {on_request}")
+        print(
+            f"[Pin Handler] Setting on_request for {self.name}: {on_request}"
+        )
         self.on_request = on_request
 
     def set_on_response(self, on_response):
-        print(f"[Pin Handler] Setting on_response for {self.name}: {on_response}")
+        print(
+            f"[Pin Handler] Setting on_response for {self.name}: {on_response}"
+        )
         self.on_response = on_response
 
     def handle_message(self, message):
@@ -164,12 +168,16 @@ class DeviceEmulator:
                     if json_message["object"] == "Pin":
                         for pin in self.pins:
                             if response := pin.handle_message(json_message):
-                                print(f"[Emulator] Sending response: {response}")
+                                print(
+                                    f"[Emulator] Sending response: {response}"
+                                )
                                 from_device_socket.send_string(response)
                                 print("")
                                 break
                         else:
-                            raise UnhandledMessageException(message, " - Pin not found")
+                            raise UnhandledMessageException(
+                                message, " - Pin not found"
+                            )
                     else:
                         raise UnhandledMessageException(message, " - not Pin")
                 else:
