@@ -1,44 +1,8 @@
-from emulator import DeviceEmulator, Pin
+from emulator import Pin
 from time import sleep
-import pathlib
-import subprocess
-import pytest
 
 
 pin_stats = {}
-
-
-# Emulator must be stopped manually within each test
-@pytest.fixture
-def emulator(request):
-    device_emulator = DeviceEmulator()
-    device_emulator.start()
-
-    yield device_emulator
-
-    if device_emulator.running:
-        print("[Fixture] Stopping emulator")
-        device_emulator.stop()
-
-
-# Blinky must be stopped manually within each test
-@pytest.fixture
-def blinky(request):
-    blinky_executable = pathlib.Path("blinky").resolve()
-    assert blinky_executable.exists()
-    blinky_process = subprocess.Popen(
-        [str(blinky_executable)],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-
-    yield blinky_process
-
-    if blinky_process.poll() is None:
-        print("[Fixture] Stopping blinky")
-        blinky_process.kill()
-        blinky_process.wait(timeout=1)
-        print(f"[Fixture] Blinky return code: {blinky_process.returncode}")
 
 
 def pin_stats_handler(message):

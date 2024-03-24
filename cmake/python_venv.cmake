@@ -50,15 +50,6 @@ function (configure_venv venv_name requirements_file)
             ${venv_path}/.pip_list
     )
 
-    add_test(
-        NAME ${venv_name}_test
-        COMMAND ${venv_path}/bin/python3 -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
-        WORKING_DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-
-    set_tests_properties(${venv_name}_test PROPERTIES DEPENDS ${venv_name})
-    set_tests_properties(${venv_name}_test PROPERTIES FIXTURES_SETUP ${venv_name})
-
     set_property(TARGET ${venv_name} PROPERTY VIRTUAL_ENVIRONMENT TRUE)
     set_property(TARGET ${venv_name} PROPERTY VIRTUAL_ENVIRONMENT_DIRECTORY ${venv_path})
 endfunction()
