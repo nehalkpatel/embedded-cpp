@@ -11,7 +11,7 @@
 #include "libs/mcu/pin.hpp"
 
 namespace app {
-using namespace std::chrono_literals;
+using std::chrono::operator""ms;
 
 auto AppMain(board::Board& board) -> std::expected<void, common::Error> {
   Blinky blinky{board};
@@ -48,7 +48,7 @@ auto Blinky::Init() -> std::expected<void, common::Error> {
   auto status = board_.Init();
   if (status) {
     return board_.UserButton1().SetInterruptHandler(
-        [this]() { static_cast<void>(board_.UserLed2().SetHigh()); },
+        [this]() { std::ignore = board_.UserLed2().SetHigh(); },
         mcu::PinTransition::kRising);
   }
   return status;

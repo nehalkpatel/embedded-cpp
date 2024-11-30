@@ -4,6 +4,7 @@
 #include <string>
 
 #include "dispatcher.hpp"
+#include "libs/common/error.hpp"
 #include "receiver.hpp"
 
 namespace mcu {
@@ -40,7 +41,7 @@ class DispatcherTest : public ::testing::Test {
       received_message = message;
       return {"Received message"};
     }
-    std::string_view received_message{};
+    std::string_view received_message;
   };
 };
 

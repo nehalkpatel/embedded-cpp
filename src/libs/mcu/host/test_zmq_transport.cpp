@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <libs/common/error.hpp>
 #include <thread>
 
 #include "dispatcher.hpp"
@@ -42,7 +43,10 @@ class ZmqTransportTest : public ::testing::Test {
     socket.bind(endpoint);
     while (running_) {
       std::array<zmq::pollitem_t, 1> items = {
-          {{static_cast<void*>(socket), 0, ZMQ_POLLIN, 0}}};
+          {{.socket = static_cast<void*>(socket),
+            .fd = 0,
+            .events = ZMQ_POLLIN,
+            .revents = 0}}};
 
       const int ret = zmq::poll(items.data(), 1, std::chrono::milliseconds{50});
 

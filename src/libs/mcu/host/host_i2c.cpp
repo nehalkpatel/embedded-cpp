@@ -15,7 +15,7 @@ namespace mcu {
 auto HostI2CController::SendData(uint16_t address,
                                  std::span<const uint8_t> data)
     -> std::expected<void, int> {
-  std::copy(data.begin(), data.end(), data_buffers_[address].begin());
+  std::ranges::copy(data, data_buffers_[address].begin());
   return {};
 }
 

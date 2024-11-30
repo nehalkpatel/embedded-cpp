@@ -82,6 +82,7 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
   const PinEmulatorRequest req = {
       .name = name_,
       .operation = OperationType::kGet,
+      .state = PinState::kHighZ,
   };
   if (!transport_.Send(Encode(req))) {
     return std::unexpected(common::Error::kUnknown);

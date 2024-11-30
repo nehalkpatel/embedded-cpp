@@ -65,7 +65,7 @@ FetchContent_Declare(
 FetchContent_GetProperties(CmakeScripts)
 
 if(NOT cmakescripts_POPULATED)
-  FetchContent_Populate(CmakeScripts)
+  FetchContent_MakeAvailable(CmakeScripts)
   set(CMAKE_MODULE_PATH ${cmakescripts_SOURCE_DIR} ${CMAKE_MODULE_PATH})
 endif()
 
