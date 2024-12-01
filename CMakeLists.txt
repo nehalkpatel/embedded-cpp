@@ -59,9 +59,10 @@ FetchContent_Declare(
 
 FetchContent_Declare(
   CmakeScripts
-  GIT_REPOSITORY https://github.com/StaflSystems/cmake-scripts.git
+  GIT_REPOSITORY https://github.com/StableCoder/cmake-scripts.git
   GIT_TAG main
 )
+
 FetchContent_GetProperties(CmakeScripts)
 
 if(NOT cmakescripts_POPULATED)
