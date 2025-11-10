@@ -21,17 +21,11 @@
     {
       "name": "host",
       "displayName": "Host",
-      "description": "Build for host using Ninja",
+      "description": "Build for host using Ninja (use CMakeUserPresets.json to set compiler paths)",
       "toolchainFile": "cmake/toolchain/host-clang.cmake",
       "inherits": [
         "default"
       ],
-      "environment": {
-        "CMAKE_TOOLCHAIN_PATH": "/opt/homebrew/opt/llvm/bin/",
-        "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm",
-        "LDFLAGS": "-L/opt/homebrew/opt/llvm/lib",
-        "CPPFLAGS": "-I/opt/homebrew/opt/llvm/include"
-      },
       "cacheVariables": {
         "EMBEDDED_CPP_MCU": "host",
         "EMBEDDED_CPP_BOARD": "host"
@@ -40,14 +34,11 @@
     {
       "name": "arm",
       "displayName": "ARM",
-      "description": "Build for ARM using Ninja",
+      "description": "Build for ARM using Ninja (use CMakeUserPresets.json to set ARM_TOOLCHAIN_PATH)",
       "hidden": true,
       "inherits": [
         "default"
-      ],
-      "environment": {
-        "CMAKE_TOOLCHAIN_PATH": "/Applications/ArmGNUToolchain/12.3.rel1/arm-none-eabi"
-      }
+      ]
     },
     {
       "name": "arm-cm4",

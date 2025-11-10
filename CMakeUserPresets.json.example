@@ -1,0 +1,68 @@
+{
+  "version": 7,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 27,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "host-mac-homebrew",
+      "inherits": "host",
+      "displayName": "Host (macOS with Homebrew LLVM)",
+      "description": "Build for host using Homebrew LLVM on macOS",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
+        "CMAKE_LINKER": "/opt/homebrew/opt/llvm/bin/clang"
+      }
+    },
+    {
+      "name": "host-mac-system",
+      "inherits": "host",
+      "displayName": "Host (macOS with system clang)",
+      "description": "Build for host using system clang on macOS",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/usr/bin/clang",
+        "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+      }
+    },
+    {
+      "name": "host-linux",
+      "inherits": "host",
+      "displayName": "Host (Linux)",
+      "description": "Build for host using clang on Linux",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/usr/bin/clang",
+        "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+      }
+    },
+    {
+      "name": "arm-mac-homebrew",
+      "inherits": "stm32f3_discovery",
+      "displayName": "ARM (macOS with Homebrew ARM toolchain)",
+      "description": "Build for ARM using Homebrew ARM toolchain on macOS",
+      "cacheVariables": {
+        "ARM_TOOLCHAIN_PATH": "/opt/homebrew/opt/arm-none-eabi-gcc/bin"
+      }
+    },
+    {
+      "name": "arm-mac-application",
+      "inherits": "stm32f3_discovery",
+      "displayName": "ARM (macOS with ARM GNU Toolchain)",
+      "description": "Build for ARM using ARM GNU Toolchain from /Applications",
+      "cacheVariables": {
+        "ARM_TOOLCHAIN_PATH": "/Applications/ArmGNUToolchain/12.3.rel1/arm-none-eabi/bin"
+      }
+    },
+    {
+      "name": "arm-linux",
+      "inherits": "stm32f3_discovery",
+      "displayName": "ARM (Linux)",
+      "description": "Build for ARM using system ARM toolchain on Linux",
+      "cacheVariables": {
+        "ARM_TOOLCHAIN_PATH": "/usr/bin"
+      }
+    }
+  ]
+}

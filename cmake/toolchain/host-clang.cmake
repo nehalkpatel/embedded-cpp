@@ -1,21 +1,31 @@
-include("${CMAKE_CURRENT_LIST_DIR}/../find_compiler.cmake")
+# Host toolchain for clang/LLVM
+# Compiler paths are set via CMakeUserPresets.json for machine-specific configuration
+# This allows each developer to specify their preferred LLVM installation
+# (e.g., Homebrew LLVM, system clang, or custom installation)
 
+# If compilers are not set via presets, use default names
+# CMake will search PATH to find them
+if(NOT DEFINED CMAKE_C_COMPILER)
+    set(CMAKE_C_COMPILER clang)
+endif()
 
-# Find the compiler path
-find_compiler(HOST_COMPILER_PATH HOST_COMPILER_EXT "${TARGET_TRIPLET}clang")
+if(NOT DEFINED CMAKE_CXX_COMPILER)
+    set(CMAKE_CXX_COMPILER clang++)
+endif()
 
-# where is the target environment located
-#set(CMAKE_FIND_ROOT_PATH ${HOST_COMPILER_PATH})
-cmake_path(GET HOST_COMPILER_PATH PARENT_PATH CMAKE_FIND_ROOT_PATH)
+if(NOT DEFINED CMAKE_ASM_COMPILER)
+    set(CMAKE_ASM_COMPILER clang)
+endif()
 
-set(CMAKE_C_COMPILER    ${HOST_COMPILER_PATH}/clang)
-set(CMAKE_CXX_COMPILER  ${HOST_COMPILER_PATH}/clang++)
-set(CMAKE_ASM_COMPILER  ${HOST_COMPILER_PATH}/clang)
-set(CMAKE_LINKER        ${HOST_COMPILER_PATH}/clang)
-set(CMAKE_SIZE_UTIL     ${HOST_COMPILER_PATH}/llvm-size)
-set(CMAKE_OBJCOPY       ${HOST_COMPILER_PATH}/llvm-objcopy)
-set(CMAKE_OBJDUMP       ${HOST_COMPILER_PATH}/llvm-objdump)
-set(CMAKE_NM_UTIL       ${HOST_COMPILER_PATH}/llvm-nm)
-set(CMAKE_AR            ${HOST_COMPILER_PATH}/llvm-ar)
-set(CMAKE_RANLIB        ${HOST_COMPILER_PATH}/llvm-ranlib)
+if(NOT DEFINED CMAKE_LINKER)
+    set(CMAKE_LINKER clang)
+endif()
+
+# Standard LLVM toolchain utilities
+set(CMAKE_SIZE_UTIL     size)
+set(CMAKE_OBJCOPY       objcopy)
+set(CMAKE_OBJDUMP       objdump)
+set(CMAKE_NM_UTIL       nm)
+set(CMAKE_AR            ar)
+set(CMAKE_RANLIB        ranlib)
 
