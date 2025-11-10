@@ -13,6 +13,9 @@ FetchContent_MakeAvailable(googletest)
 add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main)
 
+# Disable clang-tidy for test files due to dependency header issues
+reset_clang_tidy()
+
 add_executable(test_host_transport test_zmq_transport.cpp)
 target_compile_options(test_host_transport PRIVATE ${COMMON_COMPILE_OPTIONS})
 
@@ -45,3 +48,8 @@ include(GoogleTest)
 gtest_discover_tests(test_host_transport)
 gtest_discover_tests(test_messages)
 gtest_discover_tests(test_dispatcher)
+
+# Register test targets for code coverage
+target_code_coverage(test_host_transport AUTO)
+target_code_coverage(test_messages AUTO)
+target_code_coverage(test_dispatcher AUTO)

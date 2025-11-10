@@ -28,7 +28,9 @@
       ],
       "cacheVariables": {
         "EMBEDDED_CPP_MCU": "host",
-        "EMBEDDED_CPP_BOARD": "host"
+        "EMBEDDED_CPP_BOARD": "host",
+        "CMAKE_POLICY_DEFAULT_CMP0089": "NEW",
+        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
       }
     },
     {

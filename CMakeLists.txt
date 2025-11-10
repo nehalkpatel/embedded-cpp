@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.27)
+# Allow building with older dependencies that have outdated cmake_minimum_required
+cmake_policy(SET CMP0089 NEW)
 
 project(embedded-cpp-bsp VERSION 0.0.1 LANGUAGES CXX C ASM)
 
@@ -14,6 +16,7 @@ set(COMMON_COMPILE_OPTIONS
   -Wpedantic
   -Os
   -g
+  -Wno-deprecated-literal-operator
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -76,8 +79,8 @@ endif()
 # ZeroMQ itself, so we are not dependent on the system version
 # Use this to get the latest version, once the issue is fixed. TODO: pin this version.
 # FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/nehalkpatel/libzmq.git GIT_TAG fix/4629-compile-warning)
-#option(ZMQ_BUILD_TESTS OFF)
-#FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/zeromq/libzmq.git GIT_TAG v4.3.5)
+option(ZMQ_BUILD_TESTS OFF)
+FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/zeromq/libzmq.git GIT_TAG v4.3.5)
 
 # CPPZMQ header-only library; uses ZeroMQ
 option(CPPZMQ_BUILD_TESTS OFF)
@@ -91,22 +94,32 @@ FetchContent_MakeAvailable(etl)
 add_subdirectory(external)
 
 include(tools)
-# include(code-coverage)
+
+# Enable code coverage support (opt-in via -DCODE_COVERAGE=ON)
+option(CODE_COVERAGE "Enable code coverage" OFF)
+include(code-coverage)
 
 
-if(CMAKE_PRESET STREQUAL "host")
+if(CMAKE_PRESET MATCHES "^host")
   # For Windows: Prevent overriding the parent project's compiler/linker settings
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
+  # Enable code coverage for gtest if coverage is enabled
+  if(CODE_COVERAGE)
+    # Add coverage flags to CMAKE_CXX_FLAGS_INIT so googletest picks them up
+    set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} -fprofile-instr-generate -fcoverage-mapping")
+  endif()
+
   FetchContent_MakeAvailable(googletest)
-  #FetchContent_MakeAvailable(zeromq)
+  FetchContent_MakeAvailable(zeromq)
   FetchContent_MakeAvailable(cppzmq)
   FetchContent_MakeAvailable(json)
   include(CTest)
   enable_testing()
 endif()
 
-if(CMAKE_PRESET STREQUAL "arm-cm7")
+if(CMAKE_PRESET MATCHES "^arm.*cm7")
   FetchContent_MakeAvailable(stm32cubef7)
 endif()
 
