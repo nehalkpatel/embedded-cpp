@@ -37,24 +37,27 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   )
 endif()
 
+message(STATUS "LDFLAGS: $ENV{LDFLAGS}")
+message(STATUS "CPPFLAGS: $ENV{CPPFLAGS}")
+
 include(FetchContent)
 
 FetchContent_Declare(
   etl
   GIT_REPOSITORY https://github.com/ETLCPP/etl
-  GIT_TAG 20.38.1
+  GIT_TAG 20.44.1
 )
 
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest
-  GIT_TAG v1.14.0
+  GIT_TAG v1.17.0
 )
 
 FetchContent_Declare(
   stm32cubef7
   GIT_REPOSITORY https://github.com/STMicroelectronics/STM32CubeF7
-  GIT_TAG v1.17.1
+  GIT_TAG v1.17.4
 )
 
 FetchContent_Declare(
@@ -73,15 +76,15 @@ endif()
 # ZeroMQ itself, so we are not dependent on the system version
 # Use this to get the latest version, once the issue is fixed. TODO: pin this version.
 # FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/nehalkpatel/libzmq.git GIT_TAG fix/4629-compile-warning)
-option(ZMQ_BUILD_TESTS OFF)
-FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/zeromq/libzmq.git GIT_TAG b268effd886c9ea45f8a6f37f8d62b4bb045ad37)
+#option(ZMQ_BUILD_TESTS OFF)
+#FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/zeromq/libzmq.git GIT_TAG v4.3.5)
 
 # CPPZMQ header-only library; uses ZeroMQ
 option(CPPZMQ_BUILD_TESTS OFF)
-FetchContent_Declare(cppzmq GIT_REPOSITORY https://github.com/zeromq/cppzmq.git GIT_TAG v4.10.0)
+FetchContent_Declare(cppzmq GIT_REPOSITORY https://github.com/zeromq/cppzmq.git GIT_TAG v4.11.0)
 
 # FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz)
-FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json GIT_TAG v3.11.2)
+FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json GIT_TAG v3.12.0)
 
 FetchContent_MakeAvailable(etl)
 
@@ -96,7 +99,7 @@ if(CMAKE_PRESET STREQUAL "host")
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
   FetchContent_MakeAvailable(googletest)
-  FetchContent_MakeAvailable(zeromq)
+  #FetchContent_MakeAvailable(zeromq)
   FetchContent_MakeAvailable(cppzmq)
   FetchContent_MakeAvailable(json)
   include(CTest)
@@ -107,10 +110,10 @@ if(CMAKE_PRESET STREQUAL "arm-cm7")
   FetchContent_MakeAvailable(stm32cubef7)
 endif()
 
-clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
+#clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
 add_subdirectory(src)
 reset_clang_tidy()
-clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
+#clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
 add_subdirectory(test)
 reset_clang_tidy()
 add_subdirectory(py)

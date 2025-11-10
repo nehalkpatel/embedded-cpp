@@ -27,7 +27,10 @@
         "default"
       ],
       "environment": {
-        "CMAKE_TOOLCHAIN_PATH": "/opt/homebrew/opt/llvm"
+        "CMAKE_TOOLCHAIN_PATH": "/opt/homebrew/opt/llvm/bin/",
+        "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm",
+        "LDFLAGS": "-L/opt/homebrew/opt/llvm/lib",
+        "CPPFLAGS": "-I/opt/homebrew/opt/llvm/include"
       },
       "cacheVariables": {
         "EMBEDDED_CPP_MCU": "host",
