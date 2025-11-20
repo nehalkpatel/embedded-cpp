@@ -70,13 +70,11 @@ docker compose run --rm dev bash -c "
 # C++ unit tests
 docker compose run --rm dev ctest --preset=host -C Debug --output-on-failure
 
-# Python integration tests (requires emulator)
+# Python integration tests (CMake creates venv automatically)
 docker compose run --rm dev bash -c "
   cmake --preset=host &&
   cmake --build --preset=host --config Debug &&
-  cd py/host-emulator &&
-  pip install -r requirements.txt &&
-  pytest tests/ --blinky=../../build/host/bin/blinky -v
+  ctest --preset=host -C Debug -R host_emulator_test --output-on-failure
 "
 ```
 
@@ -223,6 +221,46 @@ jobs:
 ```
 
 This ensures CI and local development use identical environments.
+
+## Python Dependency Management
+
+**Python packages are managed via virtual environments (venv), not system-wide installation.**
+
+### Automatic venv Creation
+
+CMake automatically creates a Python virtual environment when building:
+- Location: `build/host/host_emulator_venv/`
+- Created from: `py/host-emulator/requirements.txt`
+- Used by: Integration tests (via CTest)
+
+**You don't need to manually install Python dependencies.** CMake handles this automatically:
+
+```bash
+cmake --preset=host
+cmake --build --preset=host --config Debug
+# Venv is created and requirements installed automatically
+```
+
+### Manual venv Usage
+
+To use the CMake-created venv manually:
+
+```bash
+# Activate the venv
+source build/host/host_emulator_venv/bin/activate
+
+# Run emulator
+cd py/host-emulator
+python -m src.emulator
+```
+
+### Adding Python Dependencies
+
+1. Update `py/host-emulator/requirements.txt`
+2. Rebuild: `cmake --build --preset=host --config Debug`
+3. CMake will automatically reinstall requirements
+
+**Note:** The Dockerfile removes the `EXTERNALLY-MANAGED` marker to allow venv creation without `--break-system-packages` flag, but all Python packages should still be installed in venvs, not system-wide.
 
 ## Customization
 

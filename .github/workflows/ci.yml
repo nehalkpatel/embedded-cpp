@@ -137,9 +137,17 @@ jobs:
             bash -c "
               cmake --preset=host &&
               cmake --build --preset=host --config Debug &&
+              ctest --preset=host -C Debug -R host_emulator_test --output-on-failure -V
+            "
+
+      - name: Extract coverage report
+        run: |
+          docker run --rm -v $(pwd):/workspace -w /workspace ${{ env.DOCKER_IMAGE }} \
+            bash -c "
               cd py/host-emulator &&
-              pip install -r requirements.txt &&
-              pytest tests/ --blinky=../../build/host/bin/blinky --cov=src --cov-report=xml --cov-report=term -v
+              ../../../build/host/host_emulator_venv/bin/python -m pytest tests/ \
+                --blinky=../../../build/host/bin/blinky \
+                --cov=src --cov-report=xml --cov-report=term -v || true
             "
 
       - name: Upload coverage to Codecov

@@ -67,9 +67,8 @@ docker compose run --rm dev \
 # 4. Unit tests
 docker compose run --rm dev ctest --preset=host -C Debug --output-on-failure
 
-# 5. Integration tests
-docker compose run --rm dev \
-  bash -c "cd py/host-emulator && pip install -r requirements.txt && pytest tests/ --blinky=../../build/host/bin/blinky --cov=src -v"
+# 5. Integration tests (CMake automatically creates and uses venv)
+docker compose run --rm dev ctest --preset=host -C Debug -R host_emulator_test --output-on-failure
 ```
 
 #### Configuration Notes

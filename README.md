@@ -112,11 +112,14 @@ ctest --preset=host -C Debug -R test_zmq_transport
 
 ### Python Integration Tests
 
+CMake automatically creates a virtual environment and installs dependencies:
+
 ```bash
-cd py/host-emulator
-pip install -r requirements.txt
-pytest tests/ --blinky=../../build/host/bin/blinky -v
+# Run integration tests (venv created automatically)
+ctest --preset=host -C Debug -R host_emulator_test --output-on-failure
 ```
+
+**Note:** Python dependencies are managed in a CMake-created venv at `build/host/host_emulator_venv/`, not system-wide.
 
 ## Supported Platforms
 
