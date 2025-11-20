@@ -59,22 +59,16 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
 RUN rm -f /usr/lib/python3.12/EXTERNALLY-MANAGED
 
 # Create a non-root user for development
+# Use UID 1001 to avoid conflicts with common system users (ubuntu uses 1000)
 ARG USERNAME=developer
-ARG USER_UID=1000
+ARG USER_UID=1001
 ARG USER_GID=$USER_UID
 
-# Install sudo first
+# Install sudo and create user
 RUN apt-get update && \
     apt-get install -y sudo && \
-    rm -rf /var/lib/apt/lists/*
-
-# Create group if it doesn't exist, create user
-RUN if ! getent group $USER_GID >/dev/null; then \
-        groupadd --gid $USER_GID $USERNAME; \
-    else \
-        GROUP_NAME=$(getent group $USER_GID | cut -d: -f1); \
-        echo "Group $USER_GID already exists as $GROUP_NAME"; \
-    fi && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid $USER_GID $USERNAME && \
     useradd --uid $USER_UID --gid $USER_GID -m $USERNAME -s /bin/bash && \
     echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME && \
     chmod 0440 /etc/sudoers.d/$USERNAME
