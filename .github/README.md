@@ -13,34 +13,30 @@ Automated testing and validation pipeline that runs on every push and pull reque
 1. **Format Check** (`format-check`)
    - Runs `clang-format` on all C++ source files
    - Fails if code is not properly formatted
-   - Run locally: `find src -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i`
+   - Run locally: `find src \( -name '*.cpp' -o -name '*.hpp' \) | xargs clang-format -i`
 
-2. **Static Analysis** (`lint`)
-   - Runs `clang-tidy` static analysis
-   - Enforces code quality standards defined in `.clang-tidy`
-   - Configured as part of CMake build process
-
-3. **Host Build** (`build-host`)
+2. **Host Build** (`build-host`)
    - Builds the project for host platform (Linux)
    - Matrix strategy: Debug and Release configurations
    - Uploads build artifacts for use by test jobs
+   - Note: `clang-tidy` static analysis runs automatically as part of the build (configured in CMakeLists.txt)
 
-4. **Unit Tests** (`test-unit`)
+3. **Unit Tests** (`test-unit`)
    - Runs C++ unit tests using Google Test
    - Executed via CTest
    - Tests: ZMQ transport, message encoding, dispatcher
 
-5. **Integration Tests** (`test-integration`)
+4. **Integration Tests** (`test-integration`)
    - Runs Python integration tests using pytest
    - Tests the full stack: C++ application + Python emulator
    - Generates code coverage reports
    - Uploads coverage to Codecov (if configured)
 
-6. **ARM Builds** (`build-arm-cm4`, `build-stm32f3`)
+5. **ARM Builds** (`build-arm-cm4`, `build-stm32f3`)
    - Currently disabled (set to `if: false`)
    - Will be enabled once board implementations are complete
 
-7. **CI Summary** (`summary`)
+6. **CI Summary** (`summary`)
    - Aggregates results from all jobs
    - Provides single pass/fail status
 
@@ -50,9 +46,9 @@ To replicate CI checks locally before pushing:
 
 ```bash
 # 1. Format check
-find src -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+find src \( -name '*.cpp' -o -name '*.hpp' \) -print0 | xargs -0 clang-format --dry-run --Werror
 
-# 2. Build (with clang-tidy enabled)
+# 2. Build (clang-tidy runs automatically as part of build)
 cmake --preset=host
 cmake --build --preset=host --config Debug
 

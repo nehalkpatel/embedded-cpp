@@ -22,38 +22,7 @@ jobs:
 
       - name: Run clang-format check
         run: |
-          find src -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
-        continue-on-error: false
-
-  lint:
-    name: Static Analysis (clang-tidy)
-    runs-on: ubuntu-latest
-    needs: format-check
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            clang-tidy \
-            clang \
-            libc++-dev \
-            libc++abi-dev \
-            cmake \
-            ninja-build
-
-      - name: Configure CMake (host preset)
-        run: cmake --preset=host
-        env:
-          CMAKE_TOOLCHAIN_PATH: /usr
-
-      - name: Run clang-tidy
-        run: |
-          # clang-tidy will be run as part of the build process
-          # The CMakeLists.txt already configures clang-tidy
-          echo "clang-tidy configured via CMake"
+          find src \( -name '*.cpp' -o -name '*.hpp' \) -print0 | xargs -0 clang-format --dry-run --Werror
 
   build-host:
     name: Build (Host - Linux)
@@ -244,19 +213,17 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [format-check, lint, build-host, test-unit, test-integration]
+    needs: [format-check, build-host, test-unit, test-integration]
     if: always()
     steps:
       - name: Check job results
         run: |
           echo "Format Check: ${{ needs.format-check.result }}"
-          echo "Lint: ${{ needs.lint.result }}"
           echo "Build Host: ${{ needs.build-host.result }}"
           echo "Unit Tests: ${{ needs.test-unit.result }}"
           echo "Integration Tests: ${{ needs.test-integration.result }}"
 
           if [ "${{ needs.format-check.result }}" != "success" ] || \
-             [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.build-host.result }}" != "success" ] || \
              [ "${{ needs.test-unit.result }}" != "success" ] || \
              [ "${{ needs.test-integration.result }}" != "success" ]; then
