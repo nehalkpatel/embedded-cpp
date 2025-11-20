@@ -55,7 +55,9 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
     update-alternatives --install /usr/bin/python python /usr/bin/python3.12 100
 
 # Upgrade pip and install Python dependencies
-RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages
+# Use --ignore-installed for wheel since Ubuntu's packaged version can't be uninstalled
+RUN python3 -m pip install --upgrade pip setuptools --break-system-packages && \
+    python3 -m pip install --upgrade --ignore-installed wheel --break-system-packages
 
 # Create a non-root user for development
 ARG USERNAME=developer
