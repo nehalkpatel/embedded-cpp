@@ -64,8 +64,8 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
   return {};
 }
 
-auto HostPin::CheckAndInvokeHandler(PinState prev_state, PinState cur_state)
-    -> void {
+auto HostPin::CheckAndInvokeHandler(PinState prev_state,
+                                    PinState cur_state) -> void {
   const bool interrupt_occurred{cur_state != prev_state};
   if (direction_ == PinDirection::kInput && interrupt_occurred) {
     if ((transition_ == PinTransition::kRising &&

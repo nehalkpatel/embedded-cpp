@@ -40,10 +40,9 @@ auto HostI2CController::ReceiveDataInterrupt(
   return {};
 }
 
-auto HostI2CController::SendDataDma(uint16_t address,
-                                    std::span<const uint8_t> data,
-                                    void (*callback)(std::expected<void, int>))
-    -> std::expected<void, int> {
+auto HostI2CController::SendDataDma(
+    uint16_t address, std::span<const uint8_t> data,
+    void (*callback)(std::expected<void, int>)) -> std::expected<void, int> {
   callback(SendData(address, data));
   return {};
 }
