@@ -69,7 +69,7 @@ docker compose run --rm dev ctest --preset=host -C Debug --output-on-failure
 
 # 5. Integration tests
 docker compose run --rm dev \
-  bash -c "cd py/host-emulator && pip install -r requirements.txt --break-system-packages && pytest tests/ --blinky=../../build/host/bin/blinky --cov=src -v"
+  bash -c "cd py/host-emulator && pip install -r requirements.txt && pytest tests/ --blinky=../../build/host/bin/blinky --cov=src -v"
 ```
 
 #### Configuration Notes

@@ -54,10 +54,9 @@ RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100 && 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 100 && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3.12 100
 
-# Upgrade pip and install Python dependencies
-# Use --ignore-installed for wheel since Ubuntu's packaged version can't be uninstalled
-RUN python3 -m pip install --upgrade pip setuptools --break-system-packages && \
-    python3 -m pip install --upgrade --ignore-installed wheel --break-system-packages
+# Remove externally-managed marker to allow pip installs without --break-system-packages
+# In a Docker container, we control the entire environment, so this protection isn't needed
+RUN rm -f /usr/lib/python3.12/EXTERNALLY-MANAGED
 
 # Create a non-root user for development
 ARG USERNAME=developer

@@ -75,7 +75,7 @@ docker compose run --rm dev bash -c "
   cmake --preset=host &&
   cmake --build --preset=host --config Debug &&
   cd py/host-emulator &&
-  pip install -r requirements.txt --break-system-packages &&
+  pip install -r requirements.txt &&
   pytest tests/ --blinky=../../build/host/bin/blinky -v
 "
 ```
