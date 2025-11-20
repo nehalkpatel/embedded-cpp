@@ -16,15 +16,43 @@ The purpose of this project is to explore:
 
 ## Quick Start
 
-### Prerequisites
+### 🐳 Docker (Recommended)
 
+The easiest way to get started with consistent dependencies:
+
+```bash
+# Build the container (one time)
+cd docker
+docker compose build
+
+# Interactive development shell
+docker compose run --rm dev
+
+# Inside the container:
+cmake --preset=host
+cmake --build --preset=host --config Debug
+ctest --preset=host -C Debug
+```
+
+**Run emulator + application:**
+```bash
+docker compose up emulator blinky
+```
+
+See [docker/README.md](docker/README.md) for comprehensive Docker documentation.
+
+### 💻 Native Build (Alternative)
+
+If you prefer to build without Docker:
+
+**Prerequisites:**
 - **CMake**: 3.27 or higher
 - **Clang/LLVM**: 14 or higher (for host builds)
 - **Python**: 3.11 or higher
 - **Ninja**: Build system
 - **ARM GCC**: For embedded target builds (optional)
 
-### Building for Host (Development/Testing)
+**Building for Host:**
 
 ```bash
 # Configure for host platform
@@ -37,7 +65,7 @@ cmake --build --preset=host --config Debug
 ctest --preset=host -C Debug --output-on-failure
 ```
 
-### Running the Blinky Example
+**Running the Blinky Example:**
 
 ```bash
 # Start the Python emulator in one terminal
@@ -48,7 +76,7 @@ python -m src.emulator
 ./build/host/bin/blinky
 ```
 
-### Building for Hardware
+**Building for Hardware:**
 
 ```bash
 # Configure for STM32F3 Discovery

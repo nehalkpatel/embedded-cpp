@@ -7,27 +7,65 @@ on:
     branches: [ main, master, develop ]
   workflow_dispatch:
 
+env:
+  DOCKER_IMAGE: embedded-cpp:ci
+
 jobs:
-  format-check:
-    name: Code Formatting Check
+  build-docker:
+    name: Build Docker Image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install clang-format
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-format
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          tags: ${{ env.DOCKER_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+
+      - name: Save Docker image
+        run: docker save ${{ env.DOCKER_IMAGE }} | gzip > docker-image.tar.gz
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: docker-image.tar.gz
+          retention-days: 1
+
+  format-check:
+    name: Code Formatting Check
+    runs-on: ubuntu-latest
+    needs: build-docker
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: docker load < docker-image.tar.gz
 
       - name: Run clang-format check
         run: |
-          find src \( -name '*.cpp' -o -name '*.hpp' \) -print0 | xargs -0 clang-format --dry-run --Werror
+          docker run --rm -v $(pwd):/workspace ${{ env.DOCKER_IMAGE }} \
+            bash -c "find src \( -name '*.cpp' -o -name '*.hpp' \) -print0 | xargs -0 clang-format --dry-run --Werror"
 
   build-host:
     name: Build (Host - Linux)
     runs-on: ubuntu-latest
-    needs: format-check
+    needs: build-docker
     strategy:
       matrix:
         config: [Debug, Release]
@@ -35,34 +73,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            clang \
-            libc++-dev \
-            libc++abi-dev \
-            cmake \
-            ninja-build \
-            libzmq3-dev
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.11'
+          name: docker-image
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r py/host-emulator/requirements.txt
-
-      - name: Configure CMake
-        run: cmake --preset=host
-        env:
-          CMAKE_TOOLCHAIN_PATH: /usr
+      - name: Load Docker image
+        run: docker load < docker-image.tar.gz
 
       - name: Build
-        run: cmake --build --preset=host --config ${{ matrix.config }}
+        run: |
+          docker run --rm -v $(pwd):/workspace -w /workspace ${{ env.DOCKER_IMAGE }} \
+            bash -c "cmake --preset=host && cmake --build --preset=host --config ${{ matrix.config }}"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -80,28 +102,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: docker load < docker-image.tar.gz
+
+      - name: Build and test
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            clang \
-            libc++-dev \
-            libc++abi-dev \
-            cmake \
-            ninja-build \
-            libzmq3-dev
-
-      - name: Configure CMake
-        run: cmake --preset=host
-        env:
-          CMAKE_TOOLCHAIN_PATH: /usr
-
-      - name: Build
-        run: cmake --build --preset=host --config Debug
-
-      - name: Run CTest
-        run: ctest --preset=host -C Debug --output-on-failure --verbose
-        working-directory: .
+          docker run --rm -v $(pwd):/workspace -w /workspace ${{ env.DOCKER_IMAGE }} \
+            bash -c "cmake --preset=host && cmake --build --preset=host --config Debug && ctest --preset=host -C Debug --output-on-failure --verbose"
 
   test-integration:
     name: Integration Tests (Python)
@@ -111,44 +123,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            clang \
-            libc++-dev \
-            libc++abi-dev \
-            cmake \
-            ninja-build \
-            libzmq3-dev
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.11'
+          name: docker-image
 
-      - name: Install Python dependencies
+      - name: Load Docker image
+        run: docker load < docker-image.tar.gz
+
+      - name: Build and run integration tests
         run: |
-          python -m pip install --upgrade pip
-          pip install -r py/host-emulator/requirements.txt
-
-      - name: Configure CMake
-        run: cmake --preset=host
-        env:
-          CMAKE_TOOLCHAIN_PATH: /usr
-
-      - name: Build
-        run: cmake --build --preset=host --config Debug
-
-      - name: Run pytest with coverage
-        run: |
-          cd py/host-emulator
-          pytest tests/ \
-            --blinky=../../build/host/bin/blinky \
-            --cov=src \
-            --cov-report=xml \
-            --cov-report=term \
-            -v
+          docker run --rm -v $(pwd):/workspace -w /workspace ${{ env.DOCKER_IMAGE }} \
+            bash -c "
+              cmake --preset=host &&
+              cmake --build --preset=host --config Debug &&
+              cd py/host-emulator &&
+              pip install -r requirements.txt --break-system-packages &&
+              pytest tests/ --blinky=../../build/host/bin/blinky --cov=src --cov-report=xml --cov-report=term -v
+            "
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -161,54 +153,46 @@ jobs:
   build-arm-cm4:
     name: Build (ARM Cortex-M4)
     runs-on: ubuntu-latest
-    needs: format-check
+    needs: build-docker
     if: false  # Disabled until ARM toolchain is properly configured
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install ARM toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
 
-      - name: Install build dependencies
-        run: |
-          sudo apt-get install -y cmake ninja-build
-
-      - name: Configure CMake
-        run: cmake --preset=arm-cm4
-        env:
-          CMAKE_TOOLCHAIN_PATH: /usr
+      - name: Load Docker image
+        run: docker load < docker-image.tar.gz
 
       - name: Build
-        run: cmake --build --preset=arm-cm4 --config Release
+        run: |
+          docker run --rm -v $(pwd):/workspace -w /workspace ${{ env.DOCKER_IMAGE }} \
+            bash -c "cmake --preset=arm-cm4 && cmake --build --preset=arm-cm4 --config Release"
 
   build-stm32f3:
     name: Build (STM32F3 Discovery)
     runs-on: ubuntu-latest
-    needs: format-check
+    needs: build-docker
     if: false  # Disabled until board implementation is complete
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install ARM toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
 
-      - name: Install build dependencies
-        run: |
-          sudo apt-get install -y cmake ninja-build
-
-      - name: Configure CMake
-        run: cmake --preset=stm32f3_discovery
-        env:
-          CMAKE_TOOLCHAIN_PATH: /usr
+      - name: Load Docker image
+        run: docker load < docker-image.tar.gz
 
       - name: Build
-        run: cmake --build --preset=stm32f3_discovery --config Release
+        run: |
+          docker run --rm -v $(pwd):/workspace -w /workspace ${{ env.DOCKER_IMAGE }} \
+            bash -c "cmake --preset=stm32f3_discovery && cmake --build --preset=stm32f3_discovery --config Release"
 
   summary:
     name: CI Summary

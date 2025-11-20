@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # Development environment container
+  dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: embedded-cpp:latest
+    container_name: embedded-cpp-dev
+    volumes:
+      - ..:/workspace:cached
+      - build-cache:/workspace/build
+    working_dir: /workspace
+    environment:
+      - CMAKE_TOOLCHAIN_PATH=/usr
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+  # Python emulator service
+  emulator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: embedded-cpp:latest
+    container_name: embedded-cpp-emulator
+    volumes:
+      - ..:/workspace:cached
+    working_dir: /workspace/py/host-emulator
+    command: python3 -m src.emulator
+    networks:
+      - embedded-net
+
+  # Blinky application service (depends on emulator)
+  blinky:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: embedded-cpp:latest
+    container_name: embedded-cpp-blinky
+    volumes:
+      - ..:/workspace:cached
+      - build-cache:/workspace/build
+    working_dir: /workspace
+    depends_on:
+      - emulator
+    networks:
+      - embedded-net
+    command: >
+      bash -c "
+        cmake --preset=host &&
+        cmake --build --preset=host --config Debug &&
+        ./build/host/bin/blinky
+      "
+
+networks:
+  embedded-net:
+    driver: bridge
+
+volumes:
+  build-cache:
+    driver: local

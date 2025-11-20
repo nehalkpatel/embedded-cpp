@@ -6,66 +6,81 @@ This directory contains GitHub-specific configurations including CI/CD workflows
 
 ### Workflow: `ci.yml`
 
-Automated testing and validation pipeline that runs on every push and pull request.
+Automated testing and validation pipeline that runs on every push and pull request using Docker for consistent environments.
 
 #### Jobs
 
-1. **Format Check** (`format-check`)
-   - Runs `clang-format` on all C++ source files
-   - Fails if code is not properly formatted
-   - Run locally: `find src \( -name '*.cpp' -o -name '*.hpp' \) | xargs clang-format -i`
+1. **Build Docker Image** (`build-docker`)
+   - Builds the unified Docker container (Ubuntu 24.04, clang-18, Python 3.12)
+   - Uses GitHub Actions cache for Docker layers
+   - Saves and uploads image as artifact for other jobs
 
-2. **Host Build** (`build-host`)
-   - Builds the project for host platform (Linux)
+2. **Format Check** (`format-check`)
+   - Runs `clang-format` on all C++ source files inside Docker container
+   - Fails if code is not properly formatted
+   - Run locally: `docker compose run --rm dev bash -c "find src \( -name '*.cpp' -o -name '*.hpp' \) | xargs clang-format -i"`
+
+3. **Host Build** (`build-host`)
+   - Builds the project for host platform (Linux) inside Docker
    - Matrix strategy: Debug and Release configurations
    - Uploads build artifacts for use by test jobs
    - Note: `clang-tidy` static analysis runs automatically as part of the build (configured in CMakeLists.txt)
 
-3. **Unit Tests** (`test-unit`)
-   - Runs C++ unit tests using Google Test
+4. **Unit Tests** (`test-unit`)
+   - Runs C++ unit tests using Google Test inside Docker
    - Executed via CTest
    - Tests: ZMQ transport, message encoding, dispatcher
 
-4. **Integration Tests** (`test-integration`)
-   - Runs Python integration tests using pytest
+5. **Integration Tests** (`test-integration`)
+   - Runs Python integration tests using pytest inside Docker
    - Tests the full stack: C++ application + Python emulator
    - Generates code coverage reports
    - Uploads coverage to Codecov (if configured)
 
-5. **ARM Builds** (`build-arm-cm4`, `build-stm32f3`)
+6. **ARM Builds** (`build-arm-cm4`, `build-stm32f3`)
    - Currently disabled (set to `if: false`)
    - Will be enabled once board implementations are complete
+   - Uses same Docker container with ARM GCC toolchain
 
-6. **CI Summary** (`summary`)
+7. **CI Summary** (`summary`)
    - Aggregates results from all jobs
    - Provides single pass/fail status
 
-#### Running CI Locally
+#### Running CI Locally (with Docker)
 
 To replicate CI checks locally before pushing:
 
 ```bash
-# 1. Format check
-find src \( -name '*.cpp' -o -name '*.hpp' \) -print0 | xargs -0 clang-format --dry-run --Werror
+cd docker
 
-# 2. Build (clang-tidy runs automatically as part of build)
-cmake --preset=host
-cmake --build --preset=host --config Debug
+# 1. Build Docker image (one time, or when Dockerfile changes)
+docker compose build
 
-# 3. Unit tests
-ctest --preset=host -C Debug --output-on-failure
+# 2. Format check
+docker compose run --rm dev \
+  bash -c "find src \( -name '*.cpp' -o -name '*.hpp' \) -print0 | xargs -0 clang-format --dry-run --Werror"
 
-# 4. Integration tests
-cd py/host-emulator
-pytest tests/ --blinky=../../build/host/bin/blinky --cov=src -v
+# 3. Build (clang-tidy runs automatically)
+docker compose run --rm dev \
+  bash -c "cmake --preset=host && cmake --build --preset=host --config Debug"
+
+# 4. Unit tests
+docker compose run --rm dev ctest --preset=host -C Debug --output-on-failure
+
+# 5. Integration tests
+docker compose run --rm dev \
+  bash -c "cd py/host-emulator && pip install -r requirements.txt --break-system-packages && pytest tests/ --blinky=../../build/host/bin/blinky --cov=src -v"
 ```
 
 #### Configuration Notes
 
-- **Toolchain Paths**: CI uses `/usr` as `CMAKE_TOOLCHAIN_PATH` (Linux standard location)
-- **Python Version**: CI uses Python 3.11
-- **Ubuntu Version**: CI runs on `ubuntu-latest`
-- **Dependencies**: Installed via `apt-get` (clang, libc++, cmake, ninja, libzmq3-dev)
+- **Docker Image**: Ubuntu 24.04 with clang-18, libc++, Python 3.12, ARM GCC
+- **Caching**: Docker layers cached via GitHub Actions cache for fast rebuilds
+- **Consistency**: CI and local development use identical Docker container
+- **Environment Variables**:
+  - `CC=clang-18`
+  - `CXX=clang++-18`
+  - `CMAKE_TOOLCHAIN_PATH=/usr`
 
 #### Triggers
 
