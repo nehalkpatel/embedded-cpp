@@ -27,7 +27,7 @@
         "default"
       ],
       "environment": {
-        "CMAKE_TOOLCHAIN_PATH": "/opt/homebrew/opt/llvm"
+        "CMAKE_TOOLCHAIN_PATH": "/usr/bin"
       },
       "cacheVariables": {
         "EMBEDDED_CPP_MCU": "host",
@@ -43,7 +43,7 @@
         "default"
       ],
       "environment": {
-        "CMAKE_TOOLCHAIN_PATH": "/Applications/ArmGNUToolchain/12.3.rel1/arm-none-eabi"
+        "CMAKE_TOOLCHAIN_PATH": "/usr/bin"
       }
     },
     {

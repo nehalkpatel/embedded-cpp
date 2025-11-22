@@ -1,0 +1,20 @@
+version: '3.9'
+
+services:
+  dev:
+    build: .
+    image: embedded-cpp-docker:latest
+    volumes:
+      - .:/home/vscode/workspace:cached
+      - build-cache:/home/vscode/workspace/build
+    working_dir: /home/vscode/workspace
+
+  host-build:
+    extends: dev
+    command: > 
+      /bin/bash -c "cmake --preset host &&
+                    cmake --build --preset host &&
+                    ctest --preset host --config Debug --output-on-failure"
+
+volumes:
+  build-cache:

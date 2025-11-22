@@ -12,11 +12,11 @@ function (configure_venv venv_name requirements_file)
 
     add_custom_command(
         OUTPUT ${venv_path}/.venv_activated
-        COMMAND source ${venv_path}/bin/activate
+        COMMAND /bin/bash -c 'source ${venv_path}/bin/activate'
         COMMAND touch ${venv_path}/.venv_activated
         DEPENDS
             ${venv_path}
-        COMMENT "Activating virtual environment ${venv_name}"
+        COMMENT "Activating virtual environment ${venv_name} with shell '$ENV{0}'"
     )
 
     set(ENV{VIRTUAL_ENV} ${venv_path})
