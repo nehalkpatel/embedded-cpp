@@ -26,6 +26,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check C++ formatting
+        run: |
+          # Install clang-format if not available
+          sudo apt-get update && sudo apt-get install -y clang-format
+
+          # Check formatting for all C++ files
+          find src -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+
+          # If formatting is wrong, show the diff
+          if [ $? -ne 0 ]; then
+            echo "❌ Formatting errors found. Run the following to fix:"
+            echo "   find src -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i"
+            exit 1
+          fi
+
+      - name: Check Python formatting
+        run: |
+          # Install ruff (modern Python linter/formatter)
+          pip install ruff --break-system-packages
+
+          # Check linting
+          ruff check py/
+
+          # Check formatting
+          ruff format --check py/
+
+          # If formatting is wrong, show help
+          if [ $? -ne 0 ]; then
+            echo "❌ Python formatting errors found. Run the following to fix:"
+            echo "   ruff check py/ --fix"
+            echo "   ruff format py/"
+            exit 1
+          fi
+
       - name: Build Docker image
         run: docker compose build embedded-cpp-dev
 

@@ -31,10 +31,9 @@ class HostUart final : public Uart, public Receiver {
   auto Receive(std::span<uint8_t> buffer, uint32_t timeout_ms)
       -> std::expected<size_t, common::Error> override;
 
-  auto SendAsync(
-      std::span<const uint8_t> data,
-      std::function<void(std::expected<void, common::Error>)> callback)
-      -> std::expected<void, common::Error> override;
+  auto SendAsync(std::span<const uint8_t> data,
+                 std::function<void(std::expected<void, common::Error>)>
+                     callback) -> std::expected<void, common::Error> override;
 
   auto ReceiveAsync(
       std::span<uint8_t> buffer,

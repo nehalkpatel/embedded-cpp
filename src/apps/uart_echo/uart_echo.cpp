@@ -40,8 +40,8 @@ auto UartEcho::Init() -> std::expected<void, common::Error> {
   }
 
   // Set up RxHandler to echo received data back and toggle LED
-  auto handler_result = board_.Uart1().SetRxHandler(
-      [this](const uint8_t* data, size_t size) {
+  auto handler_result =
+      board_.Uart1().SetRxHandler([this](const uint8_t* data, size_t size) {
         // Echo the data back
         std::vector<uint8_t> echo_data(data, data + size);
         std::ignore = board_.Uart1().Send(echo_data);

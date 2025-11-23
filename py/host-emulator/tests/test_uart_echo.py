@@ -28,7 +28,7 @@ def test_uart_echo_sends_greeting(emulator, uart_echo):
                 data = message.get("data", [])
                 received_data.extend(data)
 
-        emulator.Uart1().set_on_request(uart_handler)
+        emulator.uart1().set_on_request(uart_handler)
 
         # Give uart_echo time to initialize and send greeting
         time.sleep(0.5)
@@ -53,11 +53,11 @@ def test_uart_echo_echoes_data(emulator, uart_echo):
         time.sleep(0.5)
 
         # Clear any initial greeting data
-        emulator.Uart1().rx_buffer.clear()
+        emulator.uart1().rx_buffer.clear()
 
         # Send data to the device
         test_data = [0x48, 0x65, 0x6C, 0x6C, 0x6F]  # "Hello"
-        response = emulator.Uart1().send_data(test_data)
+        response = emulator.uart1().send_data(test_data)
 
         # Verify the response acknowledges receipt
         assert response["status"] == "Ok"
@@ -66,8 +66,8 @@ def test_uart_echo_echoes_data(emulator, uart_echo):
         time.sleep(0.2)
 
         # Check that the data was echoed back
-        assert len(emulator.Uart1().rx_buffer) == len(test_data)
-        assert list(emulator.Uart1().rx_buffer) == test_data
+        assert len(emulator.uart1().rx_buffer) == len(test_data)
+        assert list(emulator.uart1().rx_buffer) == test_data
 
     finally:
         emulator.stop()

@@ -28,7 +28,8 @@ class HostUartTest : public ::testing::Test {
     // Give emulator time to start
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    // Create dispatcher with empty receiver map (will update via reference later)
+    // Create dispatcher with empty receiver map (will update via reference
+    // later)
     dispatcher_ = std::make_unique<mcu::Dispatcher>(receiver_map_storage_);
 
     // Create transport
@@ -118,10 +119,9 @@ class HostUartTest : public ::testing::Test {
               uart_rx_buffer.begin() +
                   static_cast<std::ptrdiff_t>(bytes_to_send));
           response.bytes_transferred = bytes_to_send;
-          uart_rx_buffer.erase(
-              uart_rx_buffer.begin(),
-              uart_rx_buffer.begin() +
-                  static_cast<std::ptrdiff_t>(bytes_to_send));
+          uart_rx_buffer.erase(uart_rx_buffer.begin(),
+                               uart_rx_buffer.begin() +
+                                   static_cast<std::ptrdiff_t>(bytes_to_send));
         }
 
         const auto response_str = mcu::Encode(response);
@@ -135,7 +135,8 @@ class HostUartTest : public ::testing::Test {
     }
   }
 
-  std::vector<std::pair<std::function<bool(const std::string_view&)>, mcu::Receiver&>>
+  std::vector<
+      std::pair<std::function<bool(const std::string_view&)>, mcu::Receiver&>>
       receiver_map_storage_;
   std::unique_ptr<mcu::Dispatcher> dispatcher_;
   std::unique_ptr<mcu::ZmqTransport> device_transport_;
@@ -254,8 +255,10 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
       .timeout_ms = 0,
   };
 
-  // Send unsolicited data directly via socket (simulating external data arrival)
-  zmq::socket_t unsolicited_socket{unsolicited_context_, zmq::socket_type::pair};
+  // Send unsolicited data directly via socket (simulating external data
+  // arrival)
+  zmq::socket_t unsolicited_socket{unsolicited_context_,
+                                   zmq::socket_type::pair};
   unsolicited_socket.connect("ipc:///tmp/test_uart_emulator_device.ipc");
   std::this_thread::sleep_for(std::chrono::milliseconds(50));  // Connect time
 
@@ -264,7 +267,8 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
 
   // Wait for response (dispatcher should route and UART should respond)
   zmq::message_t response_msg;
-  const auto recv_result = unsolicited_socket.recv(response_msg, zmq::recv_flags::none);
+  const auto recv_result =
+      unsolicited_socket.recv(response_msg, zmq::recv_flags::none);
   ASSERT_TRUE(recv_result.has_value());
 
   // Give handler time to execute
