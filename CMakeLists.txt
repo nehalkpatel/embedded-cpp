@@ -84,8 +84,17 @@ FetchContent_MakeAvailable(etl)
 add_subdirectory(external)
 
 include(tools)
-# include(code-coverage)
+include(code-coverage)
 
+# Configure global code coverage settings
+if(CODE_COVERAGE)
+  # Create 'ccov-all' target and set global exclusions
+  add_code_coverage_all_targets(
+    EXCLUDE "test_*.cpp" "*/test/*" "*/_deps/*" "*/googletest/*" "*/gtest/*" "*/external/*"
+    LLVM_EXCLUDE ".*/test_.*\\.cpp" ".*/test/.*" ".*/_deps/.*" ".*/googletest/.*" ".*/gtest/.*" ".*/external/.*"
+    LCOV_EXCLUDE "*/test_*.cpp" "*/test/*" "*/_deps/*" "*/googletest/*" "*/gtest/*" "*/external/*"
+  )
+endif()
 
 if(CMAKE_PRESET STREQUAL "host")
   # For Windows: Prevent overriding the parent project's compiler/linker settings

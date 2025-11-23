@@ -21,14 +21,15 @@
     {
       "name": "host",
       "displayName": "Host",
-      "description": "Build for host using Ninja",
+      "description": "Build for host using Ninja (with code coverage)",
       "toolchainFile": "cmake/toolchain/host-clang.cmake",
       "inherits": [
         "default"
       ],
       "cacheVariables": {
         "EMBEDDED_CPP_MCU": "host",
-        "EMBEDDED_CPP_BOARD": "host"
+        "EMBEDDED_CPP_BOARD": "host",
+        "CODE_COVERAGE": "ON"
       }
     },
     {

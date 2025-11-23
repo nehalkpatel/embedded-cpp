@@ -45,3 +45,16 @@ include(GoogleTest)
 gtest_discover_tests(test_host_transport)
 gtest_discover_tests(test_messages)
 gtest_discover_tests(test_dispatcher)
+
+# Code coverage configuration
+if(CODE_COVERAGE)
+  # Add coverage instrumentation to the libraries being tested
+  target_code_coverage(host_mcu)
+  target_code_coverage(host_transport)
+
+  # Add coverage targets for each test executable
+  # Exclusions are inherited from global add_code_coverage_all_targets()
+  target_code_coverage(test_host_transport AUTO ALL)
+  target_code_coverage(test_messages AUTO ALL)
+  target_code_coverage(test_dispatcher AUTO ALL)
+endif()
