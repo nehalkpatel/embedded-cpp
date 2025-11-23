@@ -1,6 +1,5 @@
 build/
 .vscode/
-external/
 .cache/
 __pycache__/
 CMakeUserPresets.json
