@@ -19,7 +19,8 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 |-----------|-------------|--------|
 | **Host Emulation Platform** | ZeroMQ-based IPC with Python hardware simulator | ✅ Complete |
 | **Blinky Example App** | LED blink + button interrupt demo | ✅ Complete |
-| **MCU Abstraction Layer** | Pin, I2C, Delay interfaces | ✅ Complete |
+| **UART Echo Example App** | UART RxHandler demo with async reception | ✅ Complete |
+| **MCU Abstraction Layer** | Pin, UART, I2C, Delay interfaces | ✅ Complete |
 | **Board Abstraction Layer** | Board interface with host implementation | ✅ Complete |
 | **Error Handling** | `std::expected<T, Error>` pattern | ✅ Complete |
 | **C++ Unit Tests** | Google Test for transport, messages, dispatcher | ✅ Complete |
@@ -43,7 +44,6 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 |-----------|--------|-------------|
 | **nRF52832 DK Board** | ⚠️ Placeholder | Minimal CMake setup only |
 | **SPI Peripheral** | ⚠️ Not Started | SPI controller interface |
-| **UART Peripheral** | ⚠️ Not Started | UART controller interface |
 | **ADC Peripheral** | ⚠️ Not Started | ADC interface |
 | **PWM Peripheral** | ⚠️ Not Started | PWM interface |
 
@@ -64,7 +64,7 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 - [x] Comprehensive documentation
 - [x] Code coverage reporting
 - [x] Add static analysis through clang-tidy by default
-- [ ] Add UART abstraction
+- [x] Add UART abstraction with RxHandler
 - [ ] Add I2C abstraction
 - [ ] Add SPI abstraction
 - [ ] Add PWM abstraction
@@ -141,7 +141,7 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 ## Current Priorities
 
 ### High Priority
-2. **I2C Implementation** (Milestone 1, Priority 1)
+1. **I2C Implementation** (Milestone 1, Priority 1)
    - Current stub needs completion
    - Demonstrates peripheral abstraction beyond GPIO
 
@@ -187,6 +187,16 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 - [ ] Timing simulation (delays, interrupt timing)
 
 ## Decision Log
+
+### 2025-11-23: UART RxHandler Implementation
+- ✅ Added UART abstraction with event-driven RxHandler (similar to Pin interrupts)
+- ✅ Implemented HostUart with ZMQ transport and message routing
+- ✅ Created uart_echo example app demonstrating asynchronous reception
+- ✅ Added C++ unit tests for RxHandler functionality
+- ✅ Created Python integration tests for uart_echo app
+- ✅ UART initialization is explicit (not in Board::Init()) to avoid unnecessary emulator connections
+- ✅ Improved HostBoard::Init() error handling pattern with scoped blocks
+- ✅ All 20 tests passing (19 C++ + 6 Python integration)
 
 ### 2025-11-22: DevContainer & CI Integration
 - ✅ Added VS Code DevContainer support

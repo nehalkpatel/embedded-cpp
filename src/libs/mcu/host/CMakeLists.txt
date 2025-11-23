@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.27)
 
-add_library(host_mcu host_i2c.cpp host_pin.cpp delay.cpp)
+add_library(host_mcu host_i2c.cpp host_pin.cpp host_uart.cpp delay.cpp)
 target_compile_options(host_mcu PRIVATE ${COMMON_COMPILE_OPTIONS})
 
 add_library(host_transport zmq_transport.cpp)
@@ -40,11 +40,24 @@ target_link_libraries(test_dispatcher
   GTest::GTest
   )
 
+add_executable(test_host_uart test_host_uart.cpp)
+target_compile_options(test_host_uart PRIVATE ${COMMON_COMPILE_OPTIONS})
+
+target_link_libraries(test_host_uart
+ PRIVATE
+  GTest::GTest
+  host_mcu
+  host_transport
+  nlohmann_json::nlohmann_json
+  cppzmq
+  )
+
 
 include(GoogleTest)
 gtest_discover_tests(test_host_transport)
 gtest_discover_tests(test_messages)
 gtest_discover_tests(test_dispatcher)
+gtest_discover_tests(test_host_uart)
 
 # Code coverage configuration
 if(CODE_COVERAGE)
@@ -57,4 +70,5 @@ if(CODE_COVERAGE)
   target_code_coverage(test_host_transport AUTO ALL)
   target_code_coverage(test_messages AUTO ALL)
   target_code_coverage(test_dispatcher AUTO ALL)
+  target_code_coverage(test_host_uart AUTO ALL)
 endif()

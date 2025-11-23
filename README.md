@@ -78,12 +78,14 @@ cmake --workflow --preset=host-debug
 ```
 embedded-cpp/
 ├── src/
-│   ├── apps/blinky/          # Example LED blink application
+│   ├── apps/
+│   │   ├── blinky/           # Example LED blink application
+│   │   └── uart_echo/        # Example UART echo with RxHandler
 │   ├── libs/
 │   │   ├── common/           # Error handling (std::expected)
-│   │   ├── mcu/              # MCU abstraction (Pin, I2C, Delay)
+│   │   ├── mcu/              # MCU abstraction (Pin, UART, I2C, Delay)
 │   │   │   └── host/         # Host emulation with ZeroMQ
-│   │   └── board/            # Board abstraction (LEDs, buttons, peripherals)
+│   │   └── board/            # Board abstraction (LEDs, buttons, UART, peripherals)
 │   │       ├── host/         # Host board implementation
 │   │       ├── stm32f3_discovery/
 │   │       ├── stm32f767zi_nucleo/
@@ -147,11 +149,13 @@ cd py/host-emulator
 # Install dependencies
 pip install -r requirements.txt
 
-# Run tests (requires built blinky executable)
-pytest tests/ --blinky=../../build/host/bin/blinky
+# Run tests (requires built executables)
+pytest tests/ --blinky=../../build/host/bin/blinky --uart-echo=../../build/host/bin/uart_echo
 ```
 
-## Example Application: Blinky
+## Example Applications
+
+### Blinky
 
 The `blinky` application demonstrates:
 - LED blinking at 500ms intervals
@@ -171,6 +175,34 @@ cd build/host/bin
 ```
 
 The emulator will print pin state changes as the application runs.
+
+### UART Echo
+
+The `uart_echo` application demonstrates:
+- UART initialization and configuration
+- Event-driven reception with RxHandler callback (similar to Pin interrupts)
+- Asynchronous data echoing
+- LED toggling on data received
+- Greeting message on startup
+
+**Run on host emulator**:
+```bash
+# Terminal 1: Start Python emulator
+cd py/host-emulator
+python -m src.emulator
+
+# Terminal 2: Run uart_echo
+cd build/host/bin
+./uart_echo
+
+# Terminal 3: Send data via Python
+python
+>>> from src.emulator import DeviceEmulator
+>>> emu = DeviceEmulator()
+>>> emu.start()
+>>> emu.Uart1().send_data([72, 101, 108, 108, 111])  # "Hello"
+>>> bytes(emu.Uart1().rx_buffer)  # See echoed data
+```
 
 ## Software Engineering Principles
 
@@ -228,6 +260,7 @@ This is an educational project. If you'd like to contribute or experiment:
 |-----------|--------|
 | Host emulation | ✅ Fully working |
 | Blinky app | ✅ Fully working |
+| UART echo app | ✅ Fully working |
 | C++ unit tests | ✅ Fully working |
 | Python integration tests | ✅ Fully working |
 | Docker/DevContainer | ✅ Fully working |

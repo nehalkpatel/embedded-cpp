@@ -45,7 +45,8 @@ embedded-cpp/
 │
 ├── src/                       # Main source code
 │   ├── apps/                  # Application layer
-│   │   └── blinky/           # Example LED blink application
+│   │   ├── blinky/           # Example LED blink application
+│   │   └── uart_echo/        # Example UART echo with RxHandler
 │   │
 │   └── libs/                  # Library abstractions
 │       ├── common/           # Common utilities (error handling)
@@ -53,11 +54,13 @@ embedded-cpp/
 │       │
 │       ├── mcu/              # MCU abstraction layer (HAL)
 │       │   ├── pin.hpp       # Pin interface (Input/Output/Bidirectional)
+│       │   ├── uart.hpp      # UART interface with RxHandler
 │       │   ├── i2c.hpp       # I2C controller interface
 │       │   ├── delay.hpp     # Delay/timing interface
 │       │   │
 │       │   └── host/         # Host emulator implementations
 │       │       ├── host_pin.hpp/cpp        # ZMQ-based pin emulation
+│       │       ├── host_uart.hpp/cpp       # ZMQ-based UART emulation
 │       │       ├── zmq_transport.hpp/cpp   # ZeroMQ IPC transport
 │       │       ├── dispatcher.hpp          # Message routing
 │       │       └── *_messages.hpp          # Message definitions
@@ -74,7 +77,8 @@ embedded-cpp/
 │       ├── src/              # Emulator implementation
 │       │   └── emulator.py   # Virtual device simulator
 │       └── tests/            # Integration tests
-│           └── test_blinky.py
+│           ├── test_blinky.py
+│           └── test_uart_echo.py
 │
 ├── test/                      # System-level tests
 ├── external/                  # External dependencies (placeholder)
@@ -95,15 +99,15 @@ The codebase follows a strict layered architecture with dependency inversion:
 
 ```
 ┌─────────────────────────────────────┐
-│   Application Layer (apps/)         │  ← User applications (blinky)
+│   Application Layer (apps/)         │  ← User applications (blinky, uart_echo)
 └─────────────────────────────────────┘
               ↓ depends on
 ┌─────────────────────────────────────┐
-│   Board Abstraction (libs/board/)   │  ← Board interface (LEDs, buttons, I2C)
+│   Board Abstraction (libs/board/)   │  ← Board interface (LEDs, buttons, UART, I2C)
 └─────────────────────────────────────┘
               ↓ depends on
 ┌─────────────────────────────────────┐
-│   MCU Abstraction (libs/mcu/)       │  ← Hardware interfaces (Pin, I2C, Delay)
+│   MCU Abstraction (libs/mcu/)       │  ← Hardware interfaces (Pin, UART, I2C, Delay)
 └─────────────────────────────────────┘
               ↓ depends on
 ┌─────────────────────────────────────┐
@@ -160,7 +164,35 @@ struct BidirectionalPin : InputPin, OutputPin {
 };
 ```
 
-#### 3. Board Interface (`libs/board/board.hpp`)
+#### 3. UART Abstraction (`libs/mcu/uart.hpp`)
+
+```cpp
+struct Uart {
+  virtual auto Init(const UartConfig&) -> std::expected<void, Error> = 0;
+  virtual auto Send(const std::vector<uint8_t>&) -> std::expected<size_t, Error> = 0;
+  virtual auto Receive(std::vector<uint8_t>&, size_t) -> std::expected<size_t, Error> = 0;
+
+  // Event-driven reception for unsolicited data (similar to Pin interrupts)
+  virtual auto SetRxHandler(std::function<void(const uint8_t*, size_t)>)
+      -> std::expected<void, Error> = 0;
+};
+```
+
+**Pattern**: UART supports both blocking operations (Send/Receive) and event-driven reception via RxHandler callback.
+
+**RxHandler Usage**:
+```cpp
+// Register callback for unsolicited incoming data
+board.Uart1().SetRxHandler([](const uint8_t* data, size_t size) {
+  // Process received data asynchronously
+  std::vector<uint8_t> echo_data(data, data + size);
+  board.Uart1().Send(echo_data);  // Echo back
+});
+```
+
+**Important**: Applications must explicitly initialize UART when needed - it is NOT initialized by `Board::Init()`. This prevents unnecessary emulator connections in tests that don't use UART.
+
+#### 4. Board Interface (`libs/board/board.hpp`)
 
 ```cpp
 struct Board {
@@ -169,6 +201,7 @@ struct Board {
   virtual auto UserLed2() -> mcu::OutputPin& = 0;
   virtual auto UserButton1() -> mcu::InputPin& = 0;
   virtual auto I2C1() -> mcu::I2CController& = 0;
+  virtual auto Uart1() -> mcu::Uart& = 0;
 };
 ```
 
@@ -593,21 +626,25 @@ class Blinky {
 ### Core Abstractions
 - `src/libs/common/error.hpp` - Error handling
 - `src/libs/mcu/pin.hpp` - Pin abstraction
+- `src/libs/mcu/uart.hpp` - UART abstraction with RxHandler
 - `src/libs/mcu/i2c.hpp` - I2C abstraction
 - `src/libs/board/board.hpp` - Board interface
 
 ### Host Implementation
 - `src/libs/mcu/host/host_pin.hpp` - Host pin with ZMQ
+- `src/libs/mcu/host/host_uart.hpp` - Host UART with ZMQ
 - `src/libs/mcu/host/zmq_transport.hpp` - ZeroMQ transport
 - `src/libs/mcu/host/dispatcher.hpp` - Message routing
 - `src/libs/board/host/host_board.hpp` - Host board
 
-### Example Application
-- `src/apps/blinky/blinky.hpp` - LED blink app
+### Example Applications
+- `src/apps/blinky/blinky.hpp` - LED blink app with button interrupt
+- `src/apps/uart_echo/uart_echo.hpp` - UART echo app demonstrating RxHandler
 
 ### Testing
 - `py/host-emulator/src/emulator.py` - Hardware emulator
-- `py/host-emulator/tests/test_blinky.py` - Integration tests
+- `py/host-emulator/tests/test_blinky.py` - Blinky integration tests
+- `py/host-emulator/tests/test_uart_echo.py` - UART echo integration tests
 - `py/host-emulator/tests/conftest.py` - Pytest fixtures
 
 ## Implementation Status
@@ -616,8 +653,9 @@ class Blinky {
 |-----------|--------|-------|
 | Host emulator | ✅ Fully working | ZMQ-based with Python emulator |
 | Blinky app | ✅ Fully working | LED blink + button interrupt |
-| C++ unit tests | ✅ Fully working | Transport, messages, dispatcher |
-| Python integration tests | ✅ Fully working | Blinky behavior tests |
+| UART echo app | ✅ Fully working | UART RxHandler demonstration |
+| C++ unit tests | ✅ Fully working | Transport, messages, dispatcher, UART |
+| Python integration tests | ✅ Fully working | Blinky + UART echo behavior tests |
 | Docker environment | ✅ Fully working | Complete dev environment |
 | DevContainer | ✅ Fully working | VS Code integration |
 | CI/CD | ✅ Fully working | GitHub Actions pipeline |
