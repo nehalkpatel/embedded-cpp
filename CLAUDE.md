@@ -28,9 +28,18 @@ This document provides comprehensive guidance for AI assistants working with thi
 
 ```
 embedded-cpp/
-├── cmake/                      # CMake configuration and toolchains
+├── .devcontainer/             # VS Code DevContainer configuration
+│   ├── devcontainer.json      # DevContainer settings and extensions
+│   └── docker-compose.devcontainer.yml  # DevContainer-specific compose overrides
+│
+├── .github/                   # GitHub configuration
+│   └── workflows/             # GitHub Actions CI/CD
+│       └── ci.yml             # Main CI workflow (build + test on main/PRs)
+│
+├── cmake/                     # CMake configuration and toolchains
 │   └── toolchain/             # Cross-compilation toolchains
 │       ├── host-clang.cmake   # Host builds (testing/dev)
+│       ├── armgcc.cmake       # ARM GCC base configuration
 │       ├── armgcc-cm4.cmake   # Cortex-M4 builds
 │       └── armgcc-cm7.cmake   # Cortex-M7 builds
 │
@@ -68,10 +77,12 @@ embedded-cpp/
 │           └── test_blinky.py
 │
 ├── test/                      # System-level tests
-├── external/                  # External dependencies
+├── external/                  # External dependencies (placeholder)
 │
 ├── CMakeLists.txt            # Root build configuration
 ├── CMakePresets.json         # Build presets (host, arm-cm4, arm-cm7, etc.)
+├── Dockerfile                # Docker development environment
+├── docker-compose.yml        # Docker Compose configuration
 ├── README.md                 # Project overview
 └── CLAUDE.md                 # This file
 ```
@@ -187,22 +198,87 @@ The "host" platform is special - it enables desktop development and testing:
 5. Response sent back to C++
 6. Integration tests verify behavior
 
+## Development Environment
+
+### Docker and DevContainers
+
+The project provides a complete Docker-based development environment with VS Code DevContainer support.
+
+**Dockerfile** (`Dockerfile`):
+- Base image: mcr.microsoft.com/devcontainers/base:ubuntu24.04
+- Pre-installed tools:
+  - **Build**: cmake, ninja-build, build-essential
+  - **Clang/LLVM**: clang-18, clang-format, clang-tidy, lld, lldb, libc++-dev
+  - **Python**: python3, pip, venv
+  - **ARM Toolchain**: gcc-arm-none-eabi, gdb, gdb-multiarch
+  - **Libraries**: libzmq3-dev
+  - **Optional dev tools** (when `INSTALL_DEV_TOOLS=true`): bat, fzf, htop, nano, ripgrep, tree
+
+**Docker Compose** (`docker-compose.yml`):
+- **embedded-cpp-dev**: Main development service
+  - Mounts workspace at `/home/vscode/workspace`
+  - Named volume `build-cache` for faster incremental builds
+  - Image tag: `embedded-cpp-docker:latest`
+- **host-debug**: Runs host-debug workflow preset
+- **host-release**: Runs host-release workflow preset
+
+**DevContainer** (`.devcontainer/`):
+- **devcontainer.json**: VS Code configuration
+  - Pre-configured extensions: C++ tools, CMake, Cortex-Debug, Python, Ruff, GitLens, Error Lens
+  - CMake settings: source dir, build dir, Ninja generator
+  - Remote user: `vscode`
+  - Workspace folder: `/home/vscode/workspace`
+- **docker-compose.devcontainer.yml**: DevContainer-specific overrides
+  - Sets `INSTALL_DEV_TOOLS=true` for additional CLI tools
+  - Uses separate image tag: `embedded-cpp-docker:devcontainer`
+
+**Usage**:
+```bash
+# Open in VS Code DevContainer
+code .
+# Then: Ctrl+Shift+P → "Dev Containers: Reopen in Container"
+
+# Or use docker-compose directly
+docker compose up embedded-cpp-dev
+docker compose run --rm host-debug
+docker compose run --rm host-release
+```
+
+### Continuous Integration
+
+**GitHub Actions** (`.github/workflows/ci.yml`):
+- **Triggers**: Push to main, pull requests to main, manual workflow dispatch
+- **Job**: `host-build-test`
+  - Runs on: ubuntu-latest
+  - Steps:
+    1. Checkout repository
+    2. Build Docker image via docker-compose
+    3. Run host-debug workflow (configure + build + test)
+    4. Upload test results (XML/logs from `build/host/Testing/`)
+- All tests must pass before merging to main
+
 ## Build System
 
 ### CMake Presets
 
 Build configurations are defined in `CMakePresets.json`:
 
-| Preset | MCU | Board | Toolchain | Use Case |
-|--------|-----|-------|-----------|----------|
-| `host` | host | host | Clang | Development, testing, debugging |
-| `arm-cm4` | arm_cm4 | - | ARM GCC | Base Cortex-M4 builds |
-| `arm-cm7` | arm_cm7 | - | ARM GCC | Base Cortex-M7 builds |
-| `stm32f3_discovery` | arm_cm4 | stm32f3_discovery | ARM GCC | STM32F3 Discovery board |
+| Preset | MCU | Board | Toolchain | Use Case | Status |
+|--------|-----|-------|-----------|----------|--------|
+| `host` | host | host | Clang | Development, testing, debugging | ✅ Fully working |
+| `arm-cm4` | arm_cm4 | - | ARM GCC | Base Cortex-M4 builds | ⚙️ Base preset (hidden) |
+| `arm-cm7` | arm_cm7 | - | ARM GCC | Base Cortex-M7 builds | ⚙️ Base preset (hidden) |
+| `stm32f3_discovery` | arm_cm4 | stm32f3_discovery | ARM GCC | STM32F3 Discovery board | 🚧 Partial (files present, no C++ impl) |
 
 ### Build Commands
 
 ```bash
+# Using CMake Workflow Presets (Recommended)
+cmake --workflow --preset=host-debug          # Configure + build + test (Debug)
+cmake --workflow --preset=host-release        # Configure + build + test (Release)
+cmake --workflow --preset=stm32f3_discovery-release  # Configure + build (no tests on hardware)
+
+# Manual CMake Commands
 # Configure for host (development/testing)
 cmake --preset=host
 
@@ -217,21 +293,24 @@ cmake --preset=stm32f3_discovery
 
 # Build for hardware
 cmake --build --preset=stm32f3_discovery --config Release
+
+# Using Docker Compose
+docker compose run --rm host-debug        # Run host-debug workflow in container
+docker compose run --rm host-release      # Run host-release workflow in container
 ```
 
 ### External Dependencies
 
 Managed via CMake `FetchContent`:
 
-| Library | Version | Purpose |
-|---------|---------|---------|
-| etl | 20.38.1 | Embedded Template Library (STL alternative) |
-| googletest | v1.14.0 | C++ unit testing |
-| zeromq | b268effd... | Message transport for host emulation |
-| cppzmq | v4.10.0 | C++ bindings for ZeroMQ |
-| nlohmann/json | v3.11.2 | JSON serialization |
-| STM32CubeF7 | v1.17.1 | STM32F7 HAL library |
-| STM32CubeF3 | v1.11.4 | STM32F3 HAL library |
+| Library | Version | Purpose | When Fetched |
+|---------|---------|---------|--------------|
+| etl | 20.38.1 | Embedded Template Library (STL alternative) | Always |
+| googletest | v1.14.0 | C++ unit testing | Host builds only |
+| cppzmq | v4.10.0 | C++ bindings for ZeroMQ | Host builds only |
+| nlohmann/json | v3.11.2 | JSON serialization | Host builds only |
+| STM32CubeF7 | v1.17.1 | STM32F7 HAL library | arm_cm7 builds only |
+| cmake-scripts | main | CMake build utilities | Always |
 
 **Note**: Dependencies are fetched automatically during CMake configuration based on the selected preset.
 
@@ -378,8 +457,20 @@ ctest --preset=host -C Debug -R pytest
 - Faster iteration (no flashing)
 - Integration with system tools
 - Python emulator inspection
+- Works in DevContainer with VS Code debugging
 
-**Workflow**:
+**Workflow (DevContainer)**:
+```bash
+# In VS Code DevContainer terminal
+cmake --workflow --preset=host-debug
+
+# Use VS Code debugger (F5) with launch.json configuration
+
+# Or run under debugger manually
+lldb build/host/bin/blinky
+```
+
+**Workflow (Local/Docker)**:
 ```bash
 # Build with debug symbols
 cmake --build --preset=host --config Debug
@@ -514,6 +605,21 @@ class Blinky {
 - `py/host-emulator/tests/test_blinky.py` - Integration tests
 - `py/host-emulator/tests/conftest.py` - Pytest fixtures
 
+## Implementation Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Host emulator | ✅ Fully working | ZMQ-based with Python emulator |
+| Blinky app | ✅ Fully working | LED blink + button interrupt |
+| C++ unit tests | ✅ Fully working | Transport, messages, dispatcher |
+| Python integration tests | ✅ Fully working | Blinky behavior tests |
+| Docker environment | ✅ Fully working | Complete dev environment |
+| DevContainer | ✅ Fully working | VS Code integration |
+| CI/CD | ✅ Fully working | GitHub Actions pipeline |
+| STM32F3 Discovery | 🚧 Partial | Hardware files present, no C++ board impl |
+| STM32F7 Nucleo | 🚧 Partial | Hardware files present, no C++ board impl |
+| nRF52832 DK | ⚠️ Placeholder | Minimal setup only |
+
 ## Best Practices for AI Assistants
 
 ### DO
@@ -527,6 +633,8 @@ class Blinky {
 - ✅ Add integration tests for new application features
 - ✅ Document non-obvious design decisions in comments
 - ✅ Run clang-format and clang-tidy before committing
+- ✅ Use DevContainer for consistent development environment
+- ✅ Ensure CI passes before merging to main
 
 ### DON'T
 - ❌ Use exceptions (RTTI disabled, embedded context)
@@ -546,9 +654,10 @@ class Blinky {
 2. **Check Existing Patterns**: Look for similar implementations
 3. **Host First**: Implement and test on host platform
 4. **Run Full Build**: Test both host and at least one ARM preset
-5. **Verify Tests**: Ensure all tests pass (`ctest --preset=host`)
+5. **Verify Tests**: Ensure all tests pass (`ctest --preset=host` or `cmake --workflow --preset=host-debug`)
 6. **Check Linting**: Run clang-tidy on modified files
 7. **Format**: Apply clang-format before committing
+8. **CI Check**: Verify GitHub Actions CI passes on your branch
 
 ### Common Tasks
 
@@ -662,7 +771,8 @@ Solution: Verify emulator sends response messages, check dispatcher routing
 
 ---
 
-**Last Updated**: 2025-11-20
+**Last Updated**: 2025-11-22
 **CMake Version**: 3.27+
 **C++ Standard**: C++23
+**Docker Base**: Ubuntu 24.04 (DevContainer)
 **Primary Maintainer**: Project repository owner
