@@ -6,6 +6,7 @@
 #include "libs/common/error.hpp"
 #include "libs/mcu/i2c.hpp"
 #include "libs/mcu/pin.hpp"
+#include "libs/mcu/uart.hpp"
 
 namespace board {
 
@@ -17,5 +18,6 @@ struct Board {
   virtual auto UserLed2() -> mcu::OutputPin& = 0;
   virtual auto UserButton1() -> mcu::InputPin& = 0;
   virtual auto I2C1() -> mcu::I2CController& = 0;
+  virtual auto Uart1() -> mcu::Uart& = 0;
 };
 }  // namespace board

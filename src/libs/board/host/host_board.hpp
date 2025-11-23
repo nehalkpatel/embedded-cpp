@@ -9,6 +9,7 @@
 #include "libs/mcu/host/dispatcher.hpp"
 #include "libs/mcu/host/host_i2c.hpp"
 #include "libs/mcu/host/host_pin.hpp"
+#include "libs/mcu/host/host_uart.hpp"
 #include "libs/mcu/host/receiver.hpp"
 #include "libs/mcu/host/zmq_transport.hpp"
 
@@ -28,6 +29,7 @@ class HostBoard : public Board {
   auto UserLed2() -> mcu::OutputPin& override;
   auto UserButton1() -> mcu::InputPin& override;
   auto I2C1() -> mcu::I2CController& override;
+  auto Uart1() -> mcu::Uart& override;
 
  private:
   static constexpr auto IsJson(const std::string_view& message) -> bool {
@@ -38,6 +40,7 @@ class HostBoard : public Board {
       {IsJson, user_led_1_},
       {IsJson, user_led_2_},
       {IsJson, user_button_1_},
+      {IsJson, uart_1_},
   };
   mcu::Dispatcher dispatcher_{receiver_map_};
   mcu::ZmqTransport zmq_transport_{"ipc:///tmp/device_emulator.ipc",
@@ -46,6 +49,7 @@ class HostBoard : public Board {
   mcu::HostPin user_led_1_{"LED 1", zmq_transport_};
   mcu::HostPin user_led_2_{"LED 2", zmq_transport_};
   mcu::HostPin user_button_1_{"Button 1", zmq_transport_};
+  mcu::HostUart uart_1_{"UART 1", zmq_transport_};
   mcu::HostI2CController i2c1_{};
 };
 }  // namespace board

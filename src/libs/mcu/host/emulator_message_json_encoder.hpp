@@ -45,10 +45,13 @@ NLOHMANN_JSON_SERIALIZE_ENUM(MessageType,
 NLOHMANN_JSON_SERIALIZE_ENUM(OperationType, {
                                                 {OperationType::kSet, "Set"},
                                                 {OperationType::kGet, "Get"},
+                                                {OperationType::kSend, "Send"},
+                                                {OperationType::kReceive, "Receive"},
                                             })
 
 NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {
                                              {ObjectType::kPin, "Pin"},
+                                             {ObjectType::kUart, "Uart"},
                                          })
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(PinEmulatorRequest, type, object, name,
@@ -56,6 +59,12 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(PinEmulatorRequest, type, object, name,
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(PinEmulatorResponse, type, object, name,
                                    state, status)
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UartEmulatorRequest, type, object, name,
+                                   operation, data, size, timeout_ms)
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UartEmulatorResponse, type, object, name,
+                                   data, bytes_transferred, status)
 
 template <typename T>
 inline auto Encode(const T& obj) -> std::string {
