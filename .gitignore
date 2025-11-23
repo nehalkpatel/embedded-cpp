@@ -3,3 +3,4 @@ build/
 external/
 .cache/
 __pycache__/
+CMakeUserPresets.json

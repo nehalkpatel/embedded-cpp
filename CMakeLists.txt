@@ -70,11 +70,7 @@ if(NOT cmakescripts_POPULATED)
   set(CMAKE_MODULE_PATH ${cmakescripts_SOURCE_DIR} ${CMAKE_MODULE_PATH})
 endif()
 
-# ZeroMQ itself, so we are not dependent on the system version
-# Use this to get the latest version, once the issue is fixed. TODO: pin this version.
-# FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/nehalkpatel/libzmq.git GIT_TAG fix/4629-compile-warning)
-option(ZMQ_BUILD_TESTS OFF)
-FetchContent_Declare(zeromq GIT_REPOSITORY https://github.com/zeromq/libzmq.git GIT_TAG b268effd886c9ea45f8a6f37f8d62b4bb045ad37)
+# Assume libzmq is installed on the system
 
 # CPPZMQ header-only library; uses ZeroMQ
 option(CPPZMQ_BUILD_TESTS OFF)
@@ -96,7 +92,6 @@ if(CMAKE_PRESET STREQUAL "host")
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
   FetchContent_MakeAvailable(googletest)
-  FetchContent_MakeAvailable(zeromq)
   FetchContent_MakeAvailable(cppzmq)
   FetchContent_MakeAvailable(json)
   include(CTest)
@@ -114,4 +109,3 @@ clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
 add_subdirectory(test)
 reset_clang_tidy()
 add_subdirectory(py)
-
