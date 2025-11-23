@@ -1,6 +1,8 @@
 services:
-  dev:
-    build: .
+  embedded-cpp-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: embedded-cpp-docker:latest
     volumes:
       - .:/home/vscode/workspace:cached
@@ -8,12 +10,13 @@ services:
     working_dir: /home/vscode/workspace
 
   host-debug:
-    extends: dev
+    extends: embedded-cpp-dev
     command: /bin/bash -c "cmake --workflow --preset host-debug"
 
   host-release:
-    extends: dev
+    extends: embedded-cpp-dev
     command: /bin/bash -c "cmake --workflow --preset host-release"
 
 volumes:
   build-cache:
+

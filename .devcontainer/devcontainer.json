@@ -1,0 +1,39 @@
+{
+  "name": "Embedded CPP Devcontainer",
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "docker-compose.devcontainer.yml"
+  ],
+  "service": "embedded-cpp-dev",
+  "workspaceFolder": "/home/vscode/workspace",
+  "remoteUser": "vscode",
+  "overrideCommand": true,
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "marus25.cortex-debug",
+        "ms-vscode.hexeditor",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliemarsh.ruff",
+        "eamodio.gitlens",
+        "usernamehw.errorlens",
+        "gruntfuggly.todo-tree"
+      ],
+      "settings": {
+        "cmake.sourceDirectory": "${workspaceFolder}/src",
+        "cmake.buildDirectory": "${workspaceFolder}/build",
+        "cmake.configureOnOpen": false,
+        "cmake.generator": "Ninja",
+        "C_Cpp.clang_format_fallbackStyle": "Google",
+        "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+        "editor.formatOnSave": true,
+        "files.trimTrailingWhitespace": true,
+        "python.defaultInterpreterPath": "/usr/bin/python3"
+      }
+    }
+  }
+}
