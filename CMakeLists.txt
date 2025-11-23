@@ -113,8 +113,6 @@ endif()
 
 clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
 add_subdirectory(src)
-reset_clang_tidy()
-clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
 add_subdirectory(test)
 reset_clang_tidy()
-add_subdirectory(py)
+add_subdirectory(py)   # No clang-tidy for python

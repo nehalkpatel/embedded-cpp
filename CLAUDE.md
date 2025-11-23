@@ -336,6 +336,11 @@ Managed via CMake `FetchContent`:
 
 **Warnings as Errors**: All enabled checks produce errors, not warnings.
 
+**Build Integration**: clang-tidy runs automatically during compilation for all source files (except tests and external dependencies). Build will fail if any violations are detected. No separate step required - just build normally:
+```bash
+cmake --build --preset=host --config Debug
+```
+
 ### Naming Conventions
 
 Enforced by `clang-tidy`:

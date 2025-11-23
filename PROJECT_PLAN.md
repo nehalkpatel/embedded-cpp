@@ -62,8 +62,8 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 - [x] DevContainer for VS Code
 - [x] CI/CD pipeline
 - [x] Comprehensive documentation
-- [ ] Code coverage reporting
-- [ ] Add static analysis build workflow (local and CI)
+- [x] Code coverage reporting
+- [x] Add static analysis through clang-tidy by default
 - [ ] Add UART abstraction
 - [ ] Add I2C abstraction
 - [ ] Add SPI abstraction
