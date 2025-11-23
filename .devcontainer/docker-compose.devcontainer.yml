@@ -1,6 +1,7 @@
 services:
   embedded-cpp-dev:
     image: embedded-cpp-docker:devcontainer
+    user: "1000:1000"
     build:
       args:
         INSTALL_DEV_TOOLS: "true"

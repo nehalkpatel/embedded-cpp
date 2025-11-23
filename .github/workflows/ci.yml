@@ -20,7 +20,7 @@ jobs:
         run: docker compose build embedded-cpp-dev
 
       - name: Run host-debug workflow
-        run: docker compose run --rm host-debug
+        run: docker compose run --rm --user root host-debug
 
       - name: Upload test results
         if: always()
