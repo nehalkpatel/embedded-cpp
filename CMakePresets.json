@@ -26,9 +26,6 @@
       "inherits": [
         "default"
       ],
-      "environment": {
-        "CMAKE_TOOLCHAIN_PATH": "/usr/bin"
-      },
       "cacheVariables": {
         "EMBEDDED_CPP_MCU": "host",
         "EMBEDDED_CPP_BOARD": "host"
@@ -41,10 +38,7 @@
       "hidden": true,
       "inherits": [
         "default"
-      ],
-      "environment": {
-        "CMAKE_TOOLCHAIN_PATH": "/usr/bin"
-      }
+      ]
     },
     {
       "name": "arm-cm4",
@@ -143,3 +137,4 @@
     }
   ]
 }
+
