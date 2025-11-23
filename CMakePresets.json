@@ -94,16 +94,44 @@
       "configurePreset": "host"
     },
     {
+      "name": "host-debug",
+      "displayName": "Host Debug",
+      "description": "Host build (Debug) using Ninja",
+      "configurePreset": "host",
+      "configuration": "Debug"
+    },
+    {
+      "name": "host-release",
+      "displayName": "Host Release",
+      "description": "Host build (Release) using Ninja",
+      "configurePreset": "host",
+      "configuration": "Release"
+    },
+    {
       "name": "stm32f3_discovery",
       "displayName": "STM32F3 Discovery",
       "description": "STM32F3 Discovery build using Ninja",
       "configurePreset": "stm32f3_discovery"
     },
     {
+      "name": "stm32f3_discovery-release",
+      "displayName": "STM32F3 Discovery Release",
+      "description": "STM32F3 Discovery build (Release) using Ninja",
+      "configurePreset": "stm32f3_discovery",
+      "configuration": "Release"
+    },
+    {
       "name": "arm-cm7",
       "displayName": "ARM CM7",
       "description": "ARM CM7 build using Ninja",
       "configurePreset": "arm-cm7"
+    },
+    {
+      "name": "arm-cm7-release",
+      "displayName": "ARM CM7 Release",
+      "description": "ARM CM7 build (Release) using Ninja",
+      "configurePreset": "arm-cm7",
+      "configuration": "Release"
     }
   ],
   "testPresets": [
@@ -134,7 +162,104 @@
         "stopOnFailure": true
       },
       "configuration": "Debug"
+    },
+    {
+      "name": "host-debug",
+      "displayName": "Unit Tests (Debug)",
+      "description": "Unit test using CTest (Debug)",
+      "configurePreset": "host",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      },
+      "configuration": "Debug"
+    },
+    {
+      "name": "host-release",
+      "displayName": "Unit Tests (Release)",
+      "description": "Unit test using CTest (Release)",
+      "configurePreset": "host",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      },
+      "configuration": "Release"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "host-debug",
+      "displayName": "Host Debug - Build & Test",
+      "description": "Configure, build (Debug), and test for host platform",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "host"
+        },
+        {
+          "type": "build",
+          "name": "host-debug"
+        },
+        {
+          "type": "test",
+          "name": "host-debug"
+        }
+      ]
+    },
+    {
+      "name": "host-release",
+      "displayName": "Host Release - Build & Test",
+      "description": "Configure, build (Release), and test for host platform",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "host"
+        },
+        {
+          "type": "build",
+          "name": "host-release"
+        },
+        {
+          "type": "test",
+          "name": "host-release"
+        }
+      ]
+    },
+    {
+      "name": "stm32f3_discovery-release",
+      "displayName": "STM32F3 Discovery - Build",
+      "description": "Configure and build (Release) for STM32F3 Discovery",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "stm32f3_discovery"
+        },
+        {
+          "type": "build",
+          "name": "stm32f3_discovery-release"
+        }
+      ]
+    },
+    {
+      "name": "arm-cm7-release",
+      "displayName": "ARM CM7 - Build",
+      "description": "Configure and build (Release) for ARM Cortex-M7",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "arm-cm7"
+        },
+        {
+          "type": "build",
+          "name": "arm-cm7-release"
+        }
+      ]
     }
   ]
 }
-
