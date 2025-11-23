@@ -2,13 +2,13 @@
 
 import json
 import sys
-import zmq
-
 from enum import Enum
 from threading import Thread
 
+import zmq
 
-class UnhandledMessageException(Exception):
+
+class UnhandledMessageError(Exception):
     pass
 
 
@@ -99,15 +99,11 @@ class Pin:
         return None
 
     def set_on_request(self, on_request):
-        print(
-            f"[Pin Handler] Setting on_request for {self.name}: {on_request}"
-        )
+        print(f"[Pin Handler] Setting on_request for {self.name}: {on_request}")
         self.on_request = on_request
 
     def set_on_response(self, on_response):
-        print(
-            f"[Pin Handler] Setting on_response for {self.name}: {on_response}"
-        )
+        print(f"[Pin Handler] Setting on_response for {self.name}: {on_response}")
         self.on_response = on_response
 
     def handle_message(self, message):
@@ -237,16 +233,16 @@ class DeviceEmulator:
         self.uart_1 = Uart("UART 1", self.to_device_socket)
         self.uarts = [self.uart_1]
 
-    def UserLed1(self):
+    def user_led1(self):
         return self.led_1
 
-    def UserLed2(self):
+    def user_led2(self):
         return self.led_2
 
-    def UserButton1(self):
+    def user_button1(self):
         return self.button_1
 
-    def Uart1(self):
+    def uart1(self):
         return self.uart_1
 
     def run(self):
@@ -266,33 +262,27 @@ class DeviceEmulator:
                     if json_message["object"] == "Pin":
                         for pin in self.pins:
                             if response := pin.handle_message(json_message):
-                                print(
-                                    f"[Emulator] Sending response: {response}"
-                                )
+                                print(f"[Emulator] Sending response: {response}")
                                 from_device_socket.send_string(response)
                                 print("")
                                 break
                         else:
-                            raise UnhandledMessageException(
-                                message, " - Pin not found"
-                            )
+                            raise UnhandledMessageError(message, " - Pin not found")
                     elif json_message["object"] == "Uart":
                         for uart in self.uarts:
                             if response := uart.handle_message(json_message):
-                                print(
-                                    f"[Emulator] Sending response: {response}"
-                                )
+                                print(f"[Emulator] Sending response: {response}")
                                 from_device_socket.send_string(response)
                                 print("")
                                 break
                         else:
-                            raise UnhandledMessageException(
-                                message, " - Uart not found"
-                            )
+                            raise UnhandledMessageError(message, " - Uart not found")
                     else:
-                        raise UnhandledMessageException(message, f" - unknown object type: {json_message['object']}")
+                        raise UnhandledMessageError(
+                            message, f" - unknown object type: {json_message['object']}"
+                        )
                 else:
-                    raise UnhandledMessageException(message, " - not JSON")
+                    raise UnhandledMessageError(message, " - not JSON")
         finally:
             from_device_socket.close()
             from_device_context.term()
@@ -306,10 +296,7 @@ class DeviceEmulator:
 
     def uart_initialized(self, name):
         """Check if a UART with the given name exists."""
-        for uart in self.uarts:
-            if uart.name == name:
-                return True
-        return False
+        return any(uart.name == name for uart in self.uarts)
 
     def get_uart_tx_data(self, name):
         """Get data that was transmitted (sent) from the device to the emulator."""
@@ -353,7 +340,7 @@ def main():
         print("Waiting for reply")
         reply = emulator.to_device_socket.recv()
         print(f"Received reply: {reply}")
-        reply = emulator.UserButton1().get_state()
+        reply = emulator.user_button1().get_state()
         print(f"Received reply: {reply}")
         while emulator.running:
             emulator.emulator_thread.join(0.5)

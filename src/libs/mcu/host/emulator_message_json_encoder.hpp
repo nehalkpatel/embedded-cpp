@@ -42,12 +42,13 @@ NLOHMANN_JSON_SERIALIZE_ENUM(MessageType,
                                  {MessageType::kResponse, "Response"},
                              })
 
-NLOHMANN_JSON_SERIALIZE_ENUM(OperationType, {
-                                                {OperationType::kSet, "Set"},
-                                                {OperationType::kGet, "Get"},
-                                                {OperationType::kSend, "Send"},
-                                                {OperationType::kReceive, "Receive"},
-                                            })
+NLOHMANN_JSON_SERIALIZE_ENUM(OperationType,
+                             {
+                                 {OperationType::kSet, "Set"},
+                                 {OperationType::kGet, "Get"},
+                                 {OperationType::kSend, "Send"},
+                                 {OperationType::kReceive, "Receive"},
+                             })
 
 NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {
                                              {ObjectType::kPin, "Pin"},

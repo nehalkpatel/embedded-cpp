@@ -1,6 +1,6 @@
-from emulator import Pin
 from time import sleep
 
+from emulator import Pin
 
 pin_stats = {}
 
@@ -33,8 +33,8 @@ def test_blinky_start_stop(emulator, blinky):
 def test_blinky_blink(emulator, blinky):
     try:
         pin_stats.clear()
-        emulator.UserLed1().set_on_request(pin_stats_handler)
-        emulator.UserLed2().set_on_request(pin_stats_handler)
+        emulator.user_led1().set_on_request(pin_stats_handler)
+        emulator.user_led2().set_on_request(pin_stats_handler)
 
         sleep(0.75)
 
@@ -54,11 +54,11 @@ def test_blinky_button_press(emulator, blinky):
     # Blinky is configured to set LED2 to high on a rising edge for Button1
     try:
         pin_stats.clear()
-        emulator.UserLed2().set_on_request(pin_stats_handler)
-        emulator.UserButton1().set_on_response(pin_stats_handler)
+        emulator.user_led2().set_on_request(pin_stats_handler)
+        emulator.user_button1().set_on_response(pin_stats_handler)
 
-        emulator.UserButton1().set_state(Pin.state.Low)
-        emulator.UserButton1().set_state(Pin.state.High)
+        emulator.user_button1().set_state(Pin.state.Low)
+        emulator.user_button1().set_state(Pin.state.High)
 
         assert pin_stats["Button 1"]["Low"] == 1
         assert pin_stats["Button 1"]["High"] == 1

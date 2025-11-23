@@ -22,12 +22,12 @@ struct UartConfig {
   enum class Parity : uint8_t {
     kNone,
     kEven,
-    kOdd
+    kOdd,
   } parity{Parity::kNone};
 
   enum class StopBits : uint8_t {
     k1Bit,
-    k2Bits
+    k2Bits,
   } stop_bits{StopBits::k1Bit};
 
   enum class FlowControl : uint8_t {
@@ -99,8 +99,7 @@ class Uart {
   /// application when data arrives asynchronously (e.g., from external source)
   /// @param handler Callback invoked when data arrives (data pointer and size)
   /// @return Success or error code
-  virtual auto SetRxHandler(
-      std::function<void(const uint8_t*, size_t)> handler)
+  virtual auto SetRxHandler(std::function<void(const uint8_t*, size_t)> handler)
       -> std::expected<void, common::Error> = 0;
 };
 

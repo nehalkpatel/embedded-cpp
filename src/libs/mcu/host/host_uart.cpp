@@ -101,17 +101,15 @@ auto HostUart::Receive(std::span<uint8_t> buffer, uint32_t timeout_ms)
   }
 
   // Copy received data to buffer
-  const size_t bytes_to_copy =
-      std::min(buffer.size(), response.data.size());
+  const size_t bytes_to_copy = std::min(buffer.size(), response.data.size());
   std::copy_n(response.data.begin(), bytes_to_copy, buffer.begin());
 
   return bytes_to_copy;
 }
 
-auto HostUart::SendAsync(
-    std::span<const uint8_t> data,
-    std::function<void(std::expected<void, common::Error>)> callback)
-    -> std::expected<void, common::Error> {
+auto HostUart::SendAsync(std::span<const uint8_t> data,
+                         std::function<void(std::expected<void, common::Error>)>
+                             callback) -> std::expected<void, common::Error> {
   if (!initialized_) {
     return std::unexpected(common::Error::kInvalidState);
   }

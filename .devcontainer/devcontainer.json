@@ -32,7 +32,15 @@
         "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
         "editor.formatOnSave": true,
         "files.trimTrailingWhitespace": true,
-        "python.defaultInterpreterPath": "/usr/bin/python3"
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "[python]": {
+          "editor.defaultFormatter": "charliemarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
+        }
       }
     }
   }
