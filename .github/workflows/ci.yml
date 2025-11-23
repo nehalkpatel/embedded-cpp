@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, feature/* ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  host-build-test:
+    name: Host Build & Test (Debug)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker compose build dev
+
+      - name: Run host-debug workflow
+        run: docker compose run --rm host-debug
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            build/host/Testing/**/*.xml
+            build/host/Testing/**/*.log
+          if-no-files-found: ignore
