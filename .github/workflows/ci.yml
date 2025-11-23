@@ -22,6 +22,11 @@ jobs:
       - name: Run host-debug workflow
         run: docker compose run --rm --user root host-debug
 
+      - name: Generate coverage reports
+        run: |
+          docker compose run --rm --user root embedded-cpp-dev cmake --build build/host --config Debug --target ccov-all
+          sudo chown -R runner:docker build/host/ccov
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -30,4 +35,13 @@ jobs:
           path: |
             build/host/Testing/**/*.xml
             build/host/Testing/**/*.log
+          if-no-files-found: ignore
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            build/host/ccov/**/*
           if-no-files-found: ignore
