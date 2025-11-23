@@ -24,7 +24,7 @@
         "gruntfuggly.todo-tree"
       ],
       "settings": {
-        "cmake.sourceDirectory": "${workspaceFolder}/src",
+        "cmake.sourceDirectory": "${workspaceFolder}",
         "cmake.buildDirectory": "${workspaceFolder}/build",
         "cmake.configureOnOpen": false,
         "cmake.generator": "Ninja",

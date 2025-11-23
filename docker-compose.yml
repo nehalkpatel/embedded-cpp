@@ -4,9 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     image: embedded-cpp-docker:latest
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      - .:/home/vscode/workspace:cached
-      - build-cache:/home/vscode/workspace/build
+      - .:/home/vscode/workspace
     working_dir: /home/vscode/workspace
 
   host-debug:
@@ -17,6 +17,4 @@ services:
     extends: embedded-cpp-dev
     command: /bin/bash -c "cmake --workflow --preset host-release"
 
-volumes:
-  build-cache:
 
