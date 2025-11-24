@@ -48,11 +48,7 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
   };
 
   return transport_.Send(Encode(req))
-      .transform_error([](auto) { return common::Error::kUnknown; })
-      .and_then([this]() {
-        return transport_.Receive().transform_error(
-            [](auto) { return common::Error::kUnknown; });
-      })
+      .and_then([this]() { return transport_.Receive(); })
       .transform([](const std::string& rx_bytes) {
         return Decode<PinEmulatorResponse>(rx_bytes);
       })
@@ -88,11 +84,7 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
   };
 
   return transport_.Send(Encode(req))
-      .transform_error([](auto) { return common::Error::kUnknown; })
-      .and_then([this]() {
-        return transport_.Receive().transform_error(
-            [](auto) { return common::Error::kUnknown; });
-      })
+      .and_then([this]() { return transport_.Receive(); })
       .transform([this](const std::string& rx_bytes) {
         const auto resp = Decode<PinEmulatorResponse>(rx_bytes);
         // If the MCU is polling the input, then it should NOT be configured
