@@ -14,10 +14,12 @@
 
 namespace mcu {
 
+namespace {
 // Helper to convert common::Error to int error code
-static auto ErrorToInt(common::Error error) -> int {
+auto ErrorToInt(common::Error error) -> int {
   return error == common::Error::kOk ? 0 : -1;
 }
+}  // namespace
 
 auto HostI2CController::SendData(uint16_t address,
                                  std::span<const uint8_t> data)
@@ -32,19 +34,22 @@ auto HostI2CController::SendData(uint16_t address,
       .size = 0,
   };
 
-  return transport_.Send(Encode(request))
-      .and_then([this]() { return transport_.Receive(); })
-      .and_then(
-          [](const std::string& response_str) -> std::expected<void, int> {
-            const auto response = Decode<I2CEmulatorResponse>(response_str);
-            if (response.status != common::Error::kOk) {
-              return std::unexpected(ErrorToInt(response.status));
-            }
-            return {};
-          })
-      .or_else([](common::Error error) -> std::expected<void, int> {
-        return std::unexpected(ErrorToInt(error));
-      });
+  auto send_result = transport_.Send(Encode(request));
+  if (!send_result) {
+    return std::unexpected(ErrorToInt(send_result.error()));
+  }
+
+  auto receive_result = transport_.Receive();
+  if (!receive_result) {
+    return std::unexpected(ErrorToInt(receive_result.error()));
+  }
+
+  const auto response = Decode<I2CEmulatorResponse>(receive_result.value());
+  if (response.status != common::Error::kOk) {
+    return std::unexpected(ErrorToInt(response.status));
+  }
+
+  return {};
 }
 
 auto HostI2CController::ReceiveData(uint16_t address, size_t size)
@@ -59,29 +64,27 @@ auto HostI2CController::ReceiveData(uint16_t address, size_t size)
       .size = size,
   };
 
-  return transport_.Send(Encode(request))
-      .and_then([this]() { return transport_.Receive(); })
-      .transform([](const std::string& response_str) {
-        return Decode<I2CEmulatorResponse>(response_str);
-      })
-      .and_then([this, address](const I2CEmulatorResponse& response)
-                    -> std::expected<std::span<uint8_t>, int> {
-        if (response.status != common::Error::kOk) {
-          return std::unexpected(ErrorToInt(response.status));
-        }
+  auto send_result = transport_.Send(Encode(request));
+  if (!send_result) {
+    return std::unexpected(ErrorToInt(send_result.error()));
+  }
 
-        // Store received data in buffer for this address
-        auto& buffer = data_buffers_[address];
-        const size_t bytes_to_copy{
-            std::min(response.data.size(), buffer.size())};
-        std::copy_n(response.data.begin(), bytes_to_copy, buffer.begin());
+  auto receive_result = transport_.Receive();
+  if (!receive_result) {
+    return std::unexpected(ErrorToInt(receive_result.error()));
+  }
 
-        return std::span<uint8_t>{buffer.data(), bytes_to_copy};
-      })
-      .or_else(
-          [](common::Error error) -> std::expected<std::span<uint8_t>, int> {
-            return std::unexpected(ErrorToInt(error));
-          });
+  const auto response = Decode<I2CEmulatorResponse>(receive_result.value());
+  if (response.status != common::Error::kOk) {
+    return std::unexpected(ErrorToInt(response.status));
+  }
+
+  // Store received data in buffer for this address
+  auto& buffer = data_buffers_[address];
+  const size_t bytes_to_copy{std::min(response.data.size(), buffer.size())};
+  std::copy_n(response.data.begin(), bytes_to_copy, buffer.begin());
+
+  return std::span<uint8_t>{buffer.data(), bytes_to_copy};
 }
 
 auto HostI2CController::SendDataInterrupt(
