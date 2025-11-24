@@ -18,6 +18,12 @@ def pytest_addoption(parser):
         default=None,
         help="Path to the uart_echo executable",
     )
+    parser.addoption(
+        "--i2c-test",
+        action="store",
+        default=None,
+        help="Path to the i2c_test executable",
+    )
 
 
 # Emulator must be stopped manually within each test
@@ -73,3 +79,24 @@ def uart_echo(request):
         uart_echo_process.kill()
         uart_echo_process.wait(timeout=1)
         print(f"[Fixture] UartEcho return code: {uart_echo_process.returncode}")
+
+
+# I2CTest must be stopped manually within each test
+@fixture()
+def i2c_test(request):
+    i2c_test_arg = request.config.getoption("--i2c-test")
+    i2c_test_executable = pathlib.Path(i2c_test_arg).resolve()
+    assert i2c_test_executable.exists()
+    i2c_test_process = subprocess.Popen(
+        [str(i2c_test_executable)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    yield i2c_test_process
+
+    if i2c_test_process.poll() is None:
+        print("[Fixture] Stopping i2c_test")
+        i2c_test_process.kill()
+        i2c_test_process.wait(timeout=1)
+        print(f"[Fixture] I2CTest return code: {i2c_test_process.returncode}")
