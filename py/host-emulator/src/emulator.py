@@ -305,8 +305,7 @@ class I2C:
             self.device_buffers[address] = bytearray()
         self.device_buffers[address] = bytearray(data)
         print(
-            f"[I2C {self.name}] Device buffer at 0x{address:02X} set to: "
-            f"{bytes(data)}"
+            f"[I2C {self.name}] Device buffer at 0x{address:02X} set to: {bytes(data)}"
         )
 
     def read_from_device(self, address):
