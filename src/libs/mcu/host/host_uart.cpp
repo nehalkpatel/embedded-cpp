@@ -173,9 +173,9 @@ auto HostUart::ReceiveAsync(
   return {};
 }
 
-auto HostUart::IsBusy() -> bool { return busy_; }
+auto HostUart::IsBusy() const -> bool { return busy_; }
 
-auto HostUart::Available() -> size_t {
+auto HostUart::Available() const -> size_t {
   // For host implementation, we don't maintain a receive buffer
   // Always return 0 (data is retrieved on-demand from emulator)
   return 0;

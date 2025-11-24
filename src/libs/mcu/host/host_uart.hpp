@@ -40,8 +40,8 @@ class HostUart final : public Uart, public Receiver {
       std::function<void(std::expected<size_t, common::Error>)> callback)
       -> std::expected<void, common::Error> override;
 
-  auto IsBusy() -> bool override;
-  auto Available() -> size_t override;
+  auto IsBusy() const -> bool override;
+  auto Available() const -> size_t override;
   auto Flush() -> std::expected<void, common::Error> override;
 
   auto SetRxHandler(std::function<void(const uint8_t*, size_t)> handler)
