@@ -4,16 +4,19 @@
 #include <cstdint>
 #include <expected>
 #include <span>
+#include <string>
 #include <unordered_map>
 
 #include "libs/mcu/host/receiver.hpp"
+#include "libs/mcu/host/transport.hpp"
 #include "libs/mcu/i2c.hpp"
 
 namespace mcu {
 
 class HostI2CController final : public I2CController, public Receiver {
  public:
-  HostI2CController() = default;
+  explicit HostI2CController(std::string name, Transport& transport)
+      : name_{std::move(name)}, transport_{transport} {}
   HostI2CController(const HostI2CController&) = delete;
   HostI2CController(HostI2CController&&) = delete;
   auto operator=(const HostI2CController&) -> HostI2CController& = delete;
@@ -44,6 +47,8 @@ class HostI2CController final : public I2CController, public Receiver {
       -> std::expected<std::string, common::Error> override;
 
  private:
+  const std::string name_;
+  Transport& transport_;
   std::unordered_map<uint16_t, std::array<uint8_t, 256>> data_buffers_;
 };
 }  // namespace mcu
