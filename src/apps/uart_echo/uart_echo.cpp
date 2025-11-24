@@ -60,7 +60,7 @@ auto UartEcho::Init() -> std::expected<void, common::Error> {
 
 auto UartEcho::Run() -> std::expected<void, common::Error> {
   // Send initial greeting message
-  const std::string greeting = "UART Echo ready! Send data to echo it back.\n";
+  const std::string greeting{"UART Echo ready! Send data to echo it back.\n"};
   auto send_result = board_.Uart1().Send(
       std::vector<uint8_t>(greeting.begin(), greeting.end()));
   if (!send_result) {
