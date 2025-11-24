@@ -49,7 +49,7 @@ TEST_F(DispatcherTest, DispatchMessage) {
   const std::string sent_message{"Hello"};
   SimpleReceiver receiver;
   ReceiverMap receiver_map{{AcceptAll, receiver}};
-  Dispatcher dispatcher{receiver_map};
+  const Dispatcher dispatcher{receiver_map};
   auto reply = dispatcher.Dispatch(sent_message);
   EXPECT_TRUE(reply.has_value());
   EXPECT_EQ(reply.value(), "Received message");
@@ -60,7 +60,7 @@ TEST_F(DispatcherTest, DispatchMessageReject) {
   const std::string sent_message{"Hello"};
   SimpleReceiver receiver;
   ReceiverMap receiver_map{{RejectAll, receiver}};
-  Dispatcher dispatcher{receiver_map};
+  const Dispatcher dispatcher{receiver_map};
   auto reply = dispatcher.Dispatch(sent_message);
   EXPECT_FALSE(reply.has_value());
   EXPECT_EQ(receiver.received_message, "");
@@ -71,7 +71,7 @@ TEST_F(DispatcherTest, DispatchMessageMultipleReceivers) {
   SimpleReceiver receiver1;
   SimpleReceiver receiver2;
   ReceiverMap receiver_map{{IsHello, receiver1}, {IsWorld, receiver2}};
-  Dispatcher dispatcher{receiver_map};
+  const Dispatcher dispatcher{receiver_map};
   auto reply = dispatcher.Dispatch(sent_message);
   EXPECT_TRUE(reply.has_value());
   EXPECT_EQ(reply.value(), "Received message");
@@ -84,7 +84,7 @@ TEST_F(DispatcherTest, DispatchMessageMultipleReceiversSecond) {
   SimpleReceiver receiver1;
   SimpleReceiver receiver2;
   ReceiverMap receiver_map{{IsHello, receiver1}, {IsWorld, receiver2}};
-  Dispatcher dispatcher{receiver_map};
+  const Dispatcher dispatcher{receiver_map};
   auto reply = dispatcher.Dispatch(sent_message);
   EXPECT_TRUE(reply.has_value());
   EXPECT_EQ(reply.value(), "Received message");
@@ -96,7 +96,7 @@ TEST_F(DispatcherTest, DispatchMessageUnhandled) {
   const std::string sent_message{"Unhandled"};
   SimpleReceiver receiver;
   ReceiverMap receiver_map{{IsHello, receiver}};
-  Dispatcher dispatcher{receiver_map};
+  const Dispatcher dispatcher{receiver_map};
   auto reply = dispatcher.Dispatch(sent_message);
   EXPECT_FALSE(reply.has_value());
   EXPECT_EQ(receiver.received_message, "");
