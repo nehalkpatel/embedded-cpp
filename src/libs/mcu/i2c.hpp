@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <expected>
+#include <functional>
 #include <span>
 
 #include "libs/common/error.hpp"
@@ -20,20 +21,21 @@ class I2CController {
 
   virtual auto SendDataInterrupt(
       uint16_t address, std::span<const uint8_t> data,
-      void (*callback)(std::expected<void, common::Error>))
+      std::function<void(std::expected<void, common::Error>)> callback)
       -> std::expected<void, common::Error> = 0;
   virtual auto ReceiveDataInterrupt(
       uint16_t address, size_t size,
-      void (*callback)(std::expected<std::span<uint8_t>, common::Error>))
-      -> std::expected<void, common::Error> = 0;
+      std::function<void(std::expected<std::span<uint8_t>, common::Error>)>
+          callback) -> std::expected<void, common::Error> = 0;
 
-  virtual auto SendDataDma(uint16_t address, std::span<const uint8_t> data,
-                           void (*callback)(std::expected<void, common::Error>))
+  virtual auto SendDataDma(
+      uint16_t address, std::span<const uint8_t> data,
+      std::function<void(std::expected<void, common::Error>)> callback)
       -> std::expected<void, common::Error> = 0;
   virtual auto ReceiveDataDma(
       uint16_t address, size_t size,
-      void (*callback)(std::expected<std::span<uint8_t>, common::Error>))
-      -> std::expected<void, common::Error> = 0;
+      std::function<void(std::expected<std::span<uint8_t>, common::Error>)>
+          callback) -> std::expected<void, common::Error> = 0;
 };
 
 }  // namespace mcu

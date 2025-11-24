@@ -82,7 +82,7 @@ auto HostI2CController::ReceiveData(uint16_t address, size_t size)
 
 auto HostI2CController::SendDataInterrupt(
     uint16_t address, std::span<const uint8_t> data,
-    void (*callback)(std::expected<void, common::Error>))
+    std::function<void(std::expected<void, common::Error>)> callback)
     -> std::expected<void, common::Error> {
   callback(SendData(address, data));
   return {};
@@ -90,15 +90,15 @@ auto HostI2CController::SendDataInterrupt(
 
 auto HostI2CController::ReceiveDataInterrupt(
     uint16_t address, size_t size,
-    void (*callback)(std::expected<std::span<uint8_t>, common::Error>))
-    -> std::expected<void, common::Error> {
+    std::function<void(std::expected<std::span<uint8_t>, common::Error>)>
+        callback) -> std::expected<void, common::Error> {
   callback(ReceiveData(address, size));
   return {};
 }
 
 auto HostI2CController::SendDataDma(
     uint16_t address, std::span<const uint8_t> data,
-    void (*callback)(std::expected<void, common::Error>))
+    std::function<void(std::expected<void, common::Error>)> callback)
     -> std::expected<void, common::Error> {
   callback(SendData(address, data));
   return {};
@@ -106,8 +106,8 @@ auto HostI2CController::SendDataDma(
 
 auto HostI2CController::ReceiveDataDma(
     uint16_t address, size_t size,
-    void (*callback)(std::expected<std::span<uint8_t>, common::Error>))
-    -> std::expected<void, common::Error> {
+    std::function<void(std::expected<std::span<uint8_t>, common::Error>)>
+        callback) -> std::expected<void, common::Error> {
   callback(ReceiveData(address, size));
   return {};
 }
