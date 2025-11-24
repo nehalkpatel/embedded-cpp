@@ -35,11 +35,11 @@ auto UartEcho::Init() -> std::expected<void, common::Error> {
         return board_.Uart1().SetRxHandler(
             [this](const uint8_t* data, size_t size) {
               // Echo the data back
-              std::vector<uint8_t> echo_data(data, data + size);
+              const std::vector<uint8_t> echo_data(data, data + size);
               std::ignore = board_.Uart1().Send(echo_data);
 
               // Toggle LED1 to indicate data received
-              auto led_state = board_.UserLed1().Get();
+              const auto led_state = board_.UserLed1().Get();
               if (led_state && led_state.value() == mcu::PinState::kHigh) {
                 std::ignore = board_.UserLed1().SetLow();
               } else {
@@ -62,7 +62,7 @@ auto UartEcho::Run() -> std::expected<void, common::Error> {
   // The actual echo happens via the RxHandler callback
   while (true) {
     mcu::Delay(1000ms);
-    auto led_state = board_.UserLed2().Get();
+    const auto led_state = board_.UserLed2().Get();
     if (!led_state) {
       return std::unexpected(led_state.error());
     }

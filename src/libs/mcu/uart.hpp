@@ -84,11 +84,11 @@ class Uart {
 
   /// @brief Check if UART is busy transmitting
   /// @return True if busy, false otherwise
-  virtual auto IsBusy() -> bool = 0;
+  virtual auto IsBusy() const -> bool = 0;
 
   /// @brief Get number of bytes available to read
   /// @return Number of bytes in receive buffer
-  virtual auto Available() -> size_t = 0;
+  virtual auto Available() const -> size_t = 0;
 
   /// @brief Flush transmit buffer (wait for all data to be sent)
   /// @return Success or error code
