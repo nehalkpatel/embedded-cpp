@@ -47,22 +47,16 @@ auto HostUart::Send(std::span<const uint8_t> data)
       .timeout_ms = 0,
   };
 
-  auto send_result = transport_.Send(Encode(request));
-  if (!send_result) {
-    return std::unexpected(send_result.error());
-  }
-
-  auto response_str = transport_.Receive();
-  if (!response_str) {
-    return std::unexpected(response_str.error());
-  }
-
-  const auto response = Decode<UartEmulatorResponse>(response_str.value());
-  if (response.status != common::Error::kOk) {
-    return std::unexpected(response.status);
-  }
-
-  return {};
+  return transport_.Send(Encode(request))
+      .and_then([this](auto&&) { return transport_.Receive(); })
+      .and_then([](const std::string& response_str)
+                    -> std::expected<void, common::Error> {
+        const auto response = Decode<UartEmulatorResponse>(response_str);
+        if (response.status != common::Error::kOk) {
+          return std::unexpected(response.status);
+        }
+        return {};
+      });
 }
 
 auto HostUart::Receive(std::span<uint8_t> buffer, uint32_t timeout_ms)
@@ -85,26 +79,24 @@ auto HostUart::Receive(std::span<uint8_t> buffer, uint32_t timeout_ms)
       .timeout_ms = timeout_ms,
   };
 
-  auto send_result = transport_.Send(Encode(request));
-  if (!send_result) {
-    return std::unexpected(send_result.error());
-  }
+  return transport_.Send(Encode(request))
+      .and_then([this](auto&&) { return transport_.Receive(); })
+      .transform([](const std::string& response_str) {
+        return Decode<UartEmulatorResponse>(response_str);
+      })
+      .and_then([buffer](const UartEmulatorResponse& response)
+                    -> std::expected<size_t, common::Error> {
+        if (response.status != common::Error::kOk) {
+          return std::unexpected(response.status);
+        }
 
-  auto response_str = transport_.Receive();
-  if (!response_str) {
-    return std::unexpected(response_str.error());
-  }
+        // Copy received data to buffer
+        const size_t bytes_to_copy{
+            std::min(buffer.size(), response.data.size())};
+        std::copy_n(response.data.begin(), bytes_to_copy, buffer.begin());
 
-  const auto response = Decode<UartEmulatorResponse>(response_str.value());
-  if (response.status != common::Error::kOk) {
-    return std::unexpected(response.status);
-  }
-
-  // Copy received data to buffer
-  const size_t bytes_to_copy{std::min(buffer.size(), response.data.size())};
-  std::copy_n(response.data.begin(), bytes_to_copy, buffer.begin());
-
-  return bytes_to_copy;
+        return bytes_to_copy;
+      });
 }
 
 auto HostUart::SendAsync(std::span<const uint8_t> data,

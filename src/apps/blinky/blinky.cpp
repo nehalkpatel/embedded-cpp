@@ -26,32 +26,32 @@ auto AppMain(board::Board& board) -> std::expected<void, common::Error> {
 
 auto Blinky::Run() -> std::expected<void, common::Error> {
   auto status = board_.UserLed1().SetHigh();
+
   while (true) {
+    status = status
+                 .and_then([this](auto&&) {
+                   mcu::Delay(500ms);
+                   return board_.UserLed1().Get();
+                 })
+                 .and_then([this](mcu::PinState state) {
+                   return (state == mcu::PinState::kHigh)
+                              ? board_.UserLed1().SetLow()
+                              : board_.UserLed1().SetHigh();
+                 });
+
     if (!status) {
       return std::unexpected(status.error());
-    }
-    mcu::Delay(500ms);
-    auto state = board_.UserLed1().Get();
-    if (!state) {
-      return std::unexpected(state.error());
-    }
-    if (state.value() == mcu::PinState::kHigh) {
-      status = board_.UserLed1().SetLow();
-    } else {
-      status = board_.UserLed1().SetHigh();
     }
   }
   return {};
 }
 
 auto Blinky::Init() -> std::expected<void, common::Error> {
-  auto status = board_.Init();
-  if (status) {
+  return board_.Init().and_then([this](auto&&) {
     return board_.UserButton1().SetInterruptHandler(
         [this]() { std::ignore = board_.UserLed2().SetHigh(); },
         mcu::PinTransition::kRising);
-  }
-  return status;
+  });
 }
 
 }  // namespace app
