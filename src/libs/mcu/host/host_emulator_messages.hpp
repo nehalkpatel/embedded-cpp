@@ -15,8 +15,8 @@ enum class OperationType { kSet = 1, kGet, kSend, kReceive };
 enum class ObjectType { kPin = 1, kUart };
 
 struct PinEmulatorRequest {
-  MessageType type = MessageType::kRequest;
-  ObjectType object = ObjectType::kPin;
+  MessageType type{MessageType::kRequest};
+  ObjectType object{ObjectType::kPin};
   std::string name;
   OperationType operation;
   PinState state;
@@ -27,8 +27,8 @@ struct PinEmulatorRequest {
 };
 
 struct PinEmulatorResponse {
-  MessageType type = MessageType::kResponse;
-  ObjectType object = ObjectType::kPin;
+  MessageType type{MessageType::kResponse};
+  ObjectType object{ObjectType::kPin};
   std::string name;
   PinState state;
   common::Error status;
@@ -39,8 +39,8 @@ struct PinEmulatorResponse {
 };
 
 struct UartEmulatorRequest {
-  MessageType type = MessageType::kRequest;
-  ObjectType object = ObjectType::kUart;
+  MessageType type{MessageType::kRequest};
+  ObjectType object{ObjectType::kUart};
   std::string name;
   OperationType operation;
   std::vector<uint8_t> data;  // For Send operation
@@ -54,8 +54,8 @@ struct UartEmulatorRequest {
 };
 
 struct UartEmulatorResponse {
-  MessageType type = MessageType::kResponse;
-  ObjectType object = ObjectType::kUart;
+  MessageType type{MessageType::kResponse};
+  ObjectType object{ObjectType::kUart};
   std::string name;
   std::vector<uint8_t> data;  // Received data
   size_t bytes_transferred{0};

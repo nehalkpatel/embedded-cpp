@@ -20,7 +20,7 @@ ZmqTransport::ZmqTransport(const std::string& to_emulator,
   }
 
   server_thread_ =
-      std::thread(&ZmqTransport::ServerThread, this, from_emulator);
+      std::thread{&ZmqTransport::ServerThread, this, from_emulator};
 }
 
 ZmqTransport::~ZmqTransport() {
@@ -57,7 +57,7 @@ void ZmqTransport::ServerThread(const std::string& endpoint) {
           .events = ZMQ_POLLIN,
           .revents = 0}}};
 
-    const int ret = zmq::poll(items.data(), 1, std::chrono::milliseconds{50});
+    const int ret{zmq::poll(items.data(), 1, std::chrono::milliseconds{50})};
 
     if (ret == 0) {
       // Timeout occurred, check the stop condition
@@ -65,7 +65,7 @@ void ZmqTransport::ServerThread(const std::string& endpoint) {
         break;
       }
     } else if (ret > 0) {
-      zmq::message_t request;
+      zmq::message_t request{};
       if (socket.recv(request, zmq::recv_flags::none)) {
         std::cout << "Received: " << request.to_string() << '\n';
         const std::string_view request_str{
@@ -98,7 +98,7 @@ auto ZmqTransport::Send(std::string_view data)
 }
 
 auto ZmqTransport::Receive() -> std::expected<std::string, common::Error> {
-  zmq::message_t msg;
+  zmq::message_t msg{};
   if (to_emulator_socket_.recv(msg, zmq::recv_flags::none) != msg.size()) {
     return std::unexpected(common::Error::kOperationFailed);
   }

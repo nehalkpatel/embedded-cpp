@@ -21,8 +21,8 @@ auto HostI2CController::SendData(uint16_t address,
 
 auto HostI2CController::ReceiveData(uint16_t address, size_t size)
     -> std::expected<std::span<uint8_t>, int> {
-  return std::span<uint8_t>(data_buffers_[address].data(),
-                            std::min(size, data_buffers_[address].size()));
+  return std::span<uint8_t>{data_buffers_[address].data(),
+                            std::min(size, data_buffers_[address].size())};
 }
 
 auto HostI2CController::SendDataInterrupt(

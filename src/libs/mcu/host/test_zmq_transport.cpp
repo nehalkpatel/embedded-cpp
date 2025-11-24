@@ -12,8 +12,8 @@ namespace {
 class ZmqTransportTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    server_thread_ = std::thread(&ZmqTransportTest::ServerThread, this,
-                                 "ipc:///tmp/device_emulator.ipc");
+    server_thread_ = std::thread{&ZmqTransportTest::ServerThread, this,
+                                 "ipc:///tmp/device_emulator.ipc"};
   }
 
   void TearDown() override {
@@ -48,7 +48,7 @@ class ZmqTransportTest : public ::testing::Test {
             .events = ZMQ_POLLIN,
             .revents = 0}}};
 
-      const int ret = zmq::poll(items.data(), 1, std::chrono::milliseconds{50});
+      const int ret{zmq::poll(items.data(), 1, std::chrono::milliseconds{50})};
 
       if (ret == 0) {
         // Timeout occurred, check the stop condition
@@ -56,7 +56,7 @@ class ZmqTransportTest : public ::testing::Test {
           break;
         }
       } else if (ret > 0) {
-        zmq::message_t request;
+        zmq::message_t request{};
         if (socket.recv(request, zmq::recv_flags::none)) {
           const std::string_view request_str{
               static_cast<const char*>(request.data()), request.size()};
@@ -96,7 +96,7 @@ TEST(ZmqTransport, ClientMessage) {
   zmq::socket_t socket{context, zmq::socket_type::pair};
   socket.connect("ipc:///tmp/emulator_device.ipc");
   socket.send(zmq::str_buffer("Hello"), zmq::send_flags::none);
-  zmq::message_t response;
+  zmq::message_t response{};
   ASSERT_GT(socket.recv(response, zmq::recv_flags::none), 0);
   const std::string_view response_str{static_cast<const char*>(response.data()),
                                       response.size()};

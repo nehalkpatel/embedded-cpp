@@ -101,7 +101,7 @@ auto HostUart::Receive(std::span<uint8_t> buffer, uint32_t timeout_ms)
   }
 
   // Copy received data to buffer
-  const size_t bytes_to_copy = std::min(buffer.size(), response.data.size());
+  const size_t bytes_to_copy{std::min(buffer.size(), response.data.size())};
   std::copy_n(response.data.begin(), bytes_to_copy, buffer.begin());
 
   return bytes_to_copy;
@@ -283,7 +283,7 @@ auto HostUart::Receive(const std::string_view& message)
       callback(std::unexpected(response.status));
     } else {
       // Copy received data to buffer (stored for the callback)
-      const size_t bytes_received = response.bytes_transferred;
+      const size_t bytes_received{response.bytes_transferred};
       receive_buffer_.resize(bytes_received);
       std::copy_n(response.data.begin(), bytes_received,
                   receive_buffer_.begin());

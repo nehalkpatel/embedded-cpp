@@ -23,7 +23,7 @@ class HostUartTest : public ::testing::Test {
   void SetUp() override {
     // Start emulator thread
     emulator_running_ = true;
-    emulator_thread_ = std::thread([this]() { EmulatorLoop(); });
+    emulator_thread_ = std::thread{[this]() { EmulatorLoop(); }};
 
     // Give emulator time to start
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -76,8 +76,8 @@ class HostUartTest : public ::testing::Test {
               .events = ZMQ_POLLIN,
               .revents = 0}}};
 
-        const int ret =
-            zmq::poll(items.data(), 1, std::chrono::milliseconds{50});
+        const int ret{
+            zmq::poll(items.data(), 1, std::chrono::milliseconds{50})};
 
         if (ret == 0) {
           continue;  // Timeout
@@ -86,7 +86,7 @@ class HostUartTest : public ::testing::Test {
           continue;
         }
 
-        zmq::message_t message;
+        zmq::message_t message{};
         if (!socket.recv(message, zmq::recv_flags::none)) {
           continue;
         }
@@ -112,8 +112,8 @@ class HostUartTest : public ::testing::Test {
           response.bytes_transferred = request.data.size();
         } else if (request.operation == mcu::OperationType::kReceive) {
           // Device wants to receive data - send from our buffer
-          const size_t bytes_to_send =
-              std::min(request.size, uart_rx_buffer.size());
+          const size_t bytes_to_send{
+              std::min(request.size, uart_rx_buffer.size())};
           response.data = std::vector<uint8_t>(
               uart_rx_buffer.begin(),
               uart_rx_buffer.begin() +
@@ -167,7 +167,7 @@ TEST_F(HostUartTest, SendReceiveBlocking) {
   ASSERT_TRUE(init_result);
 
   // Send data
-  const std::array<uint8_t, 5> send_data = {0x01, 0x02, 0x03, 0x04, 0x05};
+  const std::array<uint8_t, 5> send_data{0x01, 0x02, 0x03, 0x04, 0x05};
   auto send_result = uart_->Send(send_data);
   EXPECT_TRUE(send_result);
 
@@ -180,7 +180,7 @@ TEST_F(HostUartTest, SendReceiveBlocking) {
 }
 
 TEST_F(HostUartTest, SendWithoutInit) {
-  const std::array<uint8_t, 5> send_data = {0x01, 0x02, 0x03, 0x04, 0x05};
+  const std::array<uint8_t, 5> send_data{0x01, 0x02, 0x03, 0x04, 0x05};
   auto result = uart_->Send(send_data);
   EXPECT_FALSE(result);
   EXPECT_EQ(result.error(), common::Error::kInvalidState);
@@ -200,7 +200,7 @@ TEST_F(HostUartTest, IsBusy) {
 
   EXPECT_FALSE(uart_->IsBusy());
 
-  const std::array<uint8_t, 5> send_data = {0x01, 0x02, 0x03, 0x04, 0x05};
+  const std::array<uint8_t, 5> send_data{0x01, 0x02, 0x03, 0x04, 0x05};
   std::ignore = uart_->Send(send_data);
 
   EXPECT_FALSE(uart_->IsBusy());  // Blocking operation completes immediately
@@ -232,8 +232,8 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
   ASSERT_TRUE(init_result);
 
   // Track received data via handler
-  std::vector<uint8_t> received_data;
-  bool handler_called = false;
+  std::vector<uint8_t> received_data{};
+  bool handler_called{false};
 
   // Register RxHandler
   auto handler_result = uart_->SetRxHandler(
@@ -244,7 +244,7 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
   ASSERT_TRUE(handler_result);
 
   // Simulate emulator sending unsolicited data to device
-  const std::vector<uint8_t> test_data = {0xDE, 0xAD, 0xBE, 0xEF};
+  const std::vector<uint8_t> test_data{0xDE, 0xAD, 0xBE, 0xEF};
   const mcu::UartEmulatorRequest unsolicited_request{
       .type = mcu::MessageType::kRequest,
       .object = mcu::ObjectType::kUart,
@@ -266,9 +266,9 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
   unsolicited_socket.send(zmq::buffer(request_str), zmq::send_flags::none);
 
   // Wait for response (dispatcher should route and UART should respond)
-  zmq::message_t response_msg;
-  const auto recv_result =
-      unsolicited_socket.recv(response_msg, zmq::recv_flags::none);
+  zmq::message_t response_msg{};
+  const auto recv_result{
+      unsolicited_socket.recv(response_msg, zmq::recv_flags::none)};
   ASSERT_TRUE(recv_result.has_value());
 
   // Give handler time to execute
