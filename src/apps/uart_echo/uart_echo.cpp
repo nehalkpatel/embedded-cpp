@@ -29,10 +29,9 @@ auto UartEcho::Init() -> std::expected<void, common::Error> {
   const mcu::UartConfig uart_config{};
 
   return board_.Init()
-      .and_then([this, &uart_config](auto&&) {
-        return board_.Uart1().Init(uart_config);
-      })
-      .and_then([this](auto&&) {
+      .and_then(
+          [this, &uart_config]() { return board_.Uart1().Init(uart_config); })
+      .and_then([this]() {
         return board_.Uart1().SetRxHandler(
             [this](const uint8_t* data, size_t size) {
               // Echo the data back

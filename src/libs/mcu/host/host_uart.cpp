@@ -48,7 +48,7 @@ auto HostUart::Send(std::span<const uint8_t> data)
   };
 
   return transport_.Send(Encode(request))
-      .and_then([this](auto&&) { return transport_.Receive(); })
+      .and_then([this]() { return transport_.Receive(); })
       .and_then([](const std::string& response_str)
                     -> std::expected<void, common::Error> {
         const auto response = Decode<UartEmulatorResponse>(response_str);
@@ -80,7 +80,7 @@ auto HostUart::Receive(std::span<uint8_t> buffer, uint32_t timeout_ms)
   };
 
   return transport_.Send(Encode(request))
-      .and_then([this](auto&&) { return transport_.Receive(); })
+      .and_then([this]() { return transport_.Receive(); })
       .transform([](const std::string& response_str) {
         return Decode<UartEmulatorResponse>(response_str);
       })

@@ -10,10 +10,10 @@
 namespace board {
 auto HostBoard::Init() -> std::expected<void, common::Error> {
   return user_led_1_.Configure(mcu::PinDirection::kOutput)
-      .and_then([this](auto&&) {
+      .and_then([this]() {
         return user_led_2_.Configure(mcu::PinDirection::kOutput);
       })
-      .and_then([this](auto&&) {
+      .and_then([this]() {
         return user_button_1_.Configure(mcu::PinDirection::kInput);
       });
 }

@@ -29,7 +29,7 @@ auto Blinky::Run() -> std::expected<void, common::Error> {
 
   while (true) {
     status = status
-                 .and_then([this](auto&&) {
+                 .and_then([this]() {
                    mcu::Delay(500ms);
                    return board_.UserLed1().Get();
                  })
@@ -47,7 +47,7 @@ auto Blinky::Run() -> std::expected<void, common::Error> {
 }
 
 auto Blinky::Init() -> std::expected<void, common::Error> {
-  return board_.Init().and_then([this](auto&&) {
+  return board_.Init().and_then([this]() {
     return board_.UserButton1().SetInterruptHandler(
         [this]() { std::ignore = board_.UserLed2().SetHigh(); },
         mcu::PinTransition::kRising);

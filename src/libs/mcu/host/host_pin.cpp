@@ -49,7 +49,7 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
 
   return transport_.Send(Encode(req))
       .or_else([](auto) { return std::unexpected(common::Error::kUnknown); })
-      .and_then([this](auto&&) {
+      .and_then([this]() {
         return transport_.Receive().or_else(
             [](auto) { return std::unexpected(common::Error::kUnknown); });
       })
@@ -89,7 +89,7 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
 
   return transport_.Send(Encode(req))
       .or_else([](auto) { return std::unexpected(common::Error::kUnknown); })
-      .and_then([this](auto&&) {
+      .and_then([this]() {
         return transport_.Receive().or_else(
             [](auto) { return std::unexpected(common::Error::kUnknown); });
       })
