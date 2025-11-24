@@ -46,22 +46,20 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
       .operation = OperationType::kSet,
       .state = state,
   };
-  if (!transport_.Send(Encode(req))) {
-    return std::unexpected(common::Error::kUnknown);
-  }
-  auto rx_bytes = transport_.Receive();
-  if (!rx_bytes) {
-    return std::unexpected(common::Error::kUnknown);
-  }
 
-  const auto resp = Decode<PinEmulatorResponse>(rx_bytes.value());
-
-  if (resp.status != common::Error::kOk) {
-    return std::unexpected(resp.status);
-  }
-
-  state_ = state;
-  return {};
+  return transport_.Send(Encode(req))
+      .and_then([this]() { return transport_.Receive(); })
+      .transform([](const std::string& rx_bytes) {
+        return Decode<PinEmulatorResponse>(rx_bytes);
+      })
+      .and_then([this, state](const PinEmulatorResponse& resp)
+                    -> std::expected<void, common::Error> {
+        if (resp.status != common::Error::kOk) {
+          return std::unexpected(resp.status);
+        }
+        state_ = state;
+        return {};
+      });
 }
 
 auto HostPin::CheckAndInvokeHandler(PinState prev_state,
@@ -84,22 +82,18 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
       .operation = OperationType::kGet,
       .state = PinState::kHighZ,
   };
-  if (!transport_.Send(Encode(req))) {
-    return std::unexpected(common::Error::kUnknown);
-  }
-  auto rx_bytes = transport_.Receive();
-  if (!rx_bytes) {
-    return std::unexpected(common::Error::kUnknown);
-  }
-  const auto resp = Decode<PinEmulatorResponse>(rx_bytes.value());
 
-  // If the MCU is polling the input, then it should NOT be configured
-  // for interrupts. Therefore, we should not invoke the handler.
-  // const PinState prev_state{state_};
-  state_ = resp.state;
-  // CheckAndInvokeHandler(prev_state, resp.state);
-
-  return resp.state;
+  return transport_.Send(Encode(req))
+      .and_then([this]() { return transport_.Receive(); })
+      .transform([this](const std::string& rx_bytes) {
+        const auto resp = Decode<PinEmulatorResponse>(rx_bytes);
+        // If the MCU is polling the input, then it should NOT be configured
+        // for interrupts. Therefore, we should not invoke the handler.
+        // const PinState prev_state{state_};
+        state_ = resp.state;
+        // CheckAndInvokeHandler(prev_state, resp.state);
+        return resp.state;
+      });
 }
 
 // Messages received from the external application will always be

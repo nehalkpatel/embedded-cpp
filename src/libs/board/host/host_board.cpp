@@ -9,27 +9,13 @@
 
 namespace board {
 auto HostBoard::Init() -> std::expected<void, common::Error> {
-  {
-    const auto res{user_led_1_.Configure(mcu::PinDirection::kOutput)};
-    if (!res) {
-      return res;
-    }
-  }
-
-  {
-    const auto res{user_led_2_.Configure(mcu::PinDirection::kOutput)};
-    if (!res) {
-      return res;
-    }
-  }
-
-  {
-    const auto res{user_button_1_.Configure(mcu::PinDirection::kInput)};
-    if (!res) {
-      return res;
-    }
-  }
-  return {};
+  return user_led_1_.Configure(mcu::PinDirection::kOutput)
+      .and_then([this]() {
+        return user_led_2_.Configure(mcu::PinDirection::kOutput);
+      })
+      .and_then([this]() {
+        return user_button_1_.Configure(mcu::PinDirection::kInput);
+      });
 }
 auto HostBoard::UserLed1() -> mcu::OutputPin& { return user_led_1_; }
 auto HostBoard::UserLed2() -> mcu::OutputPin& { return user_led_2_; }
