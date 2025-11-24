@@ -245,7 +245,10 @@ class I2C:
                     "status": Status.Ok.name,
                 }
             )
-            print(f"[I2C {self.name}] Wrote {len(data)} bytes to address 0x{address:02X}: {bytes(data)}")
+            print(
+                f"[I2C {self.name}] Wrote {len(data)} bytes to address "
+                f"0x{address:02X}: {bytes(data)}"
+            )
 
         elif message["operation"] == "Receive":
             # Device is receiving data from I2C peripheral
@@ -265,7 +268,10 @@ class I2C:
                     "status": Status.Ok.name,
                 }
             )
-            print(f"[I2C {self.name}] Read {bytes_to_send} bytes from address 0x{address:02X}: {bytes(data)}")
+            print(
+                f"[I2C {self.name}] Read {bytes_to_send} bytes from address "
+                f"0x{address:02X}: {bytes(data)}"
+            )
 
         if self.on_request:
             self.on_request(message)
@@ -298,7 +304,10 @@ class I2C:
         if address not in self.device_buffers:
             self.device_buffers[address] = bytearray()
         self.device_buffers[address] = bytearray(data)
-        print(f"[I2C {self.name}] Device buffer at 0x{address:02X} set to: {bytes(data)}")
+        print(
+            f"[I2C {self.name}] Device buffer at 0x{address:02X} set to: "
+            f"{bytes(data)}"
+        )
 
     def read_from_device(self, address):
         """Read data from a simulated I2C device (for testing)"""
