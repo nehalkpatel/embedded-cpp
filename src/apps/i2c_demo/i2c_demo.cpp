@@ -50,8 +50,8 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
     mcu::Delay(50ms);
 
     // Read data back from I2C device
-    auto read_result =
-        board_.I2C1().ReceiveData(kDeviceAddress, test_pattern.size());
+    auto read_result{
+        board_.I2C1().ReceiveData(kDeviceAddress, test_pattern.size())};
     if (!read_result) {
       // Turn off LED1 on read error
       std::ignore = board_.UserLed1().SetLow();
@@ -60,16 +60,9 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
     }
 
     // Verify received data matches test pattern
-    const auto received_span = read_result.value();
+    const auto received_span{read_result.value()};
     bool data_matches{true};
-    if (received_span.size() == test_pattern.size()) {
-      for (size_t i{0}; i < test_pattern.size(); ++i) {
-        if (received_span[i] != test_pattern[i]) {
-          data_matches = false;
-          break;
-        }
-      }
-    } else {
+    if (received_span != test_pattern) {
       data_matches = false;
     }
 
