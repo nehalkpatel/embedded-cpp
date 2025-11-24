@@ -18,7 +18,7 @@
         "ms-vscode.hexeditor",
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "charliemarsh.ruff",
+        "charliermarsh.ruff",
         "eamodio.gitlens",
         "usernamehw.errorlens",
         "gruntfuggly.todo-tree"
@@ -34,7 +34,7 @@
         "files.trimTrailingWhitespace": true,
         "python.defaultInterpreterPath": "/usr/bin/python3",
         "[python]": {
-          "editor.defaultFormatter": "charliemarsh.ruff",
+          "editor.defaultFormatter": "charliermarsh.ruff",
           "editor.formatOnSave": true,
           "editor.codeActionsOnSave": {
             "source.fixAll": "explicit",

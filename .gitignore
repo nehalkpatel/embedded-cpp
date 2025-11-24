@@ -1,5 +1,7 @@
 build/
 .vscode/
 .cache/
+.claude/
+.ruff_cache/
 __pycache__/
 CMakeUserPresets.json
