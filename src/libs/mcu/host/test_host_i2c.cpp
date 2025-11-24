@@ -39,7 +39,8 @@ class HostI2CTest : public ::testing::Test {
         "ipc:///tmp/test_i2c_emulator_device.ipc", *dispatcher_);
 
     // Now create I2C with transport
-    i2c_ = std::make_unique<mcu::HostI2CController>("I2C 1", *device_transport_);
+    i2c_ =
+        std::make_unique<mcu::HostI2CController>("I2C 1", *device_transport_);
 
     // Add I2C to receiver map (dispatcher holds reference, so this updates it)
     receiver_map_storage_.emplace_back(IsJson, std::ref(*i2c_));
@@ -168,9 +169,8 @@ TEST_F(HostI2CTest, SendReceiveData) {
   EXPECT_EQ(received_span.size(), send_data.size());
 
   // Compare received data with sent data
-  EXPECT_TRUE(
-      std::equal(received_span.begin(), received_span.end(), send_data.begin(),
-                 send_data.end()));
+  EXPECT_TRUE(std::equal(received_span.begin(), received_span.end(),
+                         send_data.begin(), send_data.end()));
 }
 
 TEST_F(HostI2CTest, MultipleAddresses) {
@@ -243,13 +243,13 @@ TEST_F(HostI2CTest, SendDataInterrupt) {
   bool callback_called{false};
   std::expected<void, common::Error> callback_result{};
 
-  auto result = i2c_->SendDataInterrupt(
-      device_address, send_data,
-      [&callback_called,
-       &callback_result](std::expected<void, common::Error> result) {
-        callback_called = true;
-        callback_result = result;
-      });
+  auto result =
+      i2c_->SendDataInterrupt(device_address, send_data,
+                              [&callback_called, &callback_result](
+                                  std::expected<void, common::Error> result) {
+                                callback_called = true;
+                                callback_result = result;
+                              });
 
   EXPECT_TRUE(result);
   EXPECT_TRUE(callback_called);
@@ -293,13 +293,13 @@ TEST_F(HostI2CTest, SendDataDma) {
   bool callback_called{false};
   std::expected<void, common::Error> callback_result{};
 
-  auto result = i2c_->SendDataDma(
-      device_address, send_data,
-      [&callback_called,
-       &callback_result](std::expected<void, common::Error> result) {
-        callback_called = true;
-        callback_result = result;
-      });
+  auto result =
+      i2c_->SendDataDma(device_address, send_data,
+                        [&callback_called, &callback_result](
+                            std::expected<void, common::Error> result) {
+                          callback_called = true;
+                          callback_result = result;
+                        });
 
   EXPECT_TRUE(result);
   EXPECT_TRUE(callback_called);
