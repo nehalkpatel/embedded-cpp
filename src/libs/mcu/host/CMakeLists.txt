@@ -52,12 +52,25 @@ target_link_libraries(test_host_uart
   cppzmq
   )
 
+add_executable(test_host_i2c test_host_i2c.cpp)
+target_compile_options(test_host_i2c PRIVATE ${COMMON_COMPILE_OPTIONS})
+
+target_link_libraries(test_host_i2c
+ PRIVATE
+  GTest::GTest
+  host_mcu
+  host_transport
+  nlohmann_json::nlohmann_json
+  cppzmq
+  )
+
 
 include(GoogleTest)
 gtest_discover_tests(test_host_transport)
 gtest_discover_tests(test_messages)
 gtest_discover_tests(test_dispatcher)
 gtest_discover_tests(test_host_uart)
+gtest_discover_tests(test_host_i2c)
 
 # Code coverage configuration
 if(CODE_COVERAGE)
@@ -71,4 +84,5 @@ if(CODE_COVERAGE)
   target_code_coverage(test_messages AUTO ALL)
   target_code_coverage(test_dispatcher AUTO ALL)
   target_code_coverage(test_host_uart AUTO ALL)
+  target_code_coverage(test_host_i2c AUTO ALL)
 endif()

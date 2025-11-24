@@ -6,3 +6,4 @@ target_link_libraries(app INTERFACE board error)
 
 add_subdirectory(blinky)
 add_subdirectory(uart_echo)
+add_subdirectory(i2c_test)
