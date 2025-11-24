@@ -19,10 +19,10 @@ def pytest_addoption(parser):
         help="Path to the uart_echo executable",
     )
     parser.addoption(
-        "--i2c-test",
+        "--i2c-demo",
         action="store",
         default=None,
-        help="Path to the i2c_test executable",
+        help="Path to the i2c_demo executable",
     )
 
 
@@ -81,22 +81,22 @@ def uart_echo(request):
         print(f"[Fixture] UartEcho return code: {uart_echo_process.returncode}")
 
 
-# I2CTest must be stopped manually within each test
+# I2CDemo must be stopped manually within each test
 @fixture()
-def i2c_test(request):
-    i2c_test_arg = request.config.getoption("--i2c-test")
-    i2c_test_executable = pathlib.Path(i2c_test_arg).resolve()
-    assert i2c_test_executable.exists()
-    i2c_test_process = subprocess.Popen(
-        [str(i2c_test_executable)],
+def i2c_demo(request):
+    i2c_demo_arg = request.config.getoption("--i2c-demo")
+    i2c_demo_executable = pathlib.Path(i2c_demo_arg).resolve()
+    assert i2c_demo_executable.exists()
+    i2c_demo_process = subprocess.Popen(
+        [str(i2c_demo_executable)],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
 
-    yield i2c_test_process
+    yield i2c_demo_process
 
-    if i2c_test_process.poll() is None:
-        print("[Fixture] Stopping i2c_test")
-        i2c_test_process.kill()
-        i2c_test_process.wait(timeout=1)
-        print(f"[Fixture] I2CTest return code: {i2c_test_process.returncode}")
+    if i2c_demo_process.poll() is None:
+        print("[Fixture] Stopping i2c_demo")
+        i2c_demo_process.kill()
+        i2c_demo_process.wait(timeout=1)
+        print(f"[Fixture] I2CDemo return code: {i2c_demo_process.returncode}")
