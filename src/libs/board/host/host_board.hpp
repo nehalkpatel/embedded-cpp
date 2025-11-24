@@ -37,11 +37,8 @@ class HostBoard : public Board {
   }
 
   const mcu::ReceiverMap receiver_map_{
-      {IsJson, user_led_1_},
-      {IsJson, user_led_2_},
-      {IsJson, user_button_1_},
-      {IsJson, uart_1_},
-      {IsJson, i2c_1_},
+      {IsJson, user_led_1_}, {IsJson, user_led_2_}, {IsJson, user_button_1_},
+      {IsJson, uart_1_},     {IsJson, i2c_1_},
   };
   mcu::Dispatcher dispatcher_{receiver_map_};
   mcu::ZmqTransport zmq_transport_{"ipc:///tmp/device_emulator.ipc",

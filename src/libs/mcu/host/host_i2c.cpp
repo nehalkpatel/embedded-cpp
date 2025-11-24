@@ -34,14 +34,14 @@ auto HostI2CController::SendData(uint16_t address,
 
   return transport_.Send(Encode(request))
       .and_then([this]() { return transport_.Receive(); })
-      .and_then([](const std::string& response_str)
-                    -> std::expected<void, int> {
-        const auto response = Decode<I2CEmulatorResponse>(response_str);
-        if (response.status != common::Error::kOk) {
-          return std::unexpected(ErrorToInt(response.status));
-        }
-        return {};
-      })
+      .and_then(
+          [](const std::string& response_str) -> std::expected<void, int> {
+            const auto response = Decode<I2CEmulatorResponse>(response_str);
+            if (response.status != common::Error::kOk) {
+              return std::unexpected(ErrorToInt(response.status));
+            }
+            return {};
+          })
       .or_else([](common::Error error) -> std::expected<void, int> {
         return std::unexpected(ErrorToInt(error));
       });
@@ -78,9 +78,10 @@ auto HostI2CController::ReceiveData(uint16_t address, size_t size)
 
         return std::span<uint8_t>{buffer.data(), bytes_to_copy};
       })
-      .or_else([](common::Error error) -> std::expected<std::span<uint8_t>, int> {
-        return std::unexpected(ErrorToInt(error));
-      });
+      .or_else(
+          [](common::Error error) -> std::expected<std::span<uint8_t>, int> {
+            return std::unexpected(ErrorToInt(error));
+          });
 }
 
 auto HostI2CController::SendDataInterrupt(

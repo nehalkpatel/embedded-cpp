@@ -93,7 +93,8 @@ struct I2CEmulatorResponse {
   auto operator==(const I2CEmulatorResponse& other) const -> bool {
     return type == other.type && object == other.object && name == other.name &&
            address == other.address && data == other.data &&
-           bytes_transferred == other.bytes_transferred && status == other.status;
+           bytes_transferred == other.bytes_transferred &&
+           status == other.status;
   }
 };
 
