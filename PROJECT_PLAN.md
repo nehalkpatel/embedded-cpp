@@ -65,7 +65,7 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 - [x] Code coverage reporting
 - [x] Add static analysis through clang-tidy by default
 - [x] Add UART abstraction with RxHandler
-- [ ] Add I2C abstraction
+- [x] Add I2C abstraction
 - [ ] Add SPI abstraction
 - [ ] Add PWM abstraction
 - [ ] Add ADC abstraction

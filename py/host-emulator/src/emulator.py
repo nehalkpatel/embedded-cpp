@@ -365,34 +365,34 @@ class DeviceEmulator:
             while self.running:
                 print("Waiting for message...")
                 message = from_device_socket.recv()
-                print(f"[Emulator] Received request: {message}")
+                # print(f"[Emulator] Received request: {message}")
                 if message.startswith(b"{") and message.endswith(b"}"):
                     # JSON message
                     json_message = json.loads(message)
                     if json_message["object"] == "Pin":
                         for pin in self.pins:
                             if response := pin.handle_message(json_message):
-                                print(f"[Emulator] Sending response: {response}")
+                                # print(f"[Emulator] Sending response: {response}")
                                 from_device_socket.send_string(response)
-                                print("")
+                                # print("")
                                 break
                         else:
                             raise UnhandledMessageError(message, " - Pin not found")
                     elif json_message["object"] == "Uart":
                         for uart in self.uarts:
                             if response := uart.handle_message(json_message):
-                                print(f"[Emulator] Sending response: {response}")
+                                # print(f"[Emulator] Sending response: {response}")
                                 from_device_socket.send_string(response)
-                                print("")
+                                # print("")
                                 break
                         else:
                             raise UnhandledMessageError(message, " - Uart not found")
                     elif json_message["object"] == "I2C":
                         for i2c in self.i2cs:
                             if response := i2c.handle_message(json_message):
-                                print(f"[Emulator] Sending response: {response}")
+                                # print(f"[Emulator] Sending response: {response}")
                                 from_device_socket.send_string(response)
-                                print("")
+                                # print("")
                                 break
                         else:
                             raise UnhandledMessageError(message, " - I2C not found")

@@ -25,23 +25,17 @@ auto AppMain(board::Board& board) -> std::expected<void, common::Error> {
 }
 
 auto Blinky::Run() -> std::expected<void, common::Error> {
-  auto status = board_.UserLed1().SetHigh();
+  auto status{board_.UserLed1().SetHigh()};
 
   while (true) {
     status = status
                  .and_then([this]() {
                    mcu::Delay(500ms);
-                   return board_.UserLed1().Get();
+                   return board_.UserLed1().Toggle();
                  })
-                 .and_then([this](mcu::PinState state) {
-                   return (state == mcu::PinState::kHigh)
-                              ? board_.UserLed1().SetLow()
-                              : board_.UserLed1().SetHigh();
+                 .or_else([](auto error) -> std::expected<void, common::Error> {
+                   return std::unexpected(error);
                  });
-
-    if (!status) {
-      return std::unexpected(status.error());
-    }
   }
   return {};
 }

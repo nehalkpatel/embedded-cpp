@@ -81,8 +81,8 @@ def test_i2c_demo_toggles_leds(emulator, i2c_demo):
         initial_led1 = emulator.get_pin_state("LED 1")
         initial_led2 = emulator.get_pin_state("LED 2")
 
-        # Wait for a few cycles
-        time.sleep(1.0)
+        # Wait for exactly one more toggle cycle (~550ms per cycle)
+        time.sleep(0.3)
 
         # Check that LEDs have toggled
         final_led1 = emulator.get_pin_state("LED 1")

@@ -7,10 +7,11 @@ add_test(
     COMMAND ${host_emulator_venv_PYTHON} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}
             --blinky=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/blinky
             --uart-echo=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/uart_echo
+            --i2c-demo=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/i2c_demo
     WORKING_DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-set_tests_properties(host_emulator_test PROPERTIES DEPENDS "blinky;uart_echo")
+set_tests_properties(host_emulator_test PROPERTIES DEPENDS "blinky;uart_echo;i2c_demo")
 set_tests_properties(host_emulator_test PROPERTIES DEPENDS host_emulator_venv)
 set_tests_properties(host_emulator_test PROPERTIES FIXTURES_SETUP host_emulator_venv)
 

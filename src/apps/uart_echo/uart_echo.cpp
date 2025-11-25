@@ -39,12 +39,7 @@ auto UartEcho::Init() -> std::expected<void, common::Error> {
               std::ignore = board_.Uart1().Send(echo_data);
 
               // Toggle LED1 to indicate data received
-              const auto led_state = board_.UserLed1().Get();
-              if (led_state && led_state.value() == mcu::PinState::kHigh) {
-                std::ignore = board_.UserLed1().SetLow();
-              } else {
-                std::ignore = board_.UserLed1().SetHigh();
-              }
+              std::ignore = board_.UserLed1().Toggle();
             });
       });
 }
@@ -52,8 +47,8 @@ auto UartEcho::Init() -> std::expected<void, common::Error> {
 auto UartEcho::Run() -> std::expected<void, common::Error> {
   // Send initial greeting message
   const std::string greeting{"UART Echo ready! Send data to echo it back.\n"};
-  auto send_result = board_.Uart1().Send(
-      std::vector<uint8_t>(greeting.begin(), greeting.end()));
+  auto send_result{board_.Uart1().Send(
+      std::vector<uint8_t>(greeting.begin(), greeting.end()))};
   if (!send_result) {
     return std::unexpected(send_result.error());
   }
@@ -62,21 +57,7 @@ auto UartEcho::Run() -> std::expected<void, common::Error> {
   // The actual echo happens via the RxHandler callback
   while (true) {
     mcu::Delay(1000ms);
-    const auto led_state = board_.UserLed2().Get();
-    if (!led_state) {
-      return std::unexpected(led_state.error());
-    }
-    if (led_state.value() == mcu::PinState::kHigh) {
-      auto status = board_.UserLed2().SetLow();
-      if (!status) {
-        return std::unexpected(status.error());
-      }
-    } else {
-      auto status = board_.UserLed2().SetHigh();
-      if (!status) {
-        return std::unexpected(status.error());
-      }
-    }
+    std::ignore = board_.UserLed2().Toggle();
   }
   return {};
 }

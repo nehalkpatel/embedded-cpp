@@ -28,6 +28,21 @@ auto HostPin::SetLow() -> std::expected<void, common::Error> {
   }
   return SendState(PinState::kLow);
 }
+
+auto HostPin::Toggle() -> std::expected<void, common::Error> {
+  if (direction_ == PinDirection::kInput) {
+    return std::unexpected(common::Error::kInvalidOperation);
+  }
+  auto current_state{GetState()};
+  if (!current_state) {
+    return std::unexpected(current_state.error());
+  }
+  if (current_state.value() == PinState::kHigh) {
+    return SendState(PinState::kLow);
+  }
+  return SendState(PinState::kHigh);
+}
+
 auto HostPin::Get() -> std::expected<PinState, common::Error> {
   return GetState();
 }

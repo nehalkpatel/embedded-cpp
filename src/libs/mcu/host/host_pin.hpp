@@ -23,6 +23,7 @@ class HostPin final : public BidirectionalPin, public Receiver {
       -> std::expected<void, common::Error> override;
   auto SetHigh() -> std::expected<void, common::Error> override;
   auto SetLow() -> std::expected<void, common::Error> override;
+  auto Toggle() -> std::expected<void, common::Error> override;
   auto Get() -> std::expected<PinState, common::Error> override;
 
   auto SetInterruptHandler(std::function<void()> handler,
