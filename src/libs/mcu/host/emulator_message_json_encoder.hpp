@@ -53,6 +53,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(OperationType,
 NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {
                                              {ObjectType::kPin, "Pin"},
                                              {ObjectType::kUart, "Uart"},
+                                             {ObjectType::kI2C, "I2C"},
                                          })
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(PinEmulatorRequest, type, object, name,
@@ -66,6 +67,12 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UartEmulatorRequest, type, object, name,
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UartEmulatorResponse, type, object, name,
                                    data, bytes_transferred, status)
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(I2CEmulatorRequest, type, object, name,
+                                   operation, address, data, size)
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(I2CEmulatorResponse, type, object, name,
+                                   address, data, bytes_transferred, status)
 
 template <typename T>
 inline auto Encode(const T& obj) -> std::string {
