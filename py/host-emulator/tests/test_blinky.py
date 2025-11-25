@@ -1,6 +1,6 @@
 from time import sleep
 
-from src import Pin
+from host_emulator import Pin
 
 pin_stats = {}
 
