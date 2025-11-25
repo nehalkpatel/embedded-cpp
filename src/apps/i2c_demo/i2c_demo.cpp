@@ -1,5 +1,6 @@
 #include "i2c_demo.hpp"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <expected>
@@ -26,6 +27,15 @@ auto AppMain(board::Board& board) -> std::expected<void, common::Error> {
 
 auto I2CDemo::Init() -> std::expected<void, common::Error> {
   return board_.Init();
+}
+
+auto I2CDemo::ToggleLed(mcu::OutputPin& led) -> void {
+  const auto led_state = led.Get();
+  if (led_state && led_state.value() == mcu::PinState::kHigh) {
+    std::ignore = led.SetLow();
+  } else {
+    std::ignore = led.SetHigh();
+  }
 }
 
 auto I2CDemo::Run() -> std::expected<void, common::Error> {
@@ -61,39 +71,18 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
 
     // Verify received data matches test pattern
     const auto received_span = read_result.value();
-    bool data_matches{true};
-    if (received_span.size() == test_pattern.size()) {
-      for (size_t i{0}; i < test_pattern.size(); ++i) {
-        if (received_span[i] != test_pattern[i]) {
-          data_matches = false;
-          break;
-        }
-      }
-    } else {
-      data_matches = false;
-    }
+    const bool data_matches = std::ranges::equal(received_span, test_pattern);
 
     // Toggle LED1 based on verification result
     if (data_matches) {
-      // Data matches - toggle LED1
-      const auto led_state = board_.UserLed1().Get();
-      if (led_state && led_state.value() == mcu::PinState::kHigh) {
-        std::ignore = board_.UserLed1().SetLow();
-      } else {
-        std::ignore = board_.UserLed1().SetHigh();
-      }
+      ToggleLed(board_.UserLed1());
     } else {
       // Data mismatch - turn off LED1
       std::ignore = board_.UserLed1().SetLow();
     }
 
     // Toggle LED2 to show we're alive
-    const auto led2_state = board_.UserLed2().Get();
-    if (led2_state && led2_state.value() == mcu::PinState::kHigh) {
-      std::ignore = board_.UserLed2().SetLow();
-    } else {
-      std::ignore = board_.UserLed2().SetHigh();
-    }
+    ToggleLed(board_.UserLed2());
 
     // Delay before next iteration
     mcu::Delay(500ms);

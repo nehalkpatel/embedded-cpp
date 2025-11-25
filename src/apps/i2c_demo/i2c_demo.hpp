@@ -11,6 +11,7 @@ class I2CDemo {
   auto Run() -> std::expected<void, common::Error>;
 
  private:
+  auto ToggleLed(mcu::OutputPin& led) -> void;
   board::Board& board_;
 };
 
