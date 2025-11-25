@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <functional>
@@ -52,14 +53,14 @@ class Uart {
   /// @brief Send data (blocking)
   /// @param data Span of bytes to send
   /// @return Success or error code
-  virtual auto Send(std::span<const uint8_t> data)
+  virtual auto Send(std::span<const std::byte> data)
       -> std::expected<void, common::Error> = 0;
 
   /// @brief Receive data (blocking with timeout)
   /// @param buffer Buffer to store received data
   /// @param timeout_ms Timeout in milliseconds (0 = wait forever)
   /// @return Number of bytes received or error
-  virtual auto Receive(std::span<uint8_t> buffer, uint32_t timeout_ms = 0)
+  virtual auto Receive(std::span<std::byte> buffer, uint32_t timeout_ms = 0)
       -> std::expected<size_t, common::Error> = 0;
 
   /// @brief Send data asynchronously
@@ -68,7 +69,7 @@ class Uart {
   /// @param callback Called when transfer completes
   /// @return Success or error code
   virtual auto SendAsync(
-      std::span<const uint8_t> data,
+      std::span<const std::byte> data,
       std::function<void(std::expected<void, common::Error>)> callback)
       -> std::expected<void, common::Error> = 0;
 
@@ -78,7 +79,7 @@ class Uart {
   /// @param callback Called when data is received (with number of bytes)
   /// @return Success or error code
   virtual auto ReceiveAsync(
-      std::span<uint8_t> buffer,
+      std::span<std::byte> buffer,
       std::function<void(std::expected<size_t, common::Error>)> callback)
       -> std::expected<void, common::Error> = 0;
 
@@ -99,7 +100,8 @@ class Uart {
   /// application when data arrives asynchronously (e.g., from external source)
   /// @param handler Callback invoked when data arrives (data pointer and size)
   /// @return Success or error code
-  virtual auto SetRxHandler(std::function<void(const uint8_t*, size_t)> handler)
+  virtual auto SetRxHandler(
+      std::function<void(const std::byte*, size_t)> handler)
       -> std::expected<void, common::Error> = 0;
 };
 

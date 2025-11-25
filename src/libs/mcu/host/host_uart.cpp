@@ -27,7 +27,7 @@ auto HostUart::Init(const UartConfig& config)
   return {};
 }
 
-auto HostUart::Send(std::span<const uint8_t> data)
+auto HostUart::Send(std::span<const std::byte> data)
     -> std::expected<void, common::Error> {
   if (!initialized_) {
     return std::unexpected(common::Error::kInvalidState);
@@ -42,7 +42,7 @@ auto HostUart::Send(std::span<const uint8_t> data)
       .object = ObjectType::kUart,
       .name = name_,
       .operation = OperationType::kSend,
-      .data = std::vector<uint8_t>(data.begin(), data.end()),
+      .data = std::vector<std::byte>(data.begin(), data.end()),
       .size = 0,
       .timeout_ms = 0,
   };
@@ -59,7 +59,7 @@ auto HostUart::Send(std::span<const uint8_t> data)
       });
 }
 
-auto HostUart::Receive(std::span<uint8_t> buffer, uint32_t timeout_ms)
+auto HostUart::Receive(std::span<std::byte> buffer, uint32_t timeout_ms)
     -> std::expected<size_t, common::Error> {
   if (!initialized_) {
     return std::unexpected(common::Error::kInvalidState);
@@ -99,7 +99,7 @@ auto HostUart::Receive(std::span<uint8_t> buffer, uint32_t timeout_ms)
       });
 }
 
-auto HostUart::SendAsync(std::span<const uint8_t> data,
+auto HostUart::SendAsync(std::span<const std::byte> data,
                          std::function<void(std::expected<void, common::Error>)>
                              callback) -> std::expected<void, common::Error> {
   if (!initialized_) {
@@ -118,7 +118,7 @@ auto HostUart::SendAsync(std::span<const uint8_t> data,
       .object = ObjectType::kUart,
       .name = name_,
       .operation = OperationType::kSend,
-      .data = std::vector<uint8_t>(data.begin(), data.end()),
+      .data = std::vector<std::byte>(data.begin(), data.end()),
       .size = 0,
       .timeout_ms = 0,
   };
@@ -135,7 +135,7 @@ auto HostUart::SendAsync(std::span<const uint8_t> data,
 }
 
 auto HostUart::ReceiveAsync(
-    std::span<uint8_t> buffer,
+    std::span<std::byte> buffer,
     std::function<void(std::expected<size_t, common::Error>)> callback)
     -> std::expected<void, common::Error> {
   if (!initialized_) {
@@ -191,8 +191,8 @@ auto HostUart::Flush() -> std::expected<void, common::Error> {
   return {};
 }
 
-auto HostUart::SetRxHandler(std::function<void(const uint8_t*, size_t)> handler)
-    -> std::expected<void, common::Error> {
+auto HostUart::SetRxHandler(std::function<void(const std::byte*, size_t)>
+                                handler) -> std::expected<void, common::Error> {
   if (!initialized_) {
     return std::unexpected(common::Error::kInvalidState);
   }

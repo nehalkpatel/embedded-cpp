@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <map>
@@ -64,7 +65,7 @@ class HostI2CTest : public ::testing::Test {
 
   void EmulatorLoop() {
     // Simulate I2C device buffers (address -> data)
-    std::map<uint16_t, std::vector<uint8_t>> i2c_device_buffers;
+    std::map<uint16_t, std::vector<std::byte>> i2c_device_buffers;
 
     try {
       zmq::socket_t socket{emulator_context_, zmq::socket_type::pair};
@@ -116,7 +117,7 @@ class HostI2CTest : public ::testing::Test {
           if (i2c_device_buffers.contains(request.address)) {
             const auto& buffer = i2c_device_buffers[request.address];
             const size_t bytes_to_send{std::min(request.size, buffer.size())};
-            response.data = std::vector<uint8_t>(
+            response.data = std::vector<std::byte>(
                 buffer.begin(),
                 buffer.begin() + static_cast<std::ptrdiff_t>(bytes_to_send));
             response.bytes_transferred = bytes_to_send;
@@ -147,7 +148,8 @@ class HostI2CTest : public ::testing::Test {
 
 TEST_F(HostI2CTest, SendData) {
   const uint16_t device_address{0x42};
-  const std::array<uint8_t, 4> send_data{0xDE, 0xAD, 0xBE, 0xEF};
+  const std::array<std::byte, 4> send_data{std::byte{0xDE}, std::byte{0xAD},
+                                           std::byte{0xBE}, std::byte{0xEF}};
 
   auto result = i2c_->SendData(device_address, send_data);
   EXPECT_TRUE(result);
@@ -155,7 +157,9 @@ TEST_F(HostI2CTest, SendData) {
 
 TEST_F(HostI2CTest, SendReceiveData) {
   const uint16_t device_address{0x50};
-  const std::array<uint8_t, 5> send_data{0x01, 0x02, 0x03, 0x04, 0x05};
+  const std::array<std::byte, 5> send_data{std::byte{0x01}, std::byte{0x02},
+                                           std::byte{0x03}, std::byte{0x04},
+                                           std::byte{0x05}};
 
   // Send data to device
   auto send_result = i2c_->SendData(device_address, send_data);
@@ -176,8 +180,10 @@ TEST_F(HostI2CTest, SendReceiveData) {
 TEST_F(HostI2CTest, MultipleAddresses) {
   const uint16_t address1{0x50};
   const uint16_t address2{0x51};
-  const std::array<uint8_t, 3> data1{0xAA, 0xBB, 0xCC};
-  const std::array<uint8_t, 4> data2{0x11, 0x22, 0x33, 0x44};
+  const std::array<std::byte, 3> data1{std::byte{0xAA}, std::byte{0xBB},
+                                       std::byte{0xCC}};
+  const std::array<std::byte, 4> data2{std::byte{0x11}, std::byte{0x22},
+                                       std::byte{0x33}, std::byte{0x44}};
 
   // Send to first address
   auto send1_result = i2c_->SendData(address1, data1);
@@ -218,7 +224,9 @@ TEST_F(HostI2CTest, ReceiveWithoutSend) {
 
 TEST_F(HostI2CTest, ReceivePartialData) {
   const uint16_t device_address{0x70};
-  const std::array<uint8_t, 10> send_data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  const std::array<std::byte, 10> send_data{
+      std::byte{0}, std::byte{1}, std::byte{2}, std::byte{3}, std::byte{4},
+      std::byte{5}, std::byte{6}, std::byte{7}, std::byte{8}, std::byte{9}};
 
   // Send 10 bytes
   auto send_result = i2c_->SendData(device_address, send_data);
@@ -238,7 +246,8 @@ TEST_F(HostI2CTest, ReceivePartialData) {
 
 TEST_F(HostI2CTest, SendDataInterrupt) {
   const uint16_t device_address{0x42};
-  const std::array<uint8_t, 3> send_data{0xAA, 0xBB, 0xCC};
+  const std::array<std::byte, 3> send_data{std::byte{0xAA}, std::byte{0xBB},
+                                           std::byte{0xCC}};
 
   bool callback_called{false};
   std::expected<void, common::Error> callback_result{};
@@ -258,20 +267,21 @@ TEST_F(HostI2CTest, SendDataInterrupt) {
 
 TEST_F(HostI2CTest, ReceiveDataInterrupt) {
   const uint16_t device_address{0x50};
-  const std::array<uint8_t, 4> send_data{0x01, 0x02, 0x03, 0x04};
+  const std::array<std::byte, 4> send_data{std::byte{0x01}, std::byte{0x02},
+                                           std::byte{0x03}, std::byte{0x04}};
 
   // First send data
   auto send_result = i2c_->SendData(device_address, send_data);
   ASSERT_TRUE(send_result);
 
   bool callback_called{false};
-  std::expected<std::span<uint8_t>, common::Error> callback_result{
+  std::expected<std::span<std::byte>, common::Error> callback_result{
       std::unexpected(common::Error::kUnknown)};
 
   auto result = i2c_->ReceiveDataInterrupt(
       device_address, send_data.size(),
       [&callback_called, &callback_result](
-          std::expected<std::span<uint8_t>, common::Error> result) {
+          std::expected<std::span<std::byte>, common::Error> result) {
         callback_called = true;
         callback_result = result;
       });
@@ -288,7 +298,8 @@ TEST_F(HostI2CTest, ReceiveDataInterrupt) {
 
 TEST_F(HostI2CTest, SendDataDma) {
   const uint16_t device_address{0x42};
-  const std::array<uint8_t, 3> send_data{0xDE, 0xAD, 0xBE};
+  const std::array<std::byte, 3> send_data{std::byte{0xDE}, std::byte{0xAD},
+                                           std::byte{0xBE}};
 
   bool callback_called{false};
   std::expected<void, common::Error> callback_result{};
@@ -308,20 +319,22 @@ TEST_F(HostI2CTest, SendDataDma) {
 
 TEST_F(HostI2CTest, ReceiveDataDma) {
   const uint16_t device_address{0x55};
-  const std::array<uint8_t, 5> send_data{0x10, 0x20, 0x30, 0x40, 0x50};
+  const std::array<std::byte, 5> send_data{std::byte{0x10}, std::byte{0x20},
+                                           std::byte{0x30}, std::byte{0x40},
+                                           std::byte{0x50}};
 
   // First send data
   auto send_result = i2c_->SendData(device_address, send_data);
   ASSERT_TRUE(send_result);
 
   bool callback_called{false};
-  std::expected<std::span<uint8_t>, common::Error> callback_result{
+  std::expected<std::span<std::byte>, common::Error> callback_result{
       std::unexpected(common::Error::kUnknown)};
 
   auto result = i2c_->ReceiveDataDma(
       device_address, send_data.size(),
       [&callback_called, &callback_result](
-          std::expected<std::span<uint8_t>, common::Error> result) {
+          std::expected<std::span<std::byte>, common::Error> result) {
         callback_called = true;
         callback_result = result;
       });
