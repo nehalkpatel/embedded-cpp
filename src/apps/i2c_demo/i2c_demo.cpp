@@ -1,4 +1,4 @@
-#include "i2c_test.hpp"
+#include "i2c_demo.hpp"
 
 #include <array>
 #include <chrono>
@@ -14,21 +14,21 @@ namespace app {
 using std::chrono::operator""ms;
 
 auto AppMain(board::Board& board) -> std::expected<void, common::Error> {
-  I2CTest i2c_test{board};
-  if (!i2c_test.Init()) {
+  I2CDemo i2c_demo{board};
+  if (!i2c_demo.Init()) {
     return std::unexpected(common::Error::kUnknown);
   }
-  if (!i2c_test.Run()) {
+  if (!i2c_demo.Run()) {
     return std::unexpected(common::Error::kUnknown);
   }
   return {};
 }
 
-auto I2CTest::Init() -> std::expected<void, common::Error> {
+auto I2CDemo::Init() -> std::expected<void, common::Error> {
   return board_.Init();
 }
 
-auto I2CTest::Run() -> std::expected<void, common::Error> {
+auto I2CDemo::Run() -> std::expected<void, common::Error> {
   // I2C device address to test
   constexpr uint16_t kDeviceAddress{0x50};
 

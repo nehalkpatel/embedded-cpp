@@ -4,9 +4,9 @@
 
 namespace app {
 
-class I2CTest {
+class I2CDemo {
  public:
-  explicit I2CTest(board::Board& board) : board_(board) {}
+  explicit I2CDemo(board::Board& board) : board_(board) {}
   auto Init() -> std::expected<void, common::Error>;
   auto Run() -> std::expected<void, common::Error>;
 

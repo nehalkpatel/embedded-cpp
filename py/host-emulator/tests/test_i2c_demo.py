@@ -3,23 +3,23 @@
 import time
 
 
-def test_i2c_test_starts(emulator, i2c_test):
-    """Test that i2c_test starts successfully."""
+def test_i2c_demo_starts(emulator, i2c_demo):
+    """Test that i2c_demo starts successfully."""
     try:
-        # Give i2c_test time to initialize
+        # Give i2c_demo time to initialize
         time.sleep(0.5)
 
         # Check that the process is still running
-        assert i2c_test.poll() is None, "i2c_test process terminated unexpectedly"
+        assert i2c_demo.poll() is None, "i2c_demo process terminated unexpectedly"
 
     finally:
         emulator.stop()
-        i2c_test.terminate()
-        i2c_test.wait(timeout=1)
+        i2c_demo.terminate()
+        i2c_demo.wait(timeout=1)
 
 
-def test_i2c_test_write_read_cycle(emulator, i2c_test):
-    """Test that i2c_test writes and reads from I2C device."""
+def test_i2c_demo_write_read_cycle(emulator, i2c_demo):
+    """Test that i2c_demo writes and reads from I2C device."""
     try:
         device_address = 0x50
         test_pattern = [0xDE, 0xAD, 0xBE, 0xEF]
@@ -49,7 +49,7 @@ def test_i2c_test_write_read_cycle(emulator, i2c_test):
         # Pre-populate I2C device buffer with test pattern
         emulator.i2c1().write_to_device(device_address, test_pattern)
 
-        # Give i2c_test time to run a few cycles
+        # Give i2c_demo time to run a few cycles
         time.sleep(1.5)
 
         # Verify that writes and reads occurred
@@ -61,12 +61,12 @@ def test_i2c_test_write_read_cycle(emulator, i2c_test):
 
     finally:
         emulator.stop()
-        i2c_test.terminate()
-        i2c_test.wait(timeout=1)
+        i2c_demo.terminate()
+        i2c_demo.wait(timeout=1)
 
 
-def test_i2c_test_toggles_leds(emulator, i2c_test):
-    """Test that i2c_test toggles LEDs based on I2C operations."""
+def test_i2c_demo_toggles_leds(emulator, i2c_demo):
+    """Test that i2c_demo toggles LEDs based on I2C operations."""
     try:
         device_address = 0x50
         test_pattern = [0xDE, 0xAD, 0xBE, 0xEF]
@@ -74,7 +74,7 @@ def test_i2c_test_toggles_leds(emulator, i2c_test):
         # Pre-populate I2C device buffer with correct test pattern
         emulator.i2c1().write_to_device(device_address, test_pattern)
 
-        # Give i2c_test time to initialize
+        # Give i2c_demo time to initialize
         time.sleep(0.5)
 
         # Record initial LED states
@@ -100,12 +100,12 @@ def test_i2c_test_toggles_leds(emulator, i2c_test):
 
     finally:
         emulator.stop()
-        i2c_test.terminate()
-        i2c_test.wait(timeout=1)
+        i2c_demo.terminate()
+        i2c_demo.wait(timeout=1)
 
 
-def test_i2c_test_data_mismatch(emulator, i2c_test):
-    """Test that i2c_test handles data mismatch correctly."""
+def test_i2c_demo_data_mismatch(emulator, i2c_demo):
+    """Test that i2c_demo handles data mismatch correctly."""
     try:
         device_address = 0x50
         wrong_pattern = [0x00, 0x11, 0x22, 0x33]  # Different from test pattern
@@ -113,7 +113,7 @@ def test_i2c_test_data_mismatch(emulator, i2c_test):
         # Pre-populate I2C device buffer with wrong data
         emulator.i2c1().write_to_device(device_address, wrong_pattern)
 
-        # Give i2c_test time to run a few cycles
+        # Give i2c_demo time to run a few cycles
         time.sleep(1.0)
 
         # LED1 should be off due to data mismatch
@@ -130,5 +130,5 @@ def test_i2c_test_data_mismatch(emulator, i2c_test):
 
     finally:
         emulator.stop()
-        i2c_test.terminate()
-        i2c_test.wait(timeout=1)
+        i2c_demo.terminate()
+        i2c_demo.wait(timeout=1)
