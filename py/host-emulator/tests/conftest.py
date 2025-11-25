@@ -1,8 +1,9 @@
 import pathlib
 import subprocess
 
-from emulator import DeviceEmulator
 from pytest import fixture
+
+from src import DeviceEmulator
 
 
 def pytest_addoption(parser):
