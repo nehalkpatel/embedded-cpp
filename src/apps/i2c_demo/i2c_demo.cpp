@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstddef>
 #include <expected>
 
 #include "apps/app.hpp"
@@ -35,7 +36,8 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
   constexpr uint16_t kDeviceAddress{0x50};
 
   // Test pattern to write/read
-  const std::array<uint8_t, 4> test_pattern{0xDE, 0xAD, 0xBE, 0xEF};
+  const std::array<std::byte, 4> test_pattern{std::byte{0xDE}, std::byte{0xAD},
+                                              std::byte{0xBE}, std::byte{0xEF}};
 
   // Main loop - write pattern, read it back, verify
   while (true) {

@@ -25,18 +25,18 @@ class HostUart final : public Uart, public Receiver {
   auto Init(const UartConfig& config)
       -> std::expected<void, common::Error> override;
 
-  auto Send(std::span<const uint8_t> data)
+  auto Send(std::span<const std::byte> data)
       -> std::expected<void, common::Error> override;
 
-  auto Receive(std::span<uint8_t> buffer, uint32_t timeout_ms)
+  auto Receive(std::span<std::byte> buffer, uint32_t timeout_ms)
       -> std::expected<size_t, common::Error> override;
 
-  auto SendAsync(std::span<const uint8_t> data,
+  auto SendAsync(std::span<const std::byte> data,
                  std::function<void(std::expected<void, common::Error>)>
                      callback) -> std::expected<void, common::Error> override;
 
   auto ReceiveAsync(
-      std::span<uint8_t> buffer,
+      std::span<std::byte> buffer,
       std::function<void(std::expected<size_t, common::Error>)> callback)
       -> std::expected<void, common::Error> override;
 
@@ -44,7 +44,7 @@ class HostUart final : public Uart, public Receiver {
   auto Available() const -> size_t override;
   auto Flush() -> std::expected<void, common::Error> override;
 
-  auto SetRxHandler(std::function<void(const uint8_t*, size_t)> handler)
+  auto SetRxHandler(std::function<void(const std::byte*, size_t)> handler)
       -> std::expected<void, common::Error> override;
 
   // Receiver interface for handling async responses from emulator
@@ -63,10 +63,10 @@ class HostUart final : public Uart, public Receiver {
   std::function<void(std::expected<size_t, common::Error>)> receive_callback_{};
 
   // Receive handler for unsolicited incoming data
-  std::function<void(const uint8_t*, size_t)> rx_handler_{};
+  std::function<void(const std::byte*, size_t)> rx_handler_{};
 
   // Receive buffer for async operations
-  std::vector<uint8_t> receive_buffer_{};
+  std::vector<std::byte> receive_buffer_{};
 };
 
 }  // namespace mcu

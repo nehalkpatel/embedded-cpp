@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <string>
@@ -43,9 +44,9 @@ struct UartEmulatorRequest {
   ObjectType object{ObjectType::kUart};
   std::string name;
   OperationType operation;
-  std::vector<uint8_t> data;  // For Send operation
-  size_t size{0};             // For Receive operation (buffer size)
-  uint32_t timeout_ms{0};     // For Receive operation
+  std::vector<std::byte> data;  // For Send operation
+  size_t size{0};               // For Receive operation (buffer size)
+  uint32_t timeout_ms{0};       // For Receive operation
   auto operator==(const UartEmulatorRequest& other) const -> bool {
     return type == other.type && object == other.object && name == other.name &&
            operation == other.operation && data == other.data &&
@@ -57,7 +58,7 @@ struct UartEmulatorResponse {
   MessageType type{MessageType::kResponse};
   ObjectType object{ObjectType::kUart};
   std::string name;
-  std::vector<uint8_t> data;  // Received data
+  std::vector<std::byte> data;  // Received data
   size_t bytes_transferred{0};
   common::Error status;
   auto operator==(const UartEmulatorResponse& other) const -> bool {
@@ -73,8 +74,8 @@ struct I2CEmulatorRequest {
   std::string name;
   OperationType operation;
   uint16_t address{0};
-  std::vector<uint8_t> data;  // For Send operation
-  size_t size{0};             // For Receive operation (buffer size)
+  std::vector<std::byte> data;  // For Send operation
+  size_t size{0};               // For Receive operation (buffer size)
   auto operator==(const I2CEmulatorRequest& other) const -> bool {
     return type == other.type && object == other.object && name == other.name &&
            operation == other.operation && address == other.address &&
@@ -87,7 +88,7 @@ struct I2CEmulatorResponse {
   ObjectType object{ObjectType::kI2C};
   std::string name;
   uint16_t address{0};
-  std::vector<uint8_t> data;  // Received data
+  std::vector<std::byte> data;  // Received data
   size_t bytes_transferred{0};
   common::Error status;
   auto operator==(const I2CEmulatorResponse& other) const -> bool {

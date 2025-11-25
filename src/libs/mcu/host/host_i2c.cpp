@@ -15,7 +15,7 @@
 namespace mcu {
 
 auto HostI2CController::SendData(uint16_t address,
-                                 std::span<const uint8_t> data)
+                                 std::span<const std::byte> data)
     -> std::expected<void, common::Error> {
   const I2CEmulatorRequest request{
       .type = MessageType::kRequest,
@@ -23,7 +23,7 @@ auto HostI2CController::SendData(uint16_t address,
       .name = name_,
       .operation = OperationType::kSend,
       .address = address,
-      .data = std::vector<uint8_t>(data.begin(), data.end()),
+      .data = std::vector<std::byte>(data.begin(), data.end()),
       .size = 0,
   };
 
@@ -46,7 +46,7 @@ auto HostI2CController::SendData(uint16_t address,
 }
 
 auto HostI2CController::ReceiveData(uint16_t address, size_t size)
-    -> std::expected<std::span<uint8_t>, common::Error> {
+    -> std::expected<std::span<std::byte>, common::Error> {
   const I2CEmulatorRequest request{
       .type = MessageType::kRequest,
       .object = ObjectType::kI2C,
@@ -77,11 +77,11 @@ auto HostI2CController::ReceiveData(uint16_t address, size_t size)
   const size_t bytes_to_copy{std::min(response.data.size(), buffer.size())};
   std::copy_n(response.data.begin(), bytes_to_copy, buffer.begin());
 
-  return std::span<uint8_t>{buffer.data(), bytes_to_copy};
+  return std::span<std::byte>{buffer.data(), bytes_to_copy};
 }
 
 auto HostI2CController::SendDataInterrupt(
-    uint16_t address, std::span<const uint8_t> data,
+    uint16_t address, std::span<const std::byte> data,
     std::function<void(std::expected<void, common::Error>)> callback)
     -> std::expected<void, common::Error> {
   callback(SendData(address, data));
@@ -90,14 +90,14 @@ auto HostI2CController::SendDataInterrupt(
 
 auto HostI2CController::ReceiveDataInterrupt(
     uint16_t address, size_t size,
-    std::function<void(std::expected<std::span<uint8_t>, common::Error>)>
+    std::function<void(std::expected<std::span<std::byte>, common::Error>)>
         callback) -> std::expected<void, common::Error> {
   callback(ReceiveData(address, size));
   return {};
 }
 
 auto HostI2CController::SendDataDma(
-    uint16_t address, std::span<const uint8_t> data,
+    uint16_t address, std::span<const std::byte> data,
     std::function<void(std::expected<void, common::Error>)> callback)
     -> std::expected<void, common::Error> {
   callback(SendData(address, data));
@@ -106,7 +106,7 @@ auto HostI2CController::SendDataDma(
 
 auto HostI2CController::ReceiveDataDma(
     uint16_t address, size_t size,
-    std::function<void(std::expected<std::span<uint8_t>, common::Error>)>
+    std::function<void(std::expected<std::span<std::byte>, common::Error>)>
         callback) -> std::expected<void, common::Error> {
   callback(ReceiveData(address, size));
   return {};

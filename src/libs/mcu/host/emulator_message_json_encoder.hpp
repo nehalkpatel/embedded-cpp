@@ -1,11 +1,27 @@
 #pragma once
 
+#include <cstddef>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <vector>
 
 #include "libs/common/error.hpp"
 #include "libs/mcu/host/host_emulator_messages.hpp"
 #include "libs/mcu/pin.hpp"
+
+// Custom JSON serialization for std::byte
+namespace nlohmann {
+template <>
+struct adl_serializer<std::byte> {
+  static void to_json(json& j, const std::byte& b) {
+    j = std::to_integer<uint8_t>(b);
+  }
+
+  static void from_json(const json& j, std::byte& b) {
+    b = static_cast<std::byte>(j.get<uint8_t>());
+  }
+};
+}  // namespace nlohmann
 
 namespace common {
 
