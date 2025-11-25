@@ -1,5 +1,6 @@
 #include "i2c_demo.hpp"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <expected>
@@ -63,7 +64,7 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
     // Verify received data matches test pattern
     const auto received_span{read_result.value()};
     bool data_matches{true};
-    if (!std::ranges::equals(received_span, test_pattern)) {
+    if (!std::ranges::equal(received_span, test_pattern)) {
       data_matches = false;
     }
 
