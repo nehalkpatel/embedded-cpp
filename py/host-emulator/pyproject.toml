@@ -4,6 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Nehal Patel <hereisnehal@gmail.com>"]
 readme = "README.md"
+packages = [{include = "host_emulator", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
