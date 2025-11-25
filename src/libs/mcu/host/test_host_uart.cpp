@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <string>
@@ -63,7 +64,7 @@ class HostUartTest : public ::testing::Test {
   }
 
   void EmulatorLoop() {
-    std::vector<uint8_t> uart_rx_buffer;
+    std::vector<std::byte> uart_rx_buffer;
 
     try {
       zmq::socket_t socket{emulator_context_, zmq::socket_type::pair};
@@ -114,7 +115,7 @@ class HostUartTest : public ::testing::Test {
           // Device wants to receive data - send from our buffer
           const size_t bytes_to_send{
               std::min(request.size, uart_rx_buffer.size())};
-          response.data = std::vector<uint8_t>(
+          response.data = std::vector<std::byte>(
               uart_rx_buffer.begin(),
               uart_rx_buffer.begin() +
                   static_cast<std::ptrdiff_t>(bytes_to_send));
@@ -167,12 +168,14 @@ TEST_F(HostUartTest, SendReceiveBlocking) {
   ASSERT_TRUE(init_result);
 
   // Send data
-  const std::array<uint8_t, 5> send_data{0x01, 0x02, 0x03, 0x04, 0x05};
+  const std::array<std::byte, 5> send_data{std::byte{0x01}, std::byte{0x02},
+                                           std::byte{0x03}, std::byte{0x04},
+                                           std::byte{0x05}};
   auto send_result = uart_->Send(send_data);
   EXPECT_TRUE(send_result);
 
   // Receive data back (emulator echoes to buffer)
-  std::array<uint8_t, 5> recv_buffer = {0};
+  std::array<std::byte, 5> recv_buffer = {};
   auto recv_result = uart_->Receive(recv_buffer, 1000);
   ASSERT_TRUE(recv_result);
   EXPECT_EQ(recv_result.value(), 5);
@@ -180,14 +183,16 @@ TEST_F(HostUartTest, SendReceiveBlocking) {
 }
 
 TEST_F(HostUartTest, SendWithoutInit) {
-  const std::array<uint8_t, 5> send_data{0x01, 0x02, 0x03, 0x04, 0x05};
+  const std::array<std::byte, 5> send_data{std::byte{0x01}, std::byte{0x02},
+                                           std::byte{0x03}, std::byte{0x04},
+                                           std::byte{0x05}};
   auto result = uart_->Send(send_data);
   EXPECT_FALSE(result);
   EXPECT_EQ(result.error(), common::Error::kInvalidState);
 }
 
 TEST_F(HostUartTest, ReceiveWithoutInit) {
-  std::array<uint8_t, 5> recv_buffer = {0};
+  std::array<std::byte, 5> recv_buffer = {};
   auto result = uart_->Receive(recv_buffer, 1000);
   EXPECT_FALSE(result);
   EXPECT_EQ(result.error(), common::Error::kInvalidState);
@@ -200,7 +205,9 @@ TEST_F(HostUartTest, IsBusy) {
 
   EXPECT_FALSE(uart_->IsBusy());
 
-  const std::array<uint8_t, 5> send_data{0x01, 0x02, 0x03, 0x04, 0x05};
+  const std::array<std::byte, 5> send_data{std::byte{0x01}, std::byte{0x02},
+                                           std::byte{0x03}, std::byte{0x04},
+                                           std::byte{0x05}};
   std::ignore = uart_->Send(send_data);
 
   EXPECT_FALSE(uart_->IsBusy());  // Blocking operation completes immediately
@@ -232,19 +239,20 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
   ASSERT_TRUE(init_result);
 
   // Track received data via handler
-  std::vector<uint8_t> received_data{};
+  std::vector<std::byte> received_data{};
   bool handler_called{false};
 
   // Register RxHandler
   auto handler_result = uart_->SetRxHandler(
-      [&received_data, &handler_called](const uint8_t* data, size_t size) {
+      [&received_data, &handler_called](const std::byte* data, size_t size) {
         received_data.assign(data, data + size);
         handler_called = true;
       });
   ASSERT_TRUE(handler_result);
 
   // Simulate emulator sending unsolicited data to device
-  const std::vector<uint8_t> test_data{0xDE, 0xAD, 0xBE, 0xEF};
+  const std::vector<std::byte> test_data{std::byte{0xDE}, std::byte{0xAD},
+                                         std::byte{0xBE}, std::byte{0xEF}};
   const mcu::UartEmulatorRequest unsolicited_request{
       .type = mcu::MessageType::kRequest,
       .object = mcu::ObjectType::kUart,
@@ -281,7 +289,7 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
 
 TEST_F(HostUartTest, RxHandlerWithoutInit) {
   // Try to set handler before initialization
-  auto result = uart_->SetRxHandler([](const uint8_t*, size_t) {});
+  auto result = uart_->SetRxHandler([](const std::byte*, size_t) {});
   EXPECT_FALSE(result);
   EXPECT_EQ(result.error(), common::Error::kInvalidState);
 }

@@ -33,9 +33,9 @@ auto UartEcho::Init() -> std::expected<void, common::Error> {
           [this, &uart_config]() { return board_.Uart1().Init(uart_config); })
       .and_then([this]() {
         return board_.Uart1().SetRxHandler(
-            [this](const uint8_t* data, size_t size) {
+            [this](const std::byte* data, size_t size) {
               // Echo the data back
-              const std::vector<uint8_t> echo_data(data, data + size);
+              const std::vector<std::byte> echo_data(data, data + size);
               std::ignore = board_.Uart1().Send(echo_data);
 
               // Toggle LED1 to indicate data received
@@ -47,8 +47,10 @@ auto UartEcho::Init() -> std::expected<void, common::Error> {
 auto UartEcho::Run() -> std::expected<void, common::Error> {
   // Send initial greeting message
   const std::string greeting{"UART Echo ready! Send data to echo it back.\n"};
+  const auto* greeting_bytes{
+      reinterpret_cast<const std::byte*>(greeting.data())};
   auto send_result{board_.Uart1().Send(
-      std::vector<uint8_t>(greeting.begin(), greeting.end()))};
+      std::span<const std::byte>{greeting_bytes, greeting.size()})};
   if (!send_result) {
     return std::unexpected(send_result.error());
   }
