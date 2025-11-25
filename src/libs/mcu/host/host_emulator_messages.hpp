@@ -12,7 +12,7 @@ namespace mcu {
 
 enum class MessageType { kRequest = 1, kResponse };
 enum class OperationType { kSet = 1, kGet, kSend, kReceive };
-enum class ObjectType { kPin = 1, kUart };
+enum class ObjectType { kPin = 1, kUart, kI2C };
 
 struct PinEmulatorRequest {
   MessageType type{MessageType::kRequest};
@@ -63,6 +63,37 @@ struct UartEmulatorResponse {
   auto operator==(const UartEmulatorResponse& other) const -> bool {
     return type == other.type && object == other.object && name == other.name &&
            data == other.data && bytes_transferred == other.bytes_transferred &&
+           status == other.status;
+  }
+};
+
+struct I2CEmulatorRequest {
+  MessageType type{MessageType::kRequest};
+  ObjectType object{ObjectType::kI2C};
+  std::string name;
+  OperationType operation;
+  uint16_t address{0};
+  std::vector<uint8_t> data;  // For Send operation
+  size_t size{0};             // For Receive operation (buffer size)
+  auto operator==(const I2CEmulatorRequest& other) const -> bool {
+    return type == other.type && object == other.object && name == other.name &&
+           operation == other.operation && address == other.address &&
+           data == other.data && size == other.size;
+  }
+};
+
+struct I2CEmulatorResponse {
+  MessageType type{MessageType::kResponse};
+  ObjectType object{ObjectType::kI2C};
+  std::string name;
+  uint16_t address{0};
+  std::vector<uint8_t> data;  // Received data
+  size_t bytes_transferred{0};
+  common::Error status;
+  auto operator==(const I2CEmulatorResponse& other) const -> bool {
+    return type == other.type && object == other.object && name == other.name &&
+           address == other.address && data == other.data &&
+           bytes_transferred == other.bytes_transferred &&
            status == other.status;
   }
 };

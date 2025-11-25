@@ -26,6 +26,7 @@ class OutputPin : public virtual InputPin {
 
   virtual auto SetHigh() -> std::expected<void, common::Error> = 0;
   virtual auto SetLow() -> std::expected<void, common::Error> = 0;
+  virtual auto Toggle() -> std::expected<void, common::Error> = 0;
 };
 
 class BidirectionalPin : public virtual InputPin, public virtual OutputPin {

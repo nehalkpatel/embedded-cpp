@@ -187,21 +187,18 @@ The `uart_echo` application demonstrates:
 
 **Run on host emulator**:
 ```bash
-# Terminal 1: Start Python emulator
-cd py/host-emulator
-python -m src.emulator
-
-# Terminal 2: Run uart_echo
+# Terminal 1: Run uart_echo
 cd build/host/bin
 ./uart_echo
 
-# Terminal 3: Send data via Python
+# Terminal 2: Send data via Python
 python
 >>> from src.emulator import DeviceEmulator
 >>> emu = DeviceEmulator()
 >>> emu.start()
->>> emu.Uart1().send_data([72, 101, 108, 108, 111])  # "Hello"
->>> bytes(emu.Uart1().rx_buffer)  # See echoed data
+>>> emu.uart1().send_data([72, 101, 108, 108, 111])  # "Hello"
+>>> bytes(emu.uart1().rx_buffer)  # See echoed data
+>>> emu.uart1().rx_buffer.clear()
 ```
 
 ## Software Engineering Principles
