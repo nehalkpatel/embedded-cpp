@@ -59,9 +59,13 @@ auto ZmqTransport::SetSocketOptions() -> void {
   // Set linger to 0 to discard messages immediately on close
   to_emulator_socket_.set(zmq::sockopt::linger, config_.linger_ms);
 
-  // Set send/recv timeouts
-  to_emulator_socket_.set(zmq::sockopt::sndtimeo, 1000);  // 1 second
-  to_emulator_socket_.set(zmq::sockopt::rcvtimeo, 5000);  // 5 seconds
+  // Set send/recv timeouts from configuration
+  to_emulator_socket_.set(
+      zmq::sockopt::sndtimeo,
+      static_cast<int>(config_.send_timeout.count()));
+  to_emulator_socket_.set(
+      zmq::sockopt::rcvtimeo,
+      static_cast<int>(config_.recv_timeout.count()));
 }
 
 auto ZmqTransport::WaitForConnection(std::chrono::milliseconds timeout)

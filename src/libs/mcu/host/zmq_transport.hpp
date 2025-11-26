@@ -28,6 +28,8 @@ struct TransportConfig {
   std::chrono::milliseconds poll_timeout{50};
   std::chrono::milliseconds connect_timeout{5000};
   std::chrono::milliseconds shutdown_timeout{2000};
+  std::chrono::milliseconds send_timeout{1000};
+  std::chrono::milliseconds recv_timeout{5000};
   int linger_ms{0};  // Discard pending messages on close
   RetryConfig retry{};
 };
