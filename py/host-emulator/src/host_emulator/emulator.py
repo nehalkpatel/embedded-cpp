@@ -2,6 +2,7 @@
 
 import json
 import sys
+import time
 from threading import Thread
 
 import zmq
@@ -15,11 +16,22 @@ from .uart import Uart
 class DeviceEmulator:
     def __init__(self):
         print("Creating DeviceEmulator")
-        self.emulator_thread = Thread(target=self.run)
         self.running = False
-        self.to_device_context = zmq.Context()
-        self.to_device_socket = self.to_device_context.socket(zmq.PAIR)
-        self.to_device_socket.connect("ipc:///tmp/emulator_device.ipc")
+
+        # Create single context for the entire emulator
+        self.context = zmq.Context()
+
+        # Create sockets but DON'T connect/bind yet
+        self.to_device_socket = self.context.socket(zmq.PAIR)
+        self.from_device_socket = self.context.socket(zmq.PAIR)
+
+        # Set socket options for robust operation
+        self.to_device_socket.setsockopt(zmq.LINGER, 0)  # Discard on close
+        self.to_device_socket.setsockopt(zmq.SNDTIMEO, 1000)  # 1s send timeout
+        self.from_device_socket.setsockopt(zmq.LINGER, 0)
+        self.from_device_socket.setsockopt(zmq.RCVTIMEO, 500)  # 500ms recv timeout
+
+        # Hardware components (use socket but don't send yet)
         self.led_1 = Pin(
             "LED 1", Pin.direction.OUT, Pin.state.Low, self.to_device_socket
         )
@@ -37,6 +49,9 @@ class DeviceEmulator:
         self.i2c_1 = I2C("I2C 1")
         self.i2cs = [self.i2c_1]
 
+        self.emulator_thread = Thread(target=self.run)
+        self._ready = False
+
     def user_led1(self):
         return self.led_1
 
@@ -53,24 +68,28 @@ class DeviceEmulator:
         return self.i2c_1
 
     def run(self):
+        """Main emulator thread - BIND first, then signal ready."""
         print("Starting emulator thread")
         try:
-            from_device_context = zmq.Context()
-            from_device_socket = from_device_context.socket(zmq.PAIR)
-            from_device_socket.bind("ipc:///tmp/device_emulator.ipc")
+            # BIND in the thread (before anyone tries to connect)
+            self.from_device_socket.bind("ipc:///tmp/device_emulator.ipc")
+            print("Bound to ipc:///tmp/device_emulator.ipc")
+
             self.running = True
+            self._ready = True  # Signal that we're ready
+
             while self.running:
-                print("Waiting for message...")
-                message = from_device_socket.recv()
-                # print(f"[Emulator] Received request: {message}")
-                if message.startswith(b"{") and message.endswith(b"}"):
-                    # JSON message
-                    json_message = json.loads(message)
+                try:
+                    # Use recv with timeout (from socket options)
+                    message = self.from_device_socket.recv()
+
+                    if message.startswith(b"{") and message.endswith(b"}"):
+                        json_message = json.loads(message)
                     if json_message["object"] == "Pin":
                         for pin in self.pins:
                             if response := pin.handle_message(json_message):
                                 # print(f"[Emulator] Sending response: {response}")
-                                from_device_socket.send_string(response)
+                                self.from_device_socket.send_string(response)
                                 # print("")
                                 break
                         else:
@@ -79,7 +98,7 @@ class DeviceEmulator:
                         for uart in self.uarts:
                             if response := uart.handle_message(json_message):
                                 # print(f"[Emulator] Sending response: {response}")
-                                from_device_socket.send_string(response)
+                                self.from_device_socket.send_string(response)
                                 # print("")
                                 break
                         else:
@@ -88,7 +107,7 @@ class DeviceEmulator:
                         for i2c in self.i2cs:
                             if response := i2c.handle_message(json_message):
                                 # print(f"[Emulator] Sending response: {response}")
-                                from_device_socket.send_string(response)
+                                self.from_device_socket.send_string(response)
                                 # print("")
                                 break
                         else:
@@ -97,18 +116,50 @@ class DeviceEmulator:
                         raise UnhandledMessageError(
                             message, f" - unknown object type: {json_message['object']}"
                         )
-                else:
-                    raise UnhandledMessageError(message, " - not JSON")
+                except zmq.Again:
+                    # Timeout - check if we should stop
+                    if not self.running:
+                        break
+                    continue
+
+        except Exception as e:
+            print(f"Emulator thread error: {e}")
         finally:
-            from_device_socket.close()
-            from_device_context.term()
+            self.from_device_socket.close()
+            print("Emulator thread exiting")
 
     def start(self):
+        """Start emulator and wait until ready."""
         self.emulator_thread.start()
 
+        # Wait for emulator to be ready (with timeout)
+        timeout = 5.0  # seconds
+        start_time = time.time()
+        while not self._ready:
+            if time.time() - start_time > timeout:
+                raise RuntimeError("Emulator failed to start within timeout")
+            time.sleep(0.01)
+
+        # NOW connect the to_device socket (emulator is bound and ready)
+        self.to_device_socket.connect("ipc:///tmp/emulator_device.ipc")
+        print("Connected to ipc:///tmp/emulator_device.ipc")
+
+        # Give connection a moment to establish
+        time.sleep(0.05)
+
     def stop(self):
+        """Stop emulator and clean up resources."""
+        print("Stopping emulator")
         self.running = False
-        self.emulator_thread.join()
+
+        # Wait for thread to exit (recv timeout will let it check running flag)
+        self.emulator_thread.join(timeout=2.0)
+
+        # Clean up sockets and context
+        self.to_device_socket.close()
+        # from_device_socket closed in thread
+        self.context.term()
+        print("Emulator stopped")
 
     def uart_initialized(self, name):
         """Check if a UART with the given name exists."""
