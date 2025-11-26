@@ -18,11 +18,18 @@ enum class TransportState {
   kError,
 };
 
+struct RetryConfig {
+  uint32_t max_attempts{3};
+  std::chrono::milliseconds retry_delay{10};
+  std::chrono::milliseconds total_timeout{1000};
+};
+
 struct TransportConfig {
   std::chrono::milliseconds poll_timeout{50};
   std::chrono::milliseconds connect_timeout{5000};
   std::chrono::milliseconds shutdown_timeout{2000};
   int linger_ms{0};  // Discard pending messages on close
+  RetryConfig retry{};
 };
 
 class ZmqTransport : public Transport {

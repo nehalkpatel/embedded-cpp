@@ -114,20 +114,43 @@ auto ZmqTransport::Send(std::string_view data)
     return std::unexpected(common::Error::kInvalidState);
   }
 
-  // Use blocking send with timeout (set via socket options)
-  try {
-    auto result{
-        to_emulator_socket_.send(zmq::buffer(data), zmq::send_flags::none)};
-    if (!result) {
+  // Calculate deadline for retry timeout
+  const auto deadline{std::chrono::steady_clock::now() +
+                      config_.retry.total_timeout};
+
+  // Retry loop
+  for (uint32_t attempt = 0; attempt < config_.retry.max_attempts; ++attempt) {
+    try {
+      auto result{
+          to_emulator_socket_.send(zmq::buffer(data), zmq::send_flags::none)};
+      if (result) {
+        return {};  // Success!
+      }
+    } catch (const zmq::error_t& e) {
+      // Check if error is retryable
+      if (e.num() == EAGAIN || e.num() == ETIMEDOUT) {
+        // Check if we've exceeded total timeout
+        if (std::chrono::steady_clock::now() >= deadline) {
+          return std::unexpected(common::Error::kTimeout);
+        }
+
+        // Wait before retry (unless this was the last attempt)
+        if (attempt + 1 < config_.retry.max_attempts) {
+          std::this_thread::sleep_for(config_.retry.retry_delay);
+        }
+        continue;  // Retry
+      }
+
+      // Non-retryable error
       return std::unexpected(common::Error::kOperationFailed);
     }
-    return {};
-  } catch (const zmq::error_t& e) {
-    if (e.num() == EAGAIN || e.num() == ETIMEDOUT) {
-      return std::unexpected(common::Error::kTimeout);
-    }
+
+    // result was false but no exception - operation failed
     return std::unexpected(common::Error::kOperationFailed);
   }
+
+  // Max attempts exceeded
+  return std::unexpected(common::Error::kTimeout);
 }
 
 void ZmqTransport::ServerThread(const std::string& endpoint) {
