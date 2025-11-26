@@ -129,9 +129,12 @@ class I2C:
             if old_handler is not None:
                 old_handler(message)
             # Check our condition
-            if message.get("operation") == operation:
-                if address is None or message.get("address") == address:
-                    event.set()
+            if (
+                message.get("operation") == operation
+                and address is None
+                or message.get("address") == address
+            ):
+                event.set()
 
         # Save old handler
         old_handler = self.on_request
@@ -165,11 +168,12 @@ class I2C:
                 old_handler(message)
             # Check our condition
             operation = message.get("operation")
-            if operation in ("Send", "Receive"):
-                if address is None or message.get("address") == address:
-                    transactions[0] += 1
-                    if transactions[0] >= count:
-                        event.set()
+            if operation in ("Send", "Receive") and (
+                address is None or message.get("address") == address
+            ):
+                transactions[0] += 1
+                if transactions[0] >= count:
+                    event.set()
 
         # Save old handler
         old_handler = self.on_request
