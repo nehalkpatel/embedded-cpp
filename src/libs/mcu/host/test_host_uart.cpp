@@ -34,9 +34,11 @@ class HostUartTest : public ::testing::Test {
     dispatcher_ = std::make_unique<mcu::Dispatcher>(receiver_map_storage_);
 
     // Create transport
-    device_transport_ = std::make_unique<mcu::ZmqTransport>(
-        "ipc:///tmp/test_uart_device_emulator.ipc",
-        "ipc:///tmp/test_uart_emulator_device.ipc", *dispatcher_);
+    device_transport_ =
+        mcu::ZmqTransport::Create("ipc:///tmp/test_uart_device_emulator.ipc",
+                                  "ipc:///tmp/test_uart_emulator_device.ipc",
+                                  *dispatcher_)
+            .value_or(nullptr);
 
     // Now create UART with transport
     uart_ = std::make_unique<mcu::HostUart>("UART 1", *device_transport_);
@@ -136,9 +138,7 @@ class HostUartTest : public ::testing::Test {
     }
   }
 
-  std::vector<
-      std::pair<std::function<bool(const std::string_view&)>, mcu::Receiver&>>
-      receiver_map_storage_;
+  mcu::ReceiverMap receiver_map_storage_;
   std::unique_ptr<mcu::Dispatcher> dispatcher_;
   std::unique_ptr<mcu::ZmqTransport> device_transport_;
   std::unique_ptr<mcu::HostUart> uart_;

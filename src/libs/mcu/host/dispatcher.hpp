@@ -11,8 +11,9 @@
 
 namespace mcu {
 
-using ReceiverMap = const std::vector<
-    std::pair<std::function<bool(const std::string_view& message)>, Receiver&>>;
+using ReceiverMap = std::vector<
+    std::pair<std::function<bool(const std::string_view& message)>,
+              std::reference_wrapper<Receiver>>>;
 
 class Dispatcher {
  public:
@@ -26,9 +27,9 @@ class Dispatcher {
 
   auto Dispatch(const std::string_view& message) const
       -> std::expected<std::string, common::Error> {
-    for (const auto& [predicate, receiver] : receivers_) {
+    for (const auto& [predicate, receiver_ref] : receivers_) {
       if (predicate(message)) {
-        auto reply = receiver.Receive(message);
+        auto reply = receiver_ref.get().Receive(message);
         if (reply.has_value()) {
           return reply;
         }
