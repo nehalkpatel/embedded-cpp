@@ -58,7 +58,7 @@ auto UartEcho::Run() -> std::expected<void, common::Error> {
   // Main loop - just blink LED2 slowly to show we're alive
   // The actual echo happens via the RxHandler callback
   while (true) {
-    mcu::Delay(1000ms);
+    mcu::Delay(200ms);
     std::ignore = board_.UserLed2().Toggle();
   }
   return {};

@@ -1,24 +1,18 @@
 """Integration tests for UART echo application with RxHandler."""
 
-import time
-
 
 def test_uart_echo_starts(emulator, uart_echo):
     """Test that uart_echo starts successfully."""
-    # Give uart_echo time to initialize
-    time.sleep(0.5)
-
     # Check that the process is still running
     assert uart_echo.poll() is None, "uart_echo process terminated unexpectedly"
 
 
 def test_uart_echo_sends_greeting(emulator, uart_echo):
     """Test that uart_echo sends a greeting message on startup."""
-    # Give uart_echo time to initialize and send greeting
-    time.sleep(0.5)
-
-    # Check rx_buffer directly (data sent before handler registration)
-    assert len(emulator.uart1().rx_buffer) > 0, "No data received from UART"
+    # Wait for UART to receive greeting data
+    assert emulator.uart1().wait_for_data(min_bytes=1, timeout=2.0), (
+        "No greeting received from uart_echo"
+    )
 
     # Check that the greeting contains expected text
     greeting = bytes(emulator.uart1().rx_buffer).decode("utf-8", errors="ignore")
@@ -27,9 +21,6 @@ def test_uart_echo_sends_greeting(emulator, uart_echo):
 
 def test_uart_echo_echoes_data(emulator, uart_echo):
     """Test that uart_echo echoes received data back."""
-    # Give uart_echo time to initialize
-    time.sleep(0.5)
-
     # Clear any initial greeting data
     emulator.uart1().rx_buffer.clear()
 
@@ -40,8 +31,10 @@ def test_uart_echo_echoes_data(emulator, uart_echo):
     # Verify the response acknowledges receipt
     assert response["status"] == "Ok"
 
-    # Give time for the RxHandler to process and echo back
-    time.sleep(0.2)
+    # Wait for the RxHandler to process and echo back
+    assert emulator.uart1().wait_for_data(min_bytes=len(test_data), timeout=1.0), (
+        "Echo data not received within timeout"
+    )
 
     # Check that the data was echoed back
     assert len(emulator.uart1().rx_buffer) == len(test_data)
@@ -50,9 +43,6 @@ def test_uart_echo_echoes_data(emulator, uart_echo):
 
 def test_uart_echo_handler_receives_echoed_data(emulator, uart_echo):
     """Test that UART handler callback is invoked when device sends data."""
-    # Give uart_echo time to initialize
-    time.sleep(0.5)
-
     # Clear any initial greeting data
     emulator.uart1().rx_buffer.clear()
 
@@ -74,8 +64,10 @@ def test_uart_echo_handler_receives_echoed_data(emulator, uart_echo):
     # Verify the response acknowledges receipt
     assert response["status"] == "Ok"
 
-    # Give time for the RxHandler to process and echo back
-    time.sleep(0.2)
+    # Wait for the RxHandler to process and echo back
+    assert emulator.uart1().wait_for_data(min_bytes=len(test_data), timeout=1.0), (
+        "Echo data not received within timeout"
+    )
 
     # Verify handler was called with echoed data
     assert len(received_via_handler) == len(test_data), (

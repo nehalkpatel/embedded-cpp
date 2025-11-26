@@ -79,7 +79,7 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
     std::ignore = board_.UserLed2().Toggle();
 
     // Delay before next iteration
-    mcu::Delay(500ms);
+    mcu::Delay(200ms);
   }
 
   return {};
