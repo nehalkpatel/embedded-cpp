@@ -51,7 +51,8 @@ def _wait_for_process_ready(process, timeout=2.0):
             raise RuntimeError(f"Process exited with code {process.returncode}")
         time.sleep(0.1)
     # Give a bit more time for ZMQ connections
-    time.sleep(0.2)
+    # Reduced from 0.2s since ZmqTransport constructor already has 10ms sleep
+    time.sleep(0.1)
 
 
 @pytest.fixture(scope="function")

@@ -180,11 +180,23 @@ void ZmqTransport::ServerThread(const std::string& endpoint) {
 }
 
 auto ZmqTransport::Receive() -> std::expected<std::string, common::Error> {
-  zmq::message_t msg{};
-  if (to_emulator_socket_.recv(msg, zmq::recv_flags::none) != msg.size()) {
+  if (state_ != TransportState::kConnected) {
+    return std::unexpected(common::Error::kInvalidState);
+  }
+
+  try {
+    zmq::message_t msg{};
+    auto result{to_emulator_socket_.recv(msg, zmq::recv_flags::none)};
+    if (!result || result.value() != msg.size()) {
+      return std::unexpected(common::Error::kOperationFailed);
+    }
+    return msg.to_string();
+  } catch (const zmq::error_t& e) {
+    if (e.num() == EAGAIN || e.num() == ETIMEDOUT) {
+      return std::unexpected(common::Error::kTimeout);
+    }
     return std::unexpected(common::Error::kOperationFailed);
   }
-  return msg.to_string();
 }
 
 }  // namespace mcu

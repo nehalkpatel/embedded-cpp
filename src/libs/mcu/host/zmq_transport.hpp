@@ -40,8 +40,10 @@ class ZmqTransport : public Transport {
 
   // New methods for connection management
   auto State() const -> TransportState { return state_.load(); }
+  auto IsConnected() const -> bool {
+    return state_.load() == TransportState::kConnected;
+  }
   auto WaitForConnection(std::chrono::milliseconds timeout)
-
       -> std::expected<void, common::Error>;
   // Factory method - preferred way to create transport
   static auto Create(const std::string& to_emulator,
