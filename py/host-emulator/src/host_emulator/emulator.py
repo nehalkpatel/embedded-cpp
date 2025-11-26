@@ -71,9 +71,18 @@ class DeviceEmulator:
         """Main emulator thread - BIND first, then signal ready."""
         print("Starting emulator thread")
         try:
+            # Clean up any stale socket files from previous runs
+            import os
+            socket_path = "/tmp/device_emulator.ipc"
+            try:
+                os.unlink(socket_path)
+                print(f"Removed stale socket file: {socket_path}")
+            except FileNotFoundError:
+                pass  # No stale file, that's fine
+
             # BIND in the thread (before anyone tries to connect)
-            self.from_device_socket.bind("ipc:///tmp/device_emulator.ipc")
-            print("Bound to ipc:///tmp/device_emulator.ipc")
+            self.from_device_socket.bind(f"ipc://{socket_path}")
+            print(f"Bound to ipc://{socket_path}")
 
             self.running = True
             self._ready = True  # Signal that we're ready
