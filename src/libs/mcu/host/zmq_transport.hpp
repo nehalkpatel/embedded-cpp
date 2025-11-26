@@ -87,9 +87,7 @@ class ZmqTransport : public Transport {
   auto LogDebug(std::string_view msg) const -> void {
     config_.logger.Debug(msg);
   }
-  auto LogInfo(std::string_view msg) const -> void {
-    config_.logger.Info(msg);
-  }
+  auto LogInfo(std::string_view msg) const -> void { config_.logger.Info(msg); }
   auto LogWarning(std::string_view msg) const -> void {
     config_.logger.Warning(msg);
   }

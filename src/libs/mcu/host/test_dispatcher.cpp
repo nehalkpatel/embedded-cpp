@@ -70,8 +70,8 @@ TEST_F(DispatcherTest, DispatchMessageMultipleReceivers) {
   const std::string sent_message{"Hello"};
   SimpleReceiver receiver1;
   SimpleReceiver receiver2;
-  const ReceiverMap receiver_map{
-      {IsHello, std::ref(receiver1)}, {IsWorld, std::ref(receiver2)}};
+  const ReceiverMap receiver_map{{IsHello, std::ref(receiver1)},
+                                 {IsWorld, std::ref(receiver2)}};
   const Dispatcher dispatcher{receiver_map};
   auto reply = dispatcher.Dispatch(sent_message);
   EXPECT_TRUE(reply.has_value());
@@ -84,8 +84,8 @@ TEST_F(DispatcherTest, DispatchMessageMultipleReceiversSecond) {
   const std::string sent_message{"World"};
   SimpleReceiver receiver1;
   SimpleReceiver receiver2;
-  const ReceiverMap receiver_map{
-      {IsHello, std::ref(receiver1)}, {IsWorld, std::ref(receiver2)}};
+  const ReceiverMap receiver_map{{IsHello, std::ref(receiver1)},
+                                 {IsWorld, std::ref(receiver2)}};
   const Dispatcher dispatcher{receiver_map};
   auto reply = dispatcher.Dispatch(sent_message);
   EXPECT_TRUE(reply.has_value());

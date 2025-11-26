@@ -11,9 +11,9 @@
 
 namespace mcu {
 
-using ReceiverMap = std::vector<
-    std::pair<std::function<bool(const std::string_view& message)>,
-              std::reference_wrapper<Receiver>>>;
+using ReceiverMap =
+    std::vector<std::pair<std::function<bool(const std::string_view& message)>,
+                          std::reference_wrapper<Receiver>>>;
 
 class Dispatcher {
  public:

@@ -54,8 +54,9 @@ ZmqTransport::ZmqTransport(const std::string& to_emulator,    // NOLINT
       std::thread{&ZmqTransport::ServerThread, this, from_emulator};
 
   // Small sleep to let server thread bind (ZMQ binding is fast, ~1-5ms typical)
-  // This is a pragmatic approach - alternatives would require condition variables
-  // or synchronization primitives which add complexity for minimal benefit
+  // This is a pragmatic approach - alternatives would require condition
+  // variables or synchronization primitives which add complexity for minimal
+  // benefit
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   // Now CONNECT to emulator (emulator should already be bound)
@@ -71,12 +72,10 @@ auto ZmqTransport::SetSocketOptions() -> void {
   to_emulator_socket_.set(zmq::sockopt::linger, config_.linger_ms);
 
   // Set send/recv timeouts from configuration
-  to_emulator_socket_.set(
-      zmq::sockopt::sndtimeo,
-      static_cast<int>(config_.send_timeout.count()));
-  to_emulator_socket_.set(
-      zmq::sockopt::rcvtimeo,
-      static_cast<int>(config_.recv_timeout.count()));
+  to_emulator_socket_.set(zmq::sockopt::sndtimeo,
+                          static_cast<int>(config_.send_timeout.count()));
+  to_emulator_socket_.set(zmq::sockopt::rcvtimeo,
+                          static_cast<int>(config_.recv_timeout.count()));
 }
 
 auto ZmqTransport::WaitForConnection(std::chrono::milliseconds timeout)

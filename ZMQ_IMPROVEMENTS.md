@@ -332,7 +332,7 @@ def stop(self):
 
 **Implementation** ([conftest.py:31-97](py/host-emulator/tests/conftest.py#L31-L97)):
 ```python
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def emulator(request):
     """Start emulator and ensure it's ready before returning."""
     device_emulator = DeviceEmulator()
@@ -344,7 +344,7 @@ def emulator(request):
         if device_emulator.running:
             device_emulator.stop()
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def blinky(request, emulator):  # Depends on emulator
     """Start blinky application after emulator is ready."""
     # ... spawn process ...

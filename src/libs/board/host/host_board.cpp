@@ -9,8 +9,7 @@
 #include "libs/mcu/uart.hpp"
 
 namespace board {
-HostBoard::HostBoard(Endpoints endpoints)
-    : endpoints_(std::move(endpoints)) {}
+HostBoard::HostBoard(Endpoints endpoints) : endpoints_(std::move(endpoints)) {}
 
 auto HostBoard::Init() -> std::expected<void, common::Error> {
   // Step 1: Create the dispatcher with an empty receiver map initially
@@ -34,10 +33,8 @@ auto HostBoard::Init() -> std::expected<void, common::Error> {
 
   // Step 4: Now build the receiver map with all components
   receiver_map_ = mcu::ReceiverMap{
-      {IsJson, std::ref(*user_led_1_)},
-      {IsJson, std::ref(*user_led_2_)},
-      {IsJson, std::ref(*user_button_1_)},
-      {IsJson, std::ref(*uart_1_)},
+      {IsJson, std::ref(*user_led_1_)},    {IsJson, std::ref(*user_led_2_)},
+      {IsJson, std::ref(*user_button_1_)}, {IsJson, std::ref(*uart_1_)},
       {IsJson, std::ref(*i2c_1_)},
   };
 
