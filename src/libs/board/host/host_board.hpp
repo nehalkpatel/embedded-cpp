@@ -19,7 +19,14 @@ namespace board {
 
 class HostBoard : public Board {
  public:
+  // Endpoint configuration for ZMQ communication
+  struct Endpoints {
+    std::string to_emulator{"ipc:///tmp/device_emulator.ipc"};
+    std::string from_emulator{"ipc:///tmp/emulator_device.ipc"};
+  };
+
   HostBoard() = default;
+  explicit HostBoard(Endpoints endpoints);
   HostBoard(const HostBoard&) = delete;
   HostBoard(HostBoard&&) = delete;
   auto operator=(const HostBoard&) -> HostBoard& = delete;
@@ -37,6 +44,9 @@ class HostBoard : public Board {
   static constexpr auto IsJson(const std::string_view& message) -> bool {
     return message.starts_with("{") && message.ends_with("}");
   }
+
+  // Endpoint configuration (declared first to be initialized first)
+  Endpoints endpoints_{};
 
   // Store components (order matters for destruction)
   std::unique_ptr<mcu::HostPin> user_led_1_{};

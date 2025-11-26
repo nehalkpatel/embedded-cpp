@@ -1,9 +1,13 @@
+import logging
 import pathlib
 import subprocess
 import time
 
 import pytest
 from host_emulator import DeviceEmulator
+
+# Configure logging for tests
+logger = logging.getLogger(__name__)
 
 
 def pytest_addoption(parser):
@@ -38,7 +42,7 @@ def emulator(request):
     finally:
         # Automatic cleanup - tests don't need to call stop()
         if device_emulator.running:
-            print("[Fixture] Stopping emulator")
+            logger.debug("[Fixture] Stopping emulator")
             device_emulator.stop()
 
 
@@ -83,14 +87,14 @@ def blinky(request, emulator):
     finally:
         # Automatic cleanup
         if blinky_process.poll() is None:
-            print("[Fixture] Stopping blinky")
+            logger.debug("[Fixture] Stopping blinky")
             blinky_process.terminate()
             try:
                 blinky_process.wait(timeout=2)
             except subprocess.TimeoutExpired:
                 blinky_process.kill()
                 blinky_process.wait()
-        print(f"[Fixture] Blinky exit code: {blinky_process.returncode}")
+        logger.debug(f"[Fixture] Blinky exit code: {blinky_process.returncode}")
 
 
 @pytest.fixture(scope="function")
@@ -114,14 +118,14 @@ def uart_echo(request, emulator):
         yield uart_echo_process
     finally:
         if uart_echo_process.poll() is None:
-            print("[Fixture] Stopping uart_echo")
+            logger.debug("[Fixture] Stopping uart_echo")
             uart_echo_process.terminate()
             try:
                 uart_echo_process.wait(timeout=2)
             except subprocess.TimeoutExpired:
                 uart_echo_process.kill()
                 uart_echo_process.wait()
-        print(f"[Fixture] UartEcho exit code: {uart_echo_process.returncode}")
+        logger.debug(f"[Fixture] UartEcho exit code: {uart_echo_process.returncode}")
 
 
 @pytest.fixture(scope="function")
@@ -145,11 +149,11 @@ def i2c_demo(request, emulator):
         yield i2c_demo_process
     finally:
         if i2c_demo_process.poll() is None:
-            print("[Fixture] Stopping i2c_demo")
+            logger.debug("[Fixture] Stopping i2c_demo")
             i2c_demo_process.terminate()
             try:
                 i2c_demo_process.wait(timeout=2)
             except subprocess.TimeoutExpired:
                 i2c_demo_process.kill()
                 i2c_demo_process.wait()
-        print(f"[Fixture] I2CDemo exit code: {i2c_demo_process.returncode}")
+        logger.debug(f"[Fixture] I2CDemo exit code: {i2c_demo_process.returncode}")

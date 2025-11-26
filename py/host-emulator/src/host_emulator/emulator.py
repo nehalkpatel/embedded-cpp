@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import json
+import logging
 import sys
 import time
 from threading import Thread
@@ -12,10 +13,46 @@ from .i2c import I2C
 from .pin import Pin
 from .uart import Uart
 
+# Configure logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)  # Default to INFO, can be changed by users
+
+# Add console handler if not already configured
+if not logger.handlers:
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
 
 class DeviceEmulator:
-    def __init__(self):
-        print("Creating DeviceEmulator")
+    # Default endpoints for IPC communication
+    DEFAULT_FROM_DEVICE_ENDPOINT = "ipc:///tmp/device_emulator.ipc"
+    DEFAULT_TO_DEVICE_ENDPOINT = "ipc:///tmp/emulator_device.ipc"
+
+    def __init__(
+        self,
+        from_device_endpoint=None,
+        to_device_endpoint=None,
+    ):
+        """Initialize the device emulator.
+
+        Args:
+            from_device_endpoint: ZMQ endpoint to bind for receiving from device.
+                                 Default: "ipc:///tmp/device_emulator.ipc"
+            to_device_endpoint: ZMQ endpoint to connect for sending to device.
+                               Default: "ipc:///tmp/emulator_device.ipc"
+        """
+        self.from_device_endpoint = (
+            from_device_endpoint or self.DEFAULT_FROM_DEVICE_ENDPOINT
+        )
+        self.to_device_endpoint = to_device_endpoint or self.DEFAULT_TO_DEVICE_ENDPOINT
+
+        logger.info("Creating DeviceEmulator")
+        logger.debug(f"  from_device: {self.from_device_endpoint}")
+        logger.debug(f"  to_device: {self.to_device_endpoint}")
+
         self.running = False
 
         # Create single context for the entire emulator
@@ -69,20 +106,21 @@ class DeviceEmulator:
 
     def run(self):
         """Main emulator thread - BIND first, then signal ready."""
-        print("Starting emulator thread")
+        logger.debug("Starting emulator thread")
         try:
-            # Clean up any stale socket files from previous runs
-            import os
-            socket_path = "/tmp/device_emulator.ipc"
-            try:
-                os.unlink(socket_path)
-                print(f"Removed stale socket file: {socket_path}")
-            except FileNotFoundError:
-                pass  # No stale file, that's fine
+            # Clean up any stale socket files from previous runs (IPC only)
+            if self.from_device_endpoint.startswith("ipc://"):
+                import os
+                socket_path = self.from_device_endpoint.replace("ipc://", "")
+                try:
+                    os.unlink(socket_path)
+                    logger.debug(f"Removed stale socket file: {socket_path}")
+                except FileNotFoundError:
+                    pass  # No stale file, that's fine
 
             # BIND in the thread (before anyone tries to connect)
-            self.from_device_socket.bind(f"ipc://{socket_path}")
-            print(f"Bound to ipc://{socket_path}")
+            self.from_device_socket.bind(self.from_device_endpoint)
+            logger.debug(f"Bound to {self.from_device_endpoint}")
 
             self.running = True
             self._ready = True  # Signal that we're ready
@@ -132,10 +170,10 @@ class DeviceEmulator:
                     continue
 
         except Exception as e:
-            print(f"Emulator thread error: {e}")
+            logger.error(f"Emulator thread error: {e}", exc_info=True)
         finally:
             self.from_device_socket.close()
-            print("Emulator thread exiting")
+            logger.debug("Emulator thread exiting")
 
     def start(self):
         """Start emulator and wait until ready."""
@@ -150,15 +188,15 @@ class DeviceEmulator:
             time.sleep(0.01)
 
         # NOW connect the to_device socket (emulator is bound and ready)
-        self.to_device_socket.connect("ipc:///tmp/emulator_device.ipc")
-        print("Connected to ipc:///tmp/emulator_device.ipc")
+        self.to_device_socket.connect(self.to_device_endpoint)
+        logger.debug(f"Connected to {self.to_device_endpoint}")
 
         # Give connection a moment to establish
         time.sleep(0.05)
 
     def stop(self):
         """Stop emulator and clean up resources."""
-        print("Stopping emulator")
+        logger.info("Stopping emulator")
         self.running = False
 
         # Wait for thread to exit (recv timeout will let it check running flag)
@@ -168,7 +206,7 @@ class DeviceEmulator:
         self.to_device_socket.close()
         # from_device_socket closed in thread
         self.context.term()
-        print("Emulator stopped")
+        logger.info("Emulator stopped")
 
     def uart_initialized(self, name):
         """Check if a UART with the given name exists."""
@@ -211,20 +249,18 @@ def main():
     emulator = DeviceEmulator()
     try:
         emulator.start()
-        print("Sending Hello")
+        logger.info("Sending Hello")
         emulator.to_device_socket.send_string("Hello")
-        print("Waiting for reply")
+        logger.info("Waiting for reply")
         reply = emulator.to_device_socket.recv()
-        print(f"Received reply: {reply}")
+        logger.info(f"Received reply: {reply}")
         reply = emulator.user_button1().get_state()
-        print(f"Received reply: {reply}")
+        logger.info(f"Received reply: {reply}")
         while emulator.running:
             emulator.emulator_thread.join(0.5)
     except (KeyboardInterrupt, SystemExit):
-        print("main Received keyboard interrupt")
+        logger.info("main Received keyboard interrupt")
         emulator.stop()
-        emulator.to_device_socket.close()
-        emulator.to_device_context.term()
         sys.exit(0)
 
 

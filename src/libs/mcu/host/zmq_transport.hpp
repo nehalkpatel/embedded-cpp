@@ -33,7 +33,20 @@ struct TransportConfig {
   std::chrono::milliseconds recv_timeout{5000};
   int linger_ms{0};  // Discard pending messages on close
   RetryConfig retry{};
-  common::Logger* logger{nullptr};  // Optional logger (nullptr = no logging)
+  common::Logger& logger;  // Logger reference (defaults to NullLogger)
+
+  // Default constructor uses NullLogger
+  TransportConfig() : logger(GetDefaultLogger()) {}
+
+  // Allow custom logger via dependency injection
+  explicit TransportConfig(common::Logger& custom_logger)
+      : logger(custom_logger) {}
+
+ private:
+  static auto GetDefaultLogger() -> common::Logger& {
+    static common::NullLogger null_logger{};
+    return null_logger;
+  }
 };
 
 class ZmqTransport : public Transport {
@@ -69,6 +82,20 @@ class ZmqTransport : public Transport {
  private:
   auto ServerThread(const std::string& endpoint) -> void;
   auto SetSocketOptions() -> void;
+
+  // Logging helpers to reduce cognitive complexity
+  auto LogDebug(std::string_view msg) const -> void {
+    config_.logger.Debug(msg);
+  }
+  auto LogInfo(std::string_view msg) const -> void {
+    config_.logger.Info(msg);
+  }
+  auto LogWarning(std::string_view msg) const -> void {
+    config_.logger.Warning(msg);
+  }
+  auto LogError(std::string_view msg) const -> void {
+    config_.logger.Error(msg);
+  }
 
   TransportConfig config_;
   std::atomic<TransportState> state_{TransportState::kDisconnected};

@@ -1,6 +1,7 @@
 #include "host_board.hpp"
 
 #include <expected>
+#include <utility>
 
 #include "libs/common/error.hpp"
 #include "libs/mcu/i2c.hpp"
@@ -8,15 +9,17 @@
 #include "libs/mcu/uart.hpp"
 
 namespace board {
+HostBoard::HostBoard(Endpoints endpoints)
+    : endpoints_(std::move(endpoints)) {}
+
 auto HostBoard::Init() -> std::expected<void, common::Error> {
   // Step 1: Create the dispatcher with an empty receiver map initially
   // We'll build the actual receiver map after creating components
   dispatcher_.emplace(receiver_map_);
 
-  // Step 2: Create the transport with the dispatcher
+  // Step 2: Create the transport with the dispatcher using configured endpoints
   auto transport_result{mcu::ZmqTransport::Create(
-      "ipc:///tmp/device_emulator.ipc", "ipc:///tmp/emulator_device.ipc",
-      *dispatcher_)};
+      endpoints_.to_emulator, endpoints_.from_emulator, *dispatcher_)};
   if (!transport_result) {
     return std::unexpected(transport_result.error());
   }
