@@ -30,7 +30,7 @@ auto Blinky::Run() -> std::expected<void, common::Error> {
   while (true) {
     status = status
                  .and_then([this]() {
-                   mcu::Delay(500ms);
+                   mcu::Delay(200ms);
                    return board_.UserLed1().Toggle();
                  })
                  .or_else([](auto error) -> std::expected<void, common::Error> {

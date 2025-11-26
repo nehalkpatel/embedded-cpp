@@ -6,7 +6,7 @@ target_compile_options(host_mcu PRIVATE ${COMMON_COMPILE_OPTIONS})
 add_library(host_transport zmq_transport.cpp)
 target_compile_options(host_transport PRIVATE ${COMMON_COMPILE_OPTIONS})
 
-target_link_libraries(host_transport PRIVATE cppzmq)
+target_link_libraries(host_transport PRIVATE cppzmq logger)
 target_link_libraries(host_mcu INTERFACE mcu PRIVATE host_transport nlohmann_json::nlohmann_json)
 
 FetchContent_MakeAvailable(googletest)

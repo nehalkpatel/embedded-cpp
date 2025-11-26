@@ -1,6 +1,7 @@
 """UART emulation for the host emulator."""
 
 import json
+import threading
 
 from .common import Status
 
@@ -99,3 +100,64 @@ class Uart:
             return self.handle_request(message)
         if message["type"] == "Response":
             return self.handle_response(message)
+
+    def wait_for_data(self, min_bytes=1, timeout=2.0):
+        """Wait for UART to receive at least min_bytes of data from device.
+
+        Args:
+            min_bytes: Minimum number of bytes to wait for
+            timeout: Maximum time to wait in seconds
+
+        Returns:
+            True if data received, False if timeout
+        """
+        event = threading.Event()
+
+        def handler(message):
+            if message.get("operation") == "Send" and len(self.rx_buffer) >= min_bytes:
+                event.set()
+
+        # Save old handler
+        old_handler = self.on_request
+
+        # Set temporary handler
+        self.on_request = handler
+
+        # Check if we already have enough data
+        if len(self.rx_buffer) >= min_bytes:
+            self.on_request = old_handler
+            return True
+
+        try:
+            return event.wait(timeout)
+        finally:
+            # Restore old handler
+            self.on_request = old_handler
+
+    def wait_for_operation(self, operation, timeout=2.0):
+        """Wait for a specific UART operation to occur.
+
+        Args:
+            operation: The operation to wait for ("Init", "Send", "Receive")
+            timeout: Maximum time to wait in seconds
+
+        Returns:
+            True if operation occurred, False if timeout
+        """
+        event = threading.Event()
+
+        def handler(message):
+            if message.get("operation") == operation:
+                event.set()
+
+        # Save old handler
+        old_handler = self.on_request
+
+        # Set temporary handler
+        self.on_request = handler
+
+        try:
+            return event.wait(timeout)
+        finally:
+            # Restore old handler
+            self.on_request = old_handler

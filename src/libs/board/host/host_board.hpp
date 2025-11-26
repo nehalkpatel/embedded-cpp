@@ -2,6 +2,8 @@
 
 #include <expected>
 #include <functional>
+#include <memory>
+#include <optional>
 #include <string>
 
 #include "libs/board/board.hpp"
@@ -17,7 +19,14 @@ namespace board {
 
 class HostBoard : public Board {
  public:
+  // Endpoint configuration for ZMQ communication
+  struct Endpoints {
+    std::string to_emulator{"ipc:///tmp/device_emulator.ipc"};
+    std::string from_emulator{"ipc:///tmp/emulator_device.ipc"};
+  };
+
   HostBoard() = default;
+  explicit HostBoard(Endpoints endpoints);
   HostBoard(const HostBoard&) = delete;
   HostBoard(HostBoard&&) = delete;
   auto operator=(const HostBoard&) -> HostBoard& = delete;
@@ -36,18 +45,19 @@ class HostBoard : public Board {
     return message.starts_with("{") && message.ends_with("}");
   }
 
-  const mcu::ReceiverMap receiver_map_{
-      {IsJson, user_led_1_}, {IsJson, user_led_2_}, {IsJson, user_button_1_},
-      {IsJson, uart_1_},     {IsJson, i2c_1_},
-  };
-  mcu::Dispatcher dispatcher_{receiver_map_};
-  mcu::ZmqTransport zmq_transport_{"ipc:///tmp/device_emulator.ipc",
-                                   "ipc:///tmp/emulator_device.ipc",
-                                   dispatcher_};
-  mcu::HostPin user_led_1_{"LED 1", zmq_transport_};
-  mcu::HostPin user_led_2_{"LED 2", zmq_transport_};
-  mcu::HostPin user_button_1_{"Button 1", zmq_transport_};
-  mcu::HostUart uart_1_{"UART 1", zmq_transport_};
-  mcu::HostI2CController i2c_1_{"I2C 1", zmq_transport_};
+  // Endpoint configuration (declared first to be initialized first)
+  Endpoints endpoints_{};
+
+  // Store components (order matters for destruction)
+  std::unique_ptr<mcu::HostPin> user_led_1_{};
+  std::unique_ptr<mcu::HostPin> user_led_2_{};
+  std::unique_ptr<mcu::HostPin> user_button_1_{};
+  std::unique_ptr<mcu::HostUart> uart_1_{};
+  std::unique_ptr<mcu::HostI2CController> i2c_1_{};
+
+  // Receiver map and dispatcher (built in Init() after components exist)
+  mcu::ReceiverMap receiver_map_{};
+  std::optional<mcu::Dispatcher> dispatcher_{};
+  std::unique_ptr<mcu::ZmqTransport> zmq_transport_{};
 };
 }  // namespace board

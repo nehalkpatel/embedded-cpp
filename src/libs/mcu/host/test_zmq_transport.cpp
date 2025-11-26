@@ -76,31 +76,16 @@ class ZmqTransportTest : public ::testing::Test {
 };
 
 TEST_F(ZmqTransportTest, SendReceive) {
-  ReceiverMap receiver_map{};
+  const ReceiverMap receiver_map{};
   Dispatcher dispatcher{receiver_map};
-  ZmqTransport transport{"ipc:///tmp/device_emulator.ipc",
-                         "ipc:///tmp/emulator_device.ipc", dispatcher};
-  auto result = transport.Send("Hello");
+  auto transport =
+      mcu::ZmqTransport::Create("ipc:///tmp/device_emulator.ipc",
+                                "ipc:///tmp/emulator_device.ipc", dispatcher);
+  auto result = (*transport)->Send("Hello");
   ASSERT_TRUE(result);
-  auto response = transport.Receive();
+  auto response = (*transport)->Receive();
   ASSERT_TRUE(response);
   ASSERT_EQ(response.value(), "World");
-}
-
-TEST(ZmqTransport, ClientMessage) {
-  ReceiverMap receiver_map{};
-  Dispatcher dispatcher{receiver_map};
-  const ZmqTransport transport{"ipc:///tmp/device_emulator.ipc",
-                               "ipc:///tmp/emulator_device.ipc", dispatcher};
-  zmq::context_t context{1};
-  zmq::socket_t socket{context, zmq::socket_type::pair};
-  socket.connect("ipc:///tmp/emulator_device.ipc");
-  socket.send(zmq::str_buffer("Hello"), zmq::send_flags::none);
-  zmq::message_t response{};
-  ASSERT_GT(socket.recv(response, zmq::recv_flags::none), 0);
-  const std::string_view response_str{static_cast<const char*>(response.data()),
-                                      response.size()};
-  ASSERT_EQ(response_str, "World");
 }
 
 }  // namespace

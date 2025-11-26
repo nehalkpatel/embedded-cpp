@@ -35,9 +35,11 @@ class HostI2CTest : public ::testing::Test {
     dispatcher_ = std::make_unique<mcu::Dispatcher>(receiver_map_storage_);
 
     // Create transport
-    device_transport_ = std::make_unique<mcu::ZmqTransport>(
-        "ipc:///tmp/test_i2c_device_emulator.ipc",
-        "ipc:///tmp/test_i2c_emulator_device.ipc", *dispatcher_);
+    device_transport_ =
+        mcu::ZmqTransport::Create("ipc:///tmp/test_i2c_device_emulator.ipc",
+                                  "ipc:///tmp/test_i2c_emulator_device.ipc",
+                                  *dispatcher_)
+            .value_or(nullptr);
 
     // Now create I2C with transport
     i2c_ =
@@ -135,9 +137,7 @@ class HostI2CTest : public ::testing::Test {
     }
   }
 
-  std::vector<
-      std::pair<std::function<bool(const std::string_view&)>, mcu::Receiver&>>
-      receiver_map_storage_;
+  mcu::ReceiverMap receiver_map_storage_;
   std::unique_ptr<mcu::Dispatcher> dispatcher_;
   std::unique_ptr<mcu::ZmqTransport> device_transport_;
   std::unique_ptr<mcu::HostI2CController> i2c_;
