@@ -69,7 +69,7 @@ def test_i2c_demo_toggles_leds(emulator, i2c_demo):
     initial_led2 = emulator.get_pin_state("LED 2")
 
     # Wait for exactly one more toggle cycle (~550ms per cycle)
-    time.sleep(0.3)
+    time.sleep(0.4)
 
     # Check that LEDs have toggled
     final_led1 = emulator.get_pin_state("LED 1")
@@ -95,7 +95,7 @@ def test_i2c_demo_data_mismatch(emulator, i2c_demo):
     emulator.i2c1().write_to_device(device_address, wrong_pattern)
 
     # Give i2c_demo time to run a few cycles
-    time.sleep(1.0)
+    time.sleep(1.2)
 
     # LED1 should be off due to data mismatch
     led1_state = emulator.get_pin_state("LED 1")

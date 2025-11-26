@@ -28,7 +28,7 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def emulator(request):
     """Start emulator and ensure it's ready before returning."""
     device_emulator = DeviceEmulator()
@@ -46,7 +46,7 @@ def emulator(request):
             device_emulator.stop()
 
 
-def _wait_for_process_ready(process, timeout=2.0):
+def _wait_for_process_ready(process, timeout=1.0):
     """Wait for process to be running and responsive."""
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -59,7 +59,7 @@ def _wait_for_process_ready(process, timeout=2.0):
     time.sleep(0.1)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def blinky(request, emulator):
     """Start blinky application after emulator is ready."""
     blinky_arg = request.config.getoption("--blinky")
@@ -97,7 +97,7 @@ def blinky(request, emulator):
         logger.debug(f"[Fixture] Blinky exit code: {blinky_process.returncode}")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def uart_echo(request, emulator):
     """Start uart_echo application after emulator is ready."""
     uart_echo_arg = request.config.getoption("--uart-echo")
@@ -128,7 +128,7 @@ def uart_echo(request, emulator):
         logger.debug(f"[Fixture] UartEcho exit code: {uart_echo_process.returncode}")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def i2c_demo(request, emulator):
     """Start i2c_demo application after emulator is ready."""
     i2c_demo_arg = request.config.getoption("--i2c-demo")
