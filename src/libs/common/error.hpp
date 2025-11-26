@@ -13,7 +13,10 @@ enum class Error : uint32_t {
   kOperationFailed,
   kUnhandled,
   kConnectionRefused,
+  kConnectionClosed,
   kTimeout,
+  kWouldBlock,
+  kMessageTooLarge,
 };
 
 }  // namespace common

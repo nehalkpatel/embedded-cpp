@@ -7,6 +7,7 @@
 
 #include "dispatcher.hpp"
 #include "libs/common/error.hpp"
+#include "libs/common/logger.hpp"
 #include "transport.hpp"
 
 namespace mcu {
@@ -32,6 +33,7 @@ struct TransportConfig {
   std::chrono::milliseconds recv_timeout{5000};
   int linger_ms{0};  // Discard pending messages on close
   RetryConfig retry{};
+  common::Logger* logger{nullptr};  // Optional logger (nullptr = no logging)
 };
 
 class ZmqTransport : public Transport {
