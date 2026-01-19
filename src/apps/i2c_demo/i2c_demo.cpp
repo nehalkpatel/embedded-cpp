@@ -39,6 +39,9 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
   const std::array<std::byte, 4> test_pattern{std::byte{0xDE}, std::byte{0xAD},
                                               std::byte{0xBE}, std::byte{0xEF}};
 
+  // Buffer for receiving data (caller-provided, no heap allocation)
+  std::array<std::byte, 4> receive_buffer{};
+
   // Main loop - write pattern, read it back, verify
   while (true) {
     // Write test pattern to I2C device
@@ -53,9 +56,8 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
     // Small delay between write and read
     mcu::Delay(50ms);
 
-    // Read data back from I2C device
-    auto read_result{
-        board_.I2C1().ReceiveData(kDeviceAddress, test_pattern.size())};
+    // Read data back from I2C device into our buffer
+    auto read_result{board_.I2C1().ReceiveData(kDeviceAddress, receive_buffer)};
     if (!read_result) {
       // Turn off LED1 on read error
       std::ignore = board_.UserLed1().SetLow();
@@ -64,8 +66,11 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
     }
 
     // Verify received data matches test pattern
-    const auto received_span{read_result.value()};
-    const bool data_matches{std::ranges::equal(received_span, test_pattern)};
+    const size_t bytes_received{read_result.value()};
+    const bool data_matches{
+        bytes_received == test_pattern.size() &&
+        std::ranges::equal(std::span{receive_buffer.data(), bytes_received},
+                           test_pattern)};
 
     // Toggle LED1 based on verification result
     if (data_matches) {

@@ -104,8 +104,9 @@ class ZmqTransport : public Transport {
   zmq::context_t from_emulator_context_{1};
 
   std::atomic<bool> running_{true};
-  std::condition_variable shutdown_cv_;
-  std::mutex shutdown_mutex_;
+  std::atomic<bool> server_bound_{false};
+  std::condition_variable bind_cv_;
+  std::mutex bind_mutex_;
 
   Dispatcher& dispatcher_;
   std::thread server_thread_;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <expected>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -96,8 +97,13 @@ inline auto Encode(const T& obj) -> std::string {
 };
 
 template <typename T>
-inline auto Decode(const std::string_view& str) -> T {
-  return nlohmann::json::parse(str).get<T>();
-};
+inline auto Decode(const std::string_view& str)
+    -> std::expected<T, common::Error> {
+  try {
+    return nlohmann::json::parse(str).template get<T>();
+  } catch (const nlohmann::json::exception&) {
+    return std::unexpected(common::Error::kInvalidArgument);
+  }
+}
 
 }  // namespace mcu

@@ -4,6 +4,7 @@
 #include <chrono>
 #include <expected>
 #include <functional>
+#include <span>
 
 #include "apps/app.hpp"
 #include "libs/board/board.hpp"
@@ -47,10 +48,7 @@ auto UartEcho::Init() -> std::expected<void, common::Error> {
 auto UartEcho::Run() -> std::expected<void, common::Error> {
   // Send initial greeting message
   const std::string greeting{"UART Echo ready! Send data to echo it back.\n"};
-  const auto* greeting_bytes{
-      reinterpret_cast<const std::byte*>(greeting.data())};
-  auto send_result{board_.Uart1().Send(
-      std::span<const std::byte>{greeting_bytes, greeting.size()})};
+  auto send_result{board_.Uart1().Send(std::as_bytes(std::span{greeting}))};
   if (!send_result) {
     return std::unexpected(send_result.error());
   }
