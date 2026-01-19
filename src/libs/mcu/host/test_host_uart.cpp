@@ -97,8 +97,12 @@ class HostUartTest : public ::testing::Test {
         const std::string_view message_str{
             static_cast<const char*>(message.data()), message.size()};
 
-        const auto request =
+        auto request_result =
             mcu::Decode<mcu::UartEmulatorRequest>(std::string{message_str});
+        if (!request_result) {
+          continue;  // Skip malformed messages
+        }
+        const auto& request = *request_result;
         mcu::UartEmulatorResponse response{
             .type = mcu::MessageType::kResponse,
             .object = mcu::ObjectType::kUart,

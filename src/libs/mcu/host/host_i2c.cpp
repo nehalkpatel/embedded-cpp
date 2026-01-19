@@ -37,16 +37,20 @@ auto HostI2CController::SendData(uint16_t address,
     return std::unexpected(receive_result.error());
   }
 
-  const auto response = Decode<I2CEmulatorResponse>(receive_result.value());
-  if (response.status != common::Error::kOk) {
-    return std::unexpected(response.status);
+  auto response = Decode<I2CEmulatorResponse>(receive_result.value());
+  if (!response) {
+    return std::unexpected(response.error());
+  }
+  if (response->status != common::Error::kOk) {
+    return std::unexpected(response->status);
   }
 
   return {};
 }
 
-auto HostI2CController::ReceiveData(uint16_t address, size_t size)
-    -> std::expected<std::span<std::byte>, common::Error> {
+auto HostI2CController::ReceiveData(uint16_t address,
+                                    std::span<std::byte> buffer)
+    -> std::expected<size_t, common::Error> {
   const I2CEmulatorRequest request{
       .type = MessageType::kRequest,
       .object = ObjectType::kI2C,
@@ -54,7 +58,7 @@ auto HostI2CController::ReceiveData(uint16_t address, size_t size)
       .operation = OperationType::kReceive,
       .address = address,
       .data = {},
-      .size = size,
+      .size = buffer.size(),
   };
 
   auto send_result = transport_.Send(Encode(request));
@@ -67,17 +71,19 @@ auto HostI2CController::ReceiveData(uint16_t address, size_t size)
     return std::unexpected(receive_result.error());
   }
 
-  const auto response = Decode<I2CEmulatorResponse>(receive_result.value());
-  if (response.status != common::Error::kOk) {
-    return std::unexpected(response.status);
+  auto response = Decode<I2CEmulatorResponse>(receive_result.value());
+  if (!response) {
+    return std::unexpected(response.error());
+  }
+  if (response->status != common::Error::kOk) {
+    return std::unexpected(response->status);
   }
 
-  // Store received data in buffer for this address
-  auto& buffer = data_buffers_[address];
-  const size_t bytes_to_copy{std::min(response.data.size(), buffer.size())};
-  std::copy_n(response.data.begin(), bytes_to_copy, buffer.begin());
+  // Copy received data into caller-provided buffer
+  const size_t bytes_to_copy{std::min(response->data.size(), buffer.size())};
+  std::copy_n(response->data.begin(), bytes_to_copy, buffer.begin());
 
-  return std::span<std::byte>{buffer.data(), bytes_to_copy};
+  return bytes_to_copy;
 }
 
 auto HostI2CController::SendDataInterrupt(
@@ -89,10 +95,10 @@ auto HostI2CController::SendDataInterrupt(
 }
 
 auto HostI2CController::ReceiveDataInterrupt(
-    uint16_t address, size_t size,
-    std::function<void(std::expected<std::span<std::byte>, common::Error>)>
-        callback) -> std::expected<void, common::Error> {
-  callback(ReceiveData(address, size));
+    uint16_t address, std::span<std::byte> buffer,
+    std::function<void(std::expected<size_t, common::Error>)> callback)
+    -> std::expected<void, common::Error> {
+  callback(ReceiveData(address, buffer));
   return {};
 }
 
@@ -105,10 +111,10 @@ auto HostI2CController::SendDataDma(
 }
 
 auto HostI2CController::ReceiveDataDma(
-    uint16_t address, size_t size,
-    std::function<void(std::expected<std::span<std::byte>, common::Error>)>
-        callback) -> std::expected<void, common::Error> {
-  callback(ReceiveData(address, size));
+    uint16_t address, std::span<std::byte> buffer,
+    std::function<void(std::expected<size_t, common::Error>)> callback)
+    -> std::expected<void, common::Error> {
+  callback(ReceiveData(address, buffer));
   return {};
 }
 

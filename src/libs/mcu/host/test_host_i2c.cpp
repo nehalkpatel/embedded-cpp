@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -98,8 +99,12 @@ class HostI2CTest : public ::testing::Test {
         const std::string_view message_str{
             static_cast<const char*>(message.data()), message.size()};
 
-        const auto request =
+        auto request_result =
             mcu::Decode<mcu::I2CEmulatorRequest>(std::string{message_str});
+        if (!request_result) {
+          continue;  // Skip malformed messages
+        }
+        const auto& request = *request_result;
         mcu::I2CEmulatorResponse response{
             .type = mcu::MessageType::kResponse,
             .object = mcu::ObjectType::kI2C,
@@ -165,16 +170,19 @@ TEST_F(HostI2CTest, SendReceiveData) {
   auto send_result = i2c_->SendData(device_address, send_data);
   ASSERT_TRUE(send_result);
 
-  // Receive data back from same device
-  auto recv_result = i2c_->ReceiveData(device_address, send_data.size());
+  // Receive data back from same device (caller-provided buffer)
+  std::array<std::byte, 5> recv_buffer{};
+  auto recv_result = i2c_->ReceiveData(device_address, recv_buffer);
   ASSERT_TRUE(recv_result);
 
-  const auto received_span = recv_result.value();
-  EXPECT_EQ(received_span.size(), send_data.size());
+  const size_t bytes_received = recv_result.value();
+  EXPECT_EQ(bytes_received, send_data.size());
 
   // Compare received data with sent data
-  EXPECT_TRUE(std::equal(received_span.begin(), received_span.end(),
-                         send_data.begin(), send_data.end()));
+  EXPECT_TRUE(std::equal(
+      recv_buffer.begin(),
+      recv_buffer.begin() + static_cast<std::ptrdiff_t>(bytes_received),
+      send_data.begin(), send_data.end()));
 }
 
 TEST_F(HostI2CTest, MultipleAddresses) {
@@ -194,19 +202,19 @@ TEST_F(HostI2CTest, MultipleAddresses) {
   ASSERT_TRUE(send2_result);
 
   // Receive from first address
-  auto recv1_result = i2c_->ReceiveData(address1, data1.size());
+  std::array<std::byte, 3> recv1_buffer{};
+  auto recv1_result = i2c_->ReceiveData(address1, recv1_buffer);
   ASSERT_TRUE(recv1_result);
-  const auto received1_span = recv1_result.value();
-  EXPECT_EQ(received1_span.size(), data1.size());
-  EXPECT_TRUE(std::equal(received1_span.begin(), received1_span.end(),
+  EXPECT_EQ(recv1_result.value(), data1.size());
+  EXPECT_TRUE(std::equal(recv1_buffer.begin(), recv1_buffer.end(),
                          data1.begin(), data1.end()));
 
   // Receive from second address
-  auto recv2_result = i2c_->ReceiveData(address2, data2.size());
+  std::array<std::byte, 4> recv2_buffer{};
+  auto recv2_result = i2c_->ReceiveData(address2, recv2_buffer);
   ASSERT_TRUE(recv2_result);
-  const auto received2_span = recv2_result.value();
-  EXPECT_EQ(received2_span.size(), data2.size());
-  EXPECT_TRUE(std::equal(received2_span.begin(), received2_span.end(),
+  EXPECT_EQ(recv2_result.value(), data2.size());
+  EXPECT_TRUE(std::equal(recv2_buffer.begin(), recv2_buffer.end(),
                          data2.begin(), data2.end()));
 }
 
@@ -214,12 +222,12 @@ TEST_F(HostI2CTest, ReceiveWithoutSend) {
   const uint16_t device_address{0x60};
 
   // Try to receive from device that has no data
-  auto result = i2c_->ReceiveData(device_address, 10);
+  std::array<std::byte, 10> recv_buffer{};
+  auto result = i2c_->ReceiveData(device_address, recv_buffer);
   ASSERT_TRUE(result);
 
-  // Should return empty span
-  const auto received_span = result.value();
-  EXPECT_EQ(received_span.size(), 0);
+  // Should return 0 bytes received
+  EXPECT_EQ(result.value(), 0);
 }
 
 TEST_F(HostI2CTest, ReceivePartialData) {
@@ -232,15 +240,16 @@ TEST_F(HostI2CTest, ReceivePartialData) {
   auto send_result = i2c_->SendData(device_address, send_data);
   ASSERT_TRUE(send_result);
 
-  // Request only 5 bytes
-  auto recv_result = i2c_->ReceiveData(device_address, 5);
+  // Request only 5 bytes (buffer size limits the receive)
+  std::array<std::byte, 5> recv_buffer{};
+  auto recv_result = i2c_->ReceiveData(device_address, recv_buffer);
   ASSERT_TRUE(recv_result);
 
-  const auto received_span = recv_result.value();
-  EXPECT_EQ(received_span.size(), 5);
+  const size_t bytes_received = recv_result.value();
+  EXPECT_EQ(bytes_received, 5);
 
   // Should receive first 5 bytes
-  EXPECT_TRUE(std::equal(received_span.begin(), received_span.end(),
+  EXPECT_TRUE(std::equal(recv_buffer.begin(), recv_buffer.end(),
                          send_data.begin(), send_data.begin() + 5));
 }
 
@@ -275,13 +284,14 @@ TEST_F(HostI2CTest, ReceiveDataInterrupt) {
   ASSERT_TRUE(send_result);
 
   bool callback_called{false};
-  std::expected<std::span<std::byte>, common::Error> callback_result{
+  std::expected<size_t, common::Error> callback_result{
       std::unexpected(common::Error::kUnknown)};
+  std::array<std::byte, 4> recv_buffer{};
 
   auto result = i2c_->ReceiveDataInterrupt(
-      device_address, send_data.size(),
-      [&callback_called, &callback_result](
-          std::expected<std::span<std::byte>, common::Error> result) {
+      device_address, recv_buffer,
+      [&callback_called,
+       &callback_result](std::expected<size_t, common::Error> result) {
         callback_called = true;
         callback_result = result;
       });
@@ -290,9 +300,9 @@ TEST_F(HostI2CTest, ReceiveDataInterrupt) {
   EXPECT_TRUE(callback_called);
   ASSERT_TRUE(callback_result);
 
-  const auto received_span = callback_result.value();
-  EXPECT_EQ(received_span.size(), send_data.size());
-  EXPECT_TRUE(std::equal(received_span.begin(), received_span.end(),
+  const size_t bytes_received = callback_result.value();
+  EXPECT_EQ(bytes_received, send_data.size());
+  EXPECT_TRUE(std::equal(recv_buffer.begin(), recv_buffer.end(),
                          send_data.begin(), send_data.end()));
 }
 
@@ -328,23 +338,24 @@ TEST_F(HostI2CTest, ReceiveDataDma) {
   ASSERT_TRUE(send_result);
 
   bool callback_called{false};
-  std::expected<std::span<std::byte>, common::Error> callback_result{
+  std::expected<size_t, common::Error> callback_result{
       std::unexpected(common::Error::kUnknown)};
+  std::array<std::byte, 5> recv_buffer{};
 
-  auto result = i2c_->ReceiveDataDma(
-      device_address, send_data.size(),
-      [&callback_called, &callback_result](
-          std::expected<std::span<std::byte>, common::Error> result) {
-        callback_called = true;
-        callback_result = result;
-      });
+  auto result =
+      i2c_->ReceiveDataDma(device_address, recv_buffer,
+                           [&callback_called, &callback_result](
+                               std::expected<size_t, common::Error> result) {
+                             callback_called = true;
+                             callback_result = result;
+                           });
 
   EXPECT_TRUE(result);
   EXPECT_TRUE(callback_called);
   ASSERT_TRUE(callback_result);
 
-  const auto received_span = callback_result.value();
-  EXPECT_EQ(received_span.size(), send_data.size());
-  EXPECT_TRUE(std::equal(received_span.begin(), received_span.end(),
+  const size_t bytes_received = callback_result.value();
+  EXPECT_EQ(bytes_received, send_data.size());
+  EXPECT_TRUE(std::equal(recv_buffer.begin(), recv_buffer.end(),
                          send_data.begin(), send_data.end()));
 }

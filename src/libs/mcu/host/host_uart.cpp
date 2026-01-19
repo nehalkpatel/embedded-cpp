@@ -51,9 +51,12 @@ auto HostUart::Send(std::span<const std::byte> data)
       .and_then([this]() { return transport_.Receive(); })
       .and_then([](const std::string& response_str)
                     -> std::expected<void, common::Error> {
-        const auto response = Decode<UartEmulatorResponse>(response_str);
-        if (response.status != common::Error::kOk) {
-          return std::unexpected(response.status);
+        auto response = Decode<UartEmulatorResponse>(response_str);
+        if (!response) {
+          return std::unexpected(response.error());
+        }
+        if (response->status != common::Error::kOk) {
+          return std::unexpected(response->status);
         }
         return {};
       });
@@ -81,7 +84,7 @@ auto HostUart::Receive(std::span<std::byte> buffer, uint32_t timeout_ms)
 
   return transport_.Send(Encode(request))
       .and_then([this]() { return transport_.Receive(); })
-      .transform([](const std::string& response_str) {
+      .and_then([](const std::string& response_str) {
         return Decode<UartEmulatorResponse>(response_str);
       })
       .and_then([buffer](const UartEmulatorResponse& response)
@@ -203,12 +206,12 @@ auto HostUart::SetRxHandler(std::function<void(const std::byte*, size_t)>
 
 auto HostUart::Receive(const std::string_view& message)
     -> std::expected<std::string, common::Error> {
-  // First, check if this is a request (unsolicited data) or response
-  const auto json_msg = nlohmann::json::parse(message);
+  // First, try to decode as a request (unsolicited data)
+  auto request_result = Decode<UartEmulatorRequest>(message);
 
   // Handle unsolicited incoming data from emulator (Request type)
-  if (json_msg["type"] == MessageType::kRequest) {
-    const auto request = Decode<UartEmulatorRequest>(message);
+  if (request_result && request_result->type == MessageType::kRequest) {
+    const auto& request = *request_result;
 
     // Verify this message is for us
     if (request.name != name_) {
@@ -239,7 +242,11 @@ auto HostUart::Receive(const std::string_view& message)
   }
 
   // Handle async operation responses
-  const auto response = Decode<UartEmulatorResponse>(message);
+  auto response_result = Decode<UartEmulatorResponse>(message);
+  if (!response_result) {
+    return std::unexpected(common::Error::kInvalidArgument);
+  }
+  const auto& response = *response_result;
 
   // Verify this message is for us
   if (response.name != name_) {

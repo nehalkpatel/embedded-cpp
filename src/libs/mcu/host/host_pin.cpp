@@ -64,7 +64,7 @@ auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
 
   return transport_.Send(Encode(req))
       .and_then([this]() { return transport_.Receive(); })
-      .transform([](const std::string& rx_bytes) {
+      .and_then([](const std::string& rx_bytes) {
         return Decode<PinEmulatorResponse>(rx_bytes);
       })
       .and_then([this, state](const PinEmulatorResponse& resp)
@@ -100,14 +100,18 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
 
   return transport_.Send(Encode(req))
       .and_then([this]() { return transport_.Receive(); })
-      .transform([this](const std::string& rx_bytes) {
-        const auto resp = Decode<PinEmulatorResponse>(rx_bytes);
+      .and_then([this](const std::string& rx_bytes)
+                    -> std::expected<PinState, common::Error> {
+        auto resp = Decode<PinEmulatorResponse>(rx_bytes);
+        if (!resp) {
+          return std::unexpected(resp.error());
+        }
         // If the MCU is polling the input, then it should NOT be configured
         // for interrupts. Therefore, we should not invoke the handler.
         // const PinState prev_state{state_};
-        state_ = resp.state;
+        state_ = resp->state;
         // CheckAndInvokeHandler(prev_state, resp.state);
-        return resp.state;
+        return resp->state;
       });
 }
 
@@ -115,11 +119,14 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
 // requests. HostPin will only send responses.
 auto HostPin::Receive(const std::string_view& message)
     -> std::expected<std::string, common::Error> {
-  const auto json_pin = json::parse(message);
-  if (json_pin["name"] != name_) {
+  auto req = Decode<PinEmulatorRequest>(message);
+  if (!req) {
     return std::unexpected(common::Error::kInvalidArgument);
   }
-  if (json_pin["type"] == MessageType::kResponse) {
+  if (req->name != name_) {
+    return std::unexpected(common::Error::kInvalidArgument);
+  }
+  if (req->type == MessageType::kResponse) {
     return std::unexpected(common::Error::kInvalidOperation);
   }
   PinEmulatorResponse resp = {
@@ -129,14 +136,13 @@ auto HostPin::Receive(const std::string_view& message)
       .state = state_,
       .status = common::Error::kInvalidOperation,
   };
-  const auto req = Decode<PinEmulatorRequest>(message);
-  if (req.operation == OperationType::kGet) {
+  if (req->operation == OperationType::kGet) {
     resp.status = common::Error::kOk;
     return Encode(resp);
   }
   // Set from the external world is only allowed if the pin is an input
   // with respect to the MCU
-  if (req.operation == OperationType::kSet) {
+  if (req->operation == OperationType::kSet) {
     if (direction_ == PinDirection::kOutput) {
       resp.status = common::Error::kInvalidOperation;
       return Encode(resp);
@@ -144,8 +150,8 @@ auto HostPin::Receive(const std::string_view& message)
     // The external entity pushed a pin update to the MCU.
     // Therefore check for interrupt.
     const PinState prev_state{state_};
-    state_ = req.state;
-    CheckAndInvokeHandler(prev_state, req.state);
+    state_ = req->state;
+    CheckAndInvokeHandler(prev_state, req->state);
     resp.state = state_;
     resp.status = common::Error::kOk;
     return Encode(resp);

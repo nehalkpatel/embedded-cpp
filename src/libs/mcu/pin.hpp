@@ -14,9 +14,10 @@ enum class PinTransition { kRising = 1, kFalling, kBoth };
 class InputPin {
  public:
   virtual ~InputPin() = default;
-  virtual auto Get() -> std::expected<PinState, common::Error> = 0;
-  virtual auto SetInterruptHandler(std::function<void()> handler,
-                                   PinTransition transition)
+  [[nodiscard]] virtual auto Get()
+      -> std::expected<PinState, common::Error> = 0;
+  [[nodiscard]] virtual auto SetInterruptHandler(std::function<void()> handler,
+                                                 PinTransition transition)
       -> std::expected<void, common::Error> = 0;
 };
 
@@ -24,16 +25,17 @@ class OutputPin : public virtual InputPin {
  public:
   virtual ~OutputPin() = default;
 
-  virtual auto SetHigh() -> std::expected<void, common::Error> = 0;
-  virtual auto SetLow() -> std::expected<void, common::Error> = 0;
-  virtual auto Toggle() -> std::expected<void, common::Error> = 0;
+  [[nodiscard]] virtual auto SetHigh()
+      -> std::expected<void, common::Error> = 0;
+  [[nodiscard]] virtual auto SetLow() -> std::expected<void, common::Error> = 0;
+  [[nodiscard]] virtual auto Toggle() -> std::expected<void, common::Error> = 0;
 };
 
 class BidirectionalPin : public virtual InputPin, public virtual OutputPin {
  public:
   virtual ~BidirectionalPin() = default;
 
-  virtual auto Configure(PinDirection direction)
+  [[nodiscard]] virtual auto Configure(PinDirection direction)
       -> std::expected<void, common::Error> = 0;
 };
 }  // namespace mcu

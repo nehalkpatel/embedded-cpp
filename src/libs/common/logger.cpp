@@ -1,23 +1,23 @@
 #include "logger.hpp"
 
-#include <iostream>
+#include <print>
 
 namespace common {
 
 auto ConsoleLogger::Debug(std::string_view msg) -> void {
-  std::cout << "[DEBUG] " << msg << '\n';
+  std::println("[DEBUG] {}", msg);
 }
 
 auto ConsoleLogger::Info(std::string_view msg) -> void {
-  std::cout << "[INFO]  " << msg << '\n';
+  std::println("[INFO]  {}", msg);
 }
 
 auto ConsoleLogger::Warning(std::string_view msg) -> void {
-  std::cerr << "[WARN]  " << msg << '\n';
+  std::println(stderr, "[WARN]  {}", msg);
 }
 
 auto ConsoleLogger::Error(std::string_view msg) -> void {
-  std::cerr << "[ERROR] " << msg << '\n';
+  std::println(stderr, "[ERROR] {}", msg);
 }
 
 }  // namespace common

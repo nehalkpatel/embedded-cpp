@@ -53,11 +53,11 @@ ZmqTransport::ZmqTransport(const std::string& to_emulator,    // NOLINT
   server_thread_ =
       std::thread{&ZmqTransport::ServerThread, this, from_emulator};
 
-  // Small sleep to let server thread bind (ZMQ binding is fast, ~1-5ms typical)
-  // This is a pragmatic approach - alternatives would require condition
-  // variables or synchronization primitives which add complexity for minimal
-  // benefit
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  // Wait for server thread to complete bind before connecting
+  {
+    std::unique_lock<std::mutex> lock(bind_mutex_);
+    bind_cv_.wait(lock, [this]() { return server_bound_.load(); });
+  }
 
   // Now CONNECT to emulator (emulator should already be bound)
   LogDebug("Connecting to emulator");
@@ -193,6 +193,13 @@ void ZmqTransport::ServerThread(const std::string& endpoint) {
                static_cast<int>(config_.poll_timeout.count()));
 
     socket.bind(endpoint);
+
+    // Signal that bind is complete
+    {
+      const std::lock_guard<std::mutex> lock(bind_mutex_);
+      server_bound_ = true;
+    }
+    bind_cv_.notify_one();
 
     LogDebug("ServerThread bound and listening");
 

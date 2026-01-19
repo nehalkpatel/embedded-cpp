@@ -1,5 +1,6 @@
 #pragma once
 
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
@@ -21,10 +22,7 @@ struct PinEmulatorRequest {
   std::string name;
   OperationType operation;
   PinState state;
-  auto operator==(const PinEmulatorRequest& other) const -> bool {
-    return type == other.type && object == other.object && name == other.name &&
-           operation == other.operation && state == other.state;
-  }
+  auto operator<=>(const PinEmulatorRequest&) const = default;
 };
 
 struct PinEmulatorResponse {
@@ -33,10 +31,7 @@ struct PinEmulatorResponse {
   std::string name;
   PinState state;
   common::Error status;
-  auto operator==(const PinEmulatorResponse& other) const -> bool {
-    return type == other.type && object == other.object && name == other.name &&
-           state == other.state && status == other.status;
-  }
+  auto operator<=>(const PinEmulatorResponse&) const = default;
 };
 
 struct UartEmulatorRequest {
@@ -47,11 +42,7 @@ struct UartEmulatorRequest {
   std::vector<std::byte> data;  // For Send operation
   size_t size{0};               // For Receive operation (buffer size)
   uint32_t timeout_ms{0};       // For Receive operation
-  auto operator==(const UartEmulatorRequest& other) const -> bool {
-    return type == other.type && object == other.object && name == other.name &&
-           operation == other.operation && data == other.data &&
-           size == other.size && timeout_ms == other.timeout_ms;
-  }
+  auto operator<=>(const UartEmulatorRequest&) const = default;
 };
 
 struct UartEmulatorResponse {
@@ -61,11 +52,7 @@ struct UartEmulatorResponse {
   std::vector<std::byte> data;  // Received data
   size_t bytes_transferred{0};
   common::Error status;
-  auto operator==(const UartEmulatorResponse& other) const -> bool {
-    return type == other.type && object == other.object && name == other.name &&
-           data == other.data && bytes_transferred == other.bytes_transferred &&
-           status == other.status;
-  }
+  auto operator<=>(const UartEmulatorResponse&) const = default;
 };
 
 struct I2CEmulatorRequest {
@@ -76,11 +63,7 @@ struct I2CEmulatorRequest {
   uint16_t address{0};
   std::vector<std::byte> data;  // For Send operation
   size_t size{0};               // For Receive operation (buffer size)
-  auto operator==(const I2CEmulatorRequest& other) const -> bool {
-    return type == other.type && object == other.object && name == other.name &&
-           operation == other.operation && address == other.address &&
-           data == other.data && size == other.size;
-  }
+  auto operator<=>(const I2CEmulatorRequest&) const = default;
 };
 
 struct I2CEmulatorResponse {
@@ -91,12 +74,7 @@ struct I2CEmulatorResponse {
   std::vector<std::byte> data;  // Received data
   size_t bytes_transferred{0};
   common::Error status;
-  auto operator==(const I2CEmulatorResponse& other) const -> bool {
-    return type == other.type && object == other.object && name == other.name &&
-           address == other.address && data == other.data &&
-           bytes_transferred == other.bytes_transferred &&
-           status == other.status;
-  }
+  auto operator<=>(const I2CEmulatorResponse&) const = default;
 };
 
 }  // namespace mcu

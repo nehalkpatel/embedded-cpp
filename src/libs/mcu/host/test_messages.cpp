@@ -25,7 +25,9 @@ TEST(EmulatorMessageJsonEncoderTest, DecodePinEmulatorRequest) {
                                             .name = "PA0",
                                             .operation = OperationType::kSet,
                                             .state = PinState::kHigh};
-  EXPECT_EQ(Decode<PinEmulatorRequest>(json), expected_request);
+  auto result = Decode<PinEmulatorRequest>(json);
+  ASSERT_TRUE(result);
+  EXPECT_EQ(*result, expected_request);
 }
 
 TEST(EmulatorMessageJsonEncoderTest, EncodeDecodePinEmulatorRequest) {
@@ -35,8 +37,16 @@ TEST(EmulatorMessageJsonEncoderTest, EncodeDecodePinEmulatorRequest) {
                                    .operation = OperationType::kSet,
                                    .state = PinState::kHigh};
   const auto json{Encode(request)};
-  const auto decoded_request{Decode<PinEmulatorRequest>(json)};
-  EXPECT_EQ(decoded_request, request);
+  auto decoded_request{Decode<PinEmulatorRequest>(json)};
+  ASSERT_TRUE(decoded_request);
+  EXPECT_EQ(*decoded_request, request);
+}
+
+TEST(EmulatorMessageJsonEncoderTest, DecodeInvalidJson) {
+  const std::string invalid_json{"not valid json"};
+  auto result = Decode<PinEmulatorRequest>(invalid_json);
+  EXPECT_FALSE(result);
+  EXPECT_EQ(result.error(), common::Error::kInvalidArgument);
 }
 
 }  // namespace
