@@ -21,7 +21,8 @@
         "charliermarsh.ruff",
         "eamodio.gitlens",
         "usernamehw.errorlens",
-        "gruntfuggly.todo-tree"
+        "gruntfuggly.todo-tree",
+        "xaver.clang-format"
       ],
       "settings": {
         "cmake.sourceDirectory": "${workspaceFolder}",
@@ -30,6 +31,7 @@
         "cmake.generator": "Ninja",
         "C_Cpp.clang_format_fallbackStyle": "Google",
         "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+        "C_Cpp.default.cppStandard": "c++23",
         "editor.formatOnSave": true,
         "files.trimTrailingWhitespace": true,
         "python.defaultInterpreterPath": "/usr/bin/python3",
@@ -40,6 +42,9 @@
             "source.fixAll": "explicit",
             "source.organizeImports": "explicit"
           }
+        },
+        "[cpp]": {
+            "editor.defaultFormatter": "xaver.clang-format"
         }
       }
     }

@@ -42,9 +42,8 @@ RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100 && 
     update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-18 100 && \
     update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100
 
-# Install ruff for Python linting and formatting
-RUN pipx install ruff && pipx ensurepath
-ENV PATH="/root/.local/bin:${PATH}"
+# Install uv for fast Python package management (to /usr/local/bin for all users)
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 
 # ... Developer comfort tools (optional, for interactive use) ...
 ARG INSTALL_DEV_TOOLS=false
