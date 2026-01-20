@@ -1,23 +1,34 @@
 """UART emulation for the host emulator."""
 
+from __future__ import annotations
+
 import json
+import logging
 import threading
+from typing import TYPE_CHECKING, Any
 
 from .common import Status
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    import zmq
+
+logger = logging.getLogger(__name__)
 
 
 class Uart:
     """Emulates a UART peripheral."""
 
-    def __init__(self, name, to_device_socket):
+    def __init__(self, name: str, to_device_socket: zmq.Socket[bytes]) -> None:
         self.name = name
         self.to_device_socket = to_device_socket
         self.rx_buffer = bytearray()  # Data waiting to be read
-        self.on_response = None
-        self.on_request = None
+        self.on_response: Callable[[dict[str, Any]], None] | None = None
+        self.on_request: Callable[[dict[str, Any]], None] | None = None
 
-    def handle_request(self, message):
-        response = {
+    def handle_request(self, message: dict[str, Any]) -> str:
+        response: dict[str, Any] = {
             "type": "Response",
             "object": "Uart",
             "name": self.name,
@@ -27,13 +38,11 @@ class Uart:
         }
 
         if message["operation"] == "Init":
-            # Initialize UART with given configuration
-            print(f"[UART {self.name}] Initialized")
+            logger.info("[UART %s] Initialized", self.name)
             response.update({"status": Status.Ok.name})
 
         elif message["operation"] == "Send":
-            # Receive data from the device and store in RX buffer
-            data = message.get("data", [])
+            data: list[int] = message.get("data", [])
             self.rx_buffer.extend(data)
             response.update(
                 {
@@ -41,11 +50,12 @@ class Uart:
                     "status": Status.Ok.name,
                 }
             )
-            print(f"[UART {self.name}] Received {len(data)} bytes: {bytes(data)}")
+            logger.info(
+                "[UART %s] Received %d bytes: %s", self.name, len(data), bytes(data)
+            )
 
         elif message["operation"] == "Receive":
-            # Send buffered data back to the device
-            size = message.get("size", 0)
+            size: int = message.get("size", 0)
             bytes_to_send = min(size, len(self.rx_buffer))
             data = list(self.rx_buffer[:bytes_to_send])
             self.rx_buffer = self.rx_buffer[bytes_to_send:]
@@ -56,42 +66,49 @@ class Uart:
                     "status": Status.Ok.name,
                 }
             )
-            print(f"[UART {self.name}] Sent {bytes_to_send} bytes: {bytes(data)}")
+            logger.info(
+                "[UART %s] Sent %d bytes: %s", self.name, bytes_to_send, bytes(data)
+            )
 
         if self.on_request:
             self.on_request(message)
         return json.dumps(response)
 
-    def send_data(self, data):
-        """Send data to the device (emulator -> device)"""
+    def send_data(self, data: bytes | list[int]) -> dict[str, Any]:
+        """Send data to the device (emulator -> device)."""
+        data_list = list(data) if isinstance(data, bytes) else data
         request = {
             "type": "Request",
             "object": "Uart",
             "name": self.name,
             "operation": "Receive",
-            "data": list(data),
-            "size": len(data),
+            "data": data_list,
+            "size": len(data_list),
             "timeout_ms": 0,
         }
-        print(f"[UART {self.name}] Sending data to device: {data}")
+        logger.debug("[UART %s] Sending data to device: %s", self.name, data)
         self.to_device_socket.send_string(json.dumps(request))
         reply = self.to_device_socket.recv()
-        print(f"[UART {self.name}] Received response: {reply}")
-        return json.loads(reply)
+        logger.debug("[UART %s] Received response: %s", self.name, reply)
+        result: dict[str, Any] = json.loads(reply)
+        return result
 
-    def handle_response(self, message):
-        print(f"[UART {self.name}] Received response: {message}")
+    def handle_response(self, message: dict[str, Any]) -> None:
+        logger.debug("[UART %s] Received response: %s", self.name, message)
         if self.on_response:
             self.on_response(message)
-        return None
 
-    def set_on_request(self, on_request):
+    def set_on_request(
+        self, on_request: Callable[[dict[str, Any]], None] | None
+    ) -> None:
         self.on_request = on_request
 
-    def set_on_response(self, on_response):
+    def set_on_response(
+        self, on_response: Callable[[dict[str, Any]], None] | None
+    ) -> None:
         self.on_response = on_response
 
-    def handle_message(self, message):
+    def handle_message(self, message: dict[str, Any]) -> str | None:
         if message["object"] != "Uart":
             return None
         if message["name"] != self.name:
@@ -99,9 +116,11 @@ class Uart:
         if message["type"] == "Request":
             return self.handle_request(message)
         if message["type"] == "Response":
-            return self.handle_response(message)
+            self.handle_response(message)
+            return None
+        return None
 
-    def wait_for_data(self, min_bytes=1, timeout=2.0):
+    def wait_for_data(self, min_bytes: int = 1, timeout: float = 2.0) -> bool:
         """Wait for UART to receive at least min_bytes of data from device.
 
         Args:
@@ -112,29 +131,24 @@ class Uart:
             True if data received, False if timeout
         """
         event = threading.Event()
+        old_handler = self.on_request
 
-        def handler(message):
+        def handler(message: dict[str, Any]) -> None:
             if message.get("operation") == "Send" and len(self.rx_buffer) >= min_bytes:
                 event.set()
 
-        # Save old handler
-        old_handler = self.on_request
-
-        # Set temporary handler
-        self.on_request = handler
-
         # Check if we already have enough data
         if len(self.rx_buffer) >= min_bytes:
-            self.on_request = old_handler
             return True
+
+        self.on_request = handler
 
         try:
             return event.wait(timeout)
         finally:
-            # Restore old handler
             self.on_request = old_handler
 
-    def wait_for_operation(self, operation, timeout=2.0):
+    def wait_for_operation(self, operation: str, timeout: float = 2.0) -> bool:
         """Wait for a specific UART operation to occur.
 
         Args:
@@ -145,19 +159,15 @@ class Uart:
             True if operation occurred, False if timeout
         """
         event = threading.Event()
+        old_handler = self.on_request
 
-        def handler(message):
+        def handler(message: dict[str, Any]) -> None:
             if message.get("operation") == operation:
                 event.set()
 
-        # Save old handler
-        old_handler = self.on_request
-
-        # Set temporary handler
         self.on_request = handler
 
         try:
             return event.wait(timeout)
         finally:
-            # Restore old handler
             self.on_request = old_handler

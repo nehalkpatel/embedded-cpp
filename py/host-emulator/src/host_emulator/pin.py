@@ -1,28 +1,57 @@
 """Pin emulation for the host emulator."""
 
+from __future__ import annotations
+
 import json
+import logging
 import threading
 from enum import Enum
+from typing import TYPE_CHECKING, Any
 
 from .common import Status
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    import zmq
+
+logger = logging.getLogger(__name__)
+
+
+class PinDirection(Enum):
+    """Pin direction configuration."""
+
+    IN = "IN"
+    OUT = "OUT"
+
+
+class PinState(Enum):
+    """Pin state values."""
+
+    Low = "Low"
+    High = "High"
+    Hi_Z = "Hi_Z"
 
 
 class Pin:
     """Emulates a digital pin (input/output)."""
 
-    direction = Enum("direction", ["IN", "OUT"])
-    state = Enum("state", ["Low", "High", "Hi_Z"])
-
-    def __init__(self, name, direction, state, to_device_socket):
+    def __init__(
+        self,
+        name: str,
+        pin_direction: PinDirection,
+        initial_state: PinState,
+        to_device_socket: zmq.Socket[bytes],
+    ) -> None:
         self.name = name
-        self.direction = direction
-        self.state = state
+        self.pin_direction = pin_direction
+        self.state = initial_state
         self.to_device_socket = to_device_socket
-        self.on_response = None
-        self.on_request = None
+        self.on_response: Callable[[dict[str, Any]], None] | None = None
+        self.on_request: Callable[[dict[str, Any]], None] | None = None
 
-    def handle_request(self, message):
-        response = {
+    def handle_request(self, message: dict[str, Any]) -> str:
+        response: dict[str, Any] = {
             "type": "Response",
             "object": "Pin",
             "name": self.name,
@@ -36,21 +65,20 @@ class Pin:
                 }
             )
         elif message["operation"] == "Set":
-            self.state = Pin.state[message["state"]]
+            self.state = PinState[message["state"]]
             response.update(
                 {
                     "state": self.state.name,
                     "status": Status.Ok.name,
                 }
             )
-        else:
-            pass
-            # default response status is InvalidOperation
+        # default response status is InvalidOperation
+
         if self.on_request:
             self.on_request(message)
         return json.dumps(response)
 
-    def set_state(self, state):
+    def set_state(self, state: PinState) -> dict[str, Any]:
         self.state = state
         request = {
             "type": "Request",
@@ -59,43 +87,52 @@ class Pin:
             "operation": "Set",
             "state": self.state.name,
         }
-        print(f"[Pin Set] Sending request: {request}")
+        logger.debug("[Pin Set] Sending request: %s", request)
         self.to_device_socket.send_string(json.dumps(request))
         reply = self.to_device_socket.recv()
-        print(f"[Pin Set] Received response: {reply}")
-        self.handle_response(json.loads(reply))
-        return json.loads(reply)
+        logger.debug("[Pin Set] Received response: %s", reply)
+        response: dict[str, Any] = json.loads(reply)
+        self.handle_response(response)
+        return response
 
-    def get_state(self):
+    def get_state(self) -> dict[str, Any]:
         request = {
             "type": "Request",
             "object": "Pin",
             "name": self.name,
             "operation": "Get",
-            "state": self.state.Hi_Z.name,
+            "state": PinState.Hi_Z.name,
         }
-        print(f"[Pin Get] Sending request: {request}")
+        logger.debug("[Pin Get] Sending request: %s", request)
         self.to_device_socket.send_string(json.dumps(request))
         reply = self.to_device_socket.recv()
-        print(f"[Pin Get] Received response: {reply}")
-        self.handle_response(json.loads(reply))
-        return json.loads(reply)
+        logger.debug("[Pin Get] Received response: %s", reply)
+        response: dict[str, Any] = json.loads(reply)
+        self.handle_response(response)
+        return response
 
-    def handle_response(self, message):
-        print(f"[Pin Handler] Received response: {message}")
+    def handle_response(self, message: dict[str, Any]) -> None:
+        logger.debug("[Pin Handler] Received response: %s", message)
         if self.on_response:
             self.on_response(message)
-        return None
 
-    def set_on_request(self, on_request):
-        print(f"[Pin Handler] Setting on_request for {self.name}: {on_request}")
+    def set_on_request(
+        self, on_request: Callable[[dict[str, Any]], None] | None
+    ) -> None:
+        logger.debug(
+            "[Pin Handler] Setting on_request for %s: %s", self.name, on_request
+        )
         self.on_request = on_request
 
-    def set_on_response(self, on_response):
-        print(f"[Pin Handler] Setting on_response for {self.name}: {on_response}")
+    def set_on_response(
+        self, on_response: Callable[[dict[str, Any]], None] | None
+    ) -> None:
+        logger.debug(
+            "[Pin Handler] Setting on_response for %s: %s", self.name, on_response
+        )
         self.on_response = on_response
 
-    def handle_message(self, message):
+    def handle_message(self, message: dict[str, Any]) -> str | None:
         if message["object"] != "Pin":
             return None
         if message["name"] != self.name:
@@ -103,9 +140,11 @@ class Pin:
         if message["type"] == "Request":
             return self.handle_request(message)
         if message["type"] == "Response":
-            return self.handle_response(message)
+            self.handle_response(message)
+            return None
+        return None
 
-    def wait_for_operation(self, operation, timeout=2.0):
+    def wait_for_operation(self, operation: str, timeout: float = 2.0) -> bool:
         """Wait for a specific pin operation to occur.
 
         Args:
@@ -116,64 +155,51 @@ class Pin:
             True if operation occurred, False if timeout
         """
         event = threading.Event()
+        old_handler = self.on_request
 
-        def handler(message):
-            # Call existing handler if present
+        def handler(message: dict[str, Any]) -> None:
             if old_handler is not None:
                 old_handler(message)
-            # Check our condition
             if message.get("operation") == operation:
                 event.set()
 
-        # Save old handler
-        old_handler = self.on_request
-
-        # Set chained handler
         self.on_request = handler
 
         try:
             return event.wait(timeout)
         finally:
-            # Restore old handler
             self.on_request = old_handler
 
-    def wait_for_state(self, state, timeout=2.0):
+    def wait_for_state(self, state: PinState, timeout: float = 2.0) -> bool:
         """Wait for pin to reach a specific state.
 
         Args:
-            state: The state to wait for (Pin.state.High, Pin.state.Low, etc.)
+            state: The state to wait for (PinState.High, PinState.Low, etc.)
             timeout: Maximum time to wait in seconds
 
         Returns:
             True if state reached, False if timeout
         """
-        # Check if already in desired state
         if self.state == state:
             return True
 
         event = threading.Event()
+        old_handler = self.on_request
 
-        def handler(message):
-            # Call existing handler if present
+        def handler(message: dict[str, Any]) -> None:
             if old_handler is not None:
                 old_handler(message)
-            # Check our condition - look at the operation and resulting state
             if message.get("operation") == "Set" and message.get("state") == state.name:
                 event.set()
 
-        # Save old handler
-        old_handler = self.on_request
-
-        # Set chained handler
         self.on_request = handler
 
         try:
             return event.wait(timeout)
         finally:
-            # Restore old handler
             self.on_request = old_handler
 
-    def wait_for_transitions(self, count, timeout=2.0):
+    def wait_for_transitions(self, count: int, timeout: float = 2.0) -> bool:
         """Wait for a specific number of state transitions (toggles).
 
         Args:
@@ -183,30 +209,25 @@ class Pin:
         Returns:
             True if transitions occurred, False if timeout
         """
-        transitions = [0]  # Use list to modify in closure
+        transitions = 0
         event = threading.Event()
-        last_state = [None]
-
-        def handler(message):
-            # Call existing handler if present
-            if old_handler is not None:
-                old_handler(message)
-            # Check our condition
-            current_state = message.get("state")
-            if last_state[0] is not None and current_state != last_state[0]:
-                transitions[0] += 1
-                if transitions[0] >= count:
-                    event.set()
-            last_state[0] = current_state
-
-        # Save old handler
+        last_state: str | None = None
         old_handler = self.on_request
 
-        # Set chained handler
+        def handler(message: dict[str, Any]) -> None:
+            nonlocal transitions, last_state
+            if old_handler is not None:
+                old_handler(message)
+            current_state = message.get("state")
+            if last_state is not None and current_state != last_state:
+                transitions += 1
+                if transitions >= count:
+                    event.set()
+            last_state = current_state
+
         self.on_request = handler
 
         try:
             return event.wait(timeout)
         finally:
-            # Restore old handler
             self.on_request = old_handler

@@ -1,6 +1,6 @@
 include("${PROJECT_SOURCE_DIR}/cmake/python_venv.cmake")
 
-configure_venv(host_emulator_venv ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt)
+configure_venv(host_emulator_venv ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_test(
     NAME host_emulator_test

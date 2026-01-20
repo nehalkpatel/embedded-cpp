@@ -6,8 +6,6 @@ from enum import Enum
 class UnhandledMessageError(Exception):
     """Exception raised when a message cannot be handled."""
 
-    pass
-
 
 class Status(Enum):
     """Status codes for emulator responses."""

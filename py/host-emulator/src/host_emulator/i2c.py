@@ -1,23 +1,32 @@
 """I2C emulation for the host emulator."""
 
+from __future__ import annotations
+
 import json
+import logging
 import threading
+from typing import TYPE_CHECKING, Any
 
 from .common import Status
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+logger = logging.getLogger(__name__)
 
 
 class I2C:
     """Emulates an I2C controller/peripheral."""
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
         # Store data for each I2C address (address -> bytearray)
-        self.device_buffers = {}
-        self.on_response = None
-        self.on_request = None
+        self.device_buffers: dict[int, bytearray] = {}
+        self.on_response: Callable[[dict[str, Any]], None] | None = None
+        self.on_request: Callable[[dict[str, Any]], None] | None = None
 
-    def handle_request(self, message):
-        response = {
+    def handle_request(self, message: dict[str, Any]) -> str:
+        response: dict[str, Any] = {
             "type": "Response",
             "object": "I2C",
             "name": self.name,
@@ -27,14 +36,11 @@ class I2C:
             "status": Status.InvalidOperation.name,
         }
 
-        address = message.get("address", 0)
+        address: int = message.get("address", 0)
 
         if message["operation"] == "Send":
             # Device is sending data to I2C peripheral
-            # Store the data in the buffer for this address
-            data = message.get("data", [])
-            if address not in self.device_buffers:
-                self.device_buffers[address] = bytearray()
+            data: list[int] = message.get("data", [])
             self.device_buffers[address] = bytearray(data)
             response.update(
                 {
@@ -42,20 +48,21 @@ class I2C:
                     "status": Status.Ok.name,
                 }
             )
-            print(
-                f"[I2C {self.name}] Wrote {len(data)} bytes to address "
-                f"0x{address:02X}: {bytes(data)}"
+            logger.info(
+                "[I2C %s] Wrote %d bytes to address 0x%02X: %s",
+                self.name,
+                len(data),
+                address,
+                bytes(data),
             )
 
         elif message["operation"] == "Receive":
             # Device is receiving data from I2C peripheral
-            # Return data from the buffer for this address
-            size = message.get("size", 0)
+            size: int = message.get("size", 0)
             if address in self.device_buffers:
                 bytes_to_send = min(size, len(self.device_buffers[address]))
                 data = list(self.device_buffers[address][:bytes_to_send])
             else:
-                # No data available, return empty
                 bytes_to_send = 0
                 data = []
             response.update(
@@ -65,28 +72,34 @@ class I2C:
                     "status": Status.Ok.name,
                 }
             )
-            print(
-                f"[I2C {self.name}] Read {bytes_to_send} bytes from address "
-                f"0x{address:02X}: {bytes(data)}"
+            logger.info(
+                "[I2C %s] Read %d bytes from address 0x%02X: %s",
+                self.name,
+                bytes_to_send,
+                address,
+                bytes(data),
             )
 
         if self.on_request:
             self.on_request(message)
         return json.dumps(response)
 
-    def handle_response(self, message):
-        print(f"[I2C {self.name}] Received response: {message}")
+    def handle_response(self, message: dict[str, Any]) -> None:
+        logger.debug("[I2C %s] Received response: %s", self.name, message)
         if self.on_response:
             self.on_response(message)
-        return None
 
-    def set_on_request(self, on_request):
+    def set_on_request(
+        self, on_request: Callable[[dict[str, Any]], None] | None
+    ) -> None:
         self.on_request = on_request
 
-    def set_on_response(self, on_response):
+    def set_on_response(
+        self, on_response: Callable[[dict[str, Any]], None] | None
+    ) -> None:
         self.on_response = on_response
 
-    def handle_message(self, message):
+    def handle_message(self, message: dict[str, Any]) -> str | None:
         if message["object"] != "I2C":
             return None
         if message["name"] != self.name:
@@ -94,24 +107,29 @@ class I2C:
         if message["type"] == "Request":
             return self.handle_request(message)
         if message["type"] == "Response":
-            return self.handle_response(message)
+            self.handle_response(message)
+            return None
+        return None
 
-    def write_to_device(self, address, data):
-        """Write data to a simulated I2C device (for testing)"""
-        if address not in self.device_buffers:
-            self.device_buffers[address] = bytearray()
+    def write_to_device(self, address: int, data: bytes | list[int]) -> None:
+        """Write data to a simulated I2C device (for testing)."""
         self.device_buffers[address] = bytearray(data)
-        print(
-            f"[I2C {self.name}] Device buffer at 0x{address:02X} set to: {bytes(data)}"
+        logger.debug(
+            "[I2C %s] Device buffer at 0x%02X set to: %s",
+            self.name,
+            address,
+            bytes(data),
         )
 
-    def read_from_device(self, address):
-        """Read data from a simulated I2C device (for testing)"""
+    def read_from_device(self, address: int) -> bytes:
+        """Read data from a simulated I2C device (for testing)."""
         if address in self.device_buffers:
             return bytes(self.device_buffers[address])
         return b""
 
-    def wait_for_operation(self, operation, address=None, timeout=2.0):
+    def wait_for_operation(
+        self, operation: str, address: int | None = None, timeout: float = 2.0
+    ) -> bool:
         """Wait for a specific I2C operation to occur.
 
         Args:
@@ -123,32 +141,26 @@ class I2C:
             True if operation occurred, False if timeout
         """
         event = threading.Event()
-
-        def handler(message):
-            # Call existing handler if present
-            if old_handler is not None:
-                old_handler(message)
-            # Check our condition
-            if (
-                message.get("operation") == operation
-                and address is None
-                or message.get("address") == address
-            ):
-                event.set()
-
-        # Save old handler
         old_handler = self.on_request
 
-        # Set chained handler
+        def handler(message: dict[str, Any]) -> None:
+            if old_handler is not None:
+                old_handler(message)
+            op_matches = message.get("operation") == operation
+            addr_matches = address is None or message.get("address") == address
+            if op_matches and addr_matches:
+                event.set()
+
         self.on_request = handler
 
         try:
             return event.wait(timeout)
         finally:
-            # Restore old handler
             self.on_request = old_handler
 
-    def wait_for_transactions(self, count, address=None, timeout=2.0):
+    def wait_for_transactions(
+        self, count: int, address: int | None = None, timeout: float = 2.0
+    ) -> bool:
         """Wait for a specific number of I2C transactions (send or receive).
 
         Args:
@@ -159,30 +171,24 @@ class I2C:
         Returns:
             True if transactions occurred, False if timeout
         """
-        transactions = [0]  # Use list to modify in closure
+        transactions = 0
         event = threading.Event()
-
-        def handler(message):
-            # Call existing handler if present
-            if old_handler is not None:
-                old_handler(message)
-            # Check our condition
-            operation = message.get("operation")
-            if operation in ("Send", "Receive") and (
-                address is None or message.get("address") == address
-            ):
-                transactions[0] += 1
-                if transactions[0] >= count:
-                    event.set()
-
-        # Save old handler
         old_handler = self.on_request
 
-        # Set temporary handler
+        def handler(message: dict[str, Any]) -> None:
+            nonlocal transactions
+            if old_handler is not None:
+                old_handler(message)
+            operation = message.get("operation")
+            addr_matches = address is None or message.get("address") == address
+            if operation in ("Send", "Receive") and addr_matches:
+                transactions += 1
+                if transactions >= count:
+                    event.set()
+
         self.on_request = handler
 
         try:
             return event.wait(timeout)
         finally:
-            # Restore old handler
             self.on_request = old_handler
