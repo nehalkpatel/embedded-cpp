@@ -28,7 +28,7 @@ docker compose run --rm host-debug
 
 ### Local Build
 
-**Requirements**: CMake 3.27+, Ninja, Clang 18+, Python 3.10+, ZeroMQ (libzmq3-dev)
+**Requirements**: CMake 3.27+, Ninja, Clang 18+, Python 3.11+, [uv](https://docs.astral.sh/uv/), ZeroMQ (libzmq3-dev)
 
 ```bash
 cmake --workflow --preset=host-debug    # Configure + build + test
@@ -40,7 +40,7 @@ cmake --workflow --preset=host-debug    # Configure + build + test
 Application (apps/)  →  Board (libs/board/)  →  MCU (libs/mcu/)  →  Platform Implementations
 ```
 
-- **apps/**: Example applications (blinky, uart_echo)
+- **apps/**: Example applications (blinky, uart_echo, i2c_demo)
 - **libs/mcu/**: Hardware abstractions (Pin, UART, I2C, Delay) with host emulation
 - **libs/board/**: Board-specific implementations (host, STM32F3, STM32F7, nRF52)
 - **py/host-emulator/**: Python hardware simulator for desktop testing
@@ -65,15 +65,15 @@ ctest --preset=host -C Debug --output-on-failure
 # Single C++ test
 ctest --preset=host -C Debug -R test_zmq_transport
 
-# Python integration tests
-cd py/host-emulator && pytest tests/ -v
+# Python integration tests (via CTest, which supplies the app paths)
+ctest --preset=host -C Debug -R host_emulator_test
 ```
 
 ## Example: Running Blinky
 
 ```bash
 # Terminal 1: Start emulator
-cd py/host-emulator && python -m src.emulator
+cd py/host-emulator && uv run python -m host_emulator.emulator
 
 # Terminal 2: Run application
 ./build/host/bin/Debug/blinky
