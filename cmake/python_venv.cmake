@@ -3,8 +3,8 @@
 # Usage:
 #   configure_venv(venv_name project_dir)
 #
-# This creates a virtual environment using uv and installs the project
-# in editable mode with dev dependencies.
+# Syncs `project_dir` (and its dev dependency group) into a venv under the CMake
+# binary directory, using the project's uv.lock so builds are reproducible.
 #
 # Sets ${venv_name}_PYTHON to the path of the Python interpreter in the venv.
 
@@ -26,28 +26,33 @@ function(configure_venv venv_name project_dir)
     endif()
 
     message(STATUS "Using uv: ${UV_EXECUTABLE}")
+    message(STATUS "Syncing ${venv_name} from ${project_dir}/uv.lock")
 
-    # Create venv and install project with dev dependencies
-    if(NOT EXISTS "${venv_path}/bin/python3")
-        message(STATUS "Creating virtual environment: ${venv_name}")
-        execute_process(
-            COMMAND ${UV_EXECUTABLE} venv ${venv_path} --python 3.11
-            RESULT_VARIABLE venv_result
-        )
-        if(NOT venv_result EQUAL 0)
-            message(FATAL_ERROR "Failed to create virtual environment: ${venv_name}")
-        endif()
-    endif()
-
-    # Install project in editable mode with dev dependencies using uv pip
-    message(STATUS "Installing ${venv_name} dependencies with uv")
+    # `uv sync --frozen` installs exactly what uv.lock pins and fails rather than
+    # silently re-resolving if the lock is stale. It is a no-op once the venv
+    # matches the lock, so repeat configures stay cheap.
+    #
+    # UV_PROJECT_ENVIRONMENT redirects the venv out of the source tree and into
+    # the build directory. The interpreter comes from .python-version.
     execute_process(
-        COMMAND ${UV_EXECUTABLE} pip install -e ${project_dir}[dev] --python ${venv_path}/bin/python3
-        RESULT_VARIABLE install_result
+        COMMAND ${CMAKE_COMMAND} -E env
+                "UV_PROJECT_ENVIRONMENT=${venv_path}"
+                ${UV_EXECUTABLE} sync --frozen
+        WORKING_DIRECTORY ${project_dir}
+        RESULT_VARIABLE sync_result
     )
-    if(NOT install_result EQUAL 0)
-        message(FATAL_ERROR "Failed to install project into ${venv_name}")
+    if(NOT sync_result EQUAL 0)
+        message(FATAL_ERROR
+            "Failed to sync ${venv_name} from ${project_dir}/uv.lock. "
+            "If dependencies changed, refresh the lock with: uv lock"
+        )
     endif()
+
+    # Re-run CMake if the dependency manifests change
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+        "${project_dir}/pyproject.toml"
+        "${project_dir}/uv.lock"
+    )
 
     # Export the Python path
     set(${venv_name}_PYTHON ${venv_path}/bin/python3 PARENT_SCOPE)
