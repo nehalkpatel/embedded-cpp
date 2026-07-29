@@ -17,8 +17,16 @@ ctest --preset=host -C Debug                 # Test all
 # Run single C++ test
 ctest --preset=host -C Debug -R test_zmq_transport
 
-# Run single Python integration test
-cd py/host-emulator && pytest tests/test_blinky.py -v
+# Run all Python integration tests (wires up executable paths for you)
+ctest --preset=host -C Debug -R host_emulator_test
+
+# Run a single Python integration test directly (needs the app path;
+# --extra dev pulls in pytest, which lives in the dev optional-dependency group)
+cd py/host-emulator && uv run --extra dev pytest tests/test_blinky.py -v \
+    --blinky=../../build/host/bin/Debug/blinky
+
+# Python lint / type-check
+cd py/host-emulator && uv run --extra dev ruff check . && uv run --extra dev mypy src
 
 # Cross-compile for ARM
 cmake --workflow --preset=stm32f3_discovery-release
@@ -72,15 +80,16 @@ class MyApp {
 1. Define interface in `libs/mcu/*.hpp` (for peripherals) or `libs/board/board.hpp`
 2. Implement host version in `libs/mcu/host/` with ZMQ messaging
 3. Add message types to `host_emulator_messages.hpp`
-4. Update Python emulator in `py/host-emulator/src/`
+4. Update Python emulator in `py/host-emulator/src/host_emulator/`
 5. Write unit tests (C++) and integration tests (Python)
 6. Implement hardware versions in board-specific directories
 
 ## Testing
 
 - **C++ unit tests**: Colocated with code (`src/libs/mcu/host/test_*.cpp`), use Google Test
-- **Python integration tests**: `py/host-emulator/tests/`, use pytest with fixtures that manage emulator/app lifecycle
+- **Python integration tests**: `py/host-emulator/tests/`, use pytest with fixtures that manage emulator/app lifecycle. CTest builds a uv venv under `build/host/host_emulator_venv` and runs them as the `host_emulator_test` target
 - **clang-tidy**: Runs automatically during build, no separate step needed
+- **Python tooling**: uv + ruff + strict mypy, all configured in `py/host-emulator/pyproject.toml`
 
 ## Important Files
 
