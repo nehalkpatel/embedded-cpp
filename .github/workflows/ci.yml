@@ -17,6 +17,11 @@ on:
       - '.gitignore'
   workflow_dispatch:
 
+# Cancel superseded runs on the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   host-build-test:
     name: Host Build & Test (Debug)
@@ -26,49 +31,67 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Pin to clang-format-18 to match the version in the dev container
+      # (Dockerfile aliases clang-format -> clang-format-18). An unpinned
+      # clang-format can disagree with local formatting.
       - name: Check C++ formatting
         run: |
-          # Install clang-format if not available
-          sudo apt-get update && sudo apt-get install -y clang-format
+          sudo apt-get update && sudo apt-get install -y clang-format-18
 
-          # Check formatting for all C++ files
-          find src -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
-
-          # If formatting is wrong, show the diff
-          if [ $? -ne 0 ]; then
-            echo "❌ Formatting errors found. Run the following to fix:"
-            echo "   find src -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i"
+          if ! find src \( -name '*.cpp' -o -name '*.hpp' \) -print0 \
+               | xargs -r0 clang-format-18 --dry-run --Werror; then
+            echo "::error::C++ formatting errors. Fix with:"
+            echo "  find src \( -name '*.cpp' -o -name '*.hpp' \) | xargs clang-format -i"
             exit 1
           fi
 
-      - name: Check Python formatting
+      # uv resolves ruff/mypy/Python from py/host-emulator/uv.lock and
+      # .python-version, so CI runs the exact versions the container does.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: py/host-emulator/uv.lock
+
+      - name: Lint and type-check Python
+        working-directory: py/host-emulator
         run: |
-          # Install ruff (modern Python linter/formatter)
-          pip install ruff --break-system-packages
-
-          # Check linting
-          ruff check py/
-
-          # Check formatting
-          ruff format --check py/
-
-          # If formatting is wrong, show help
-          if [ $? -ne 0 ]; then
-            echo "❌ Python formatting errors found. Run the following to fix:"
-            echo "   ruff check py/ --fix"
-            echo "   ruff format py/"
+          if ! uv run --frozen ruff check .; then
+            echo "::error::Python lint errors. Fix with: uv run ruff check --fix ."
             exit 1
           fi
 
-      - name: Build Docker image
-        run: docker compose build embedded-cpp-dev
+          if ! uv run --frozen ruff format --check .; then
+            echo "::error::Python formatting errors. Fix with: uv run ruff format ."
+            exit 1
+          fi
+
+          if ! uv run --frozen mypy src; then
+            echo "::error::Python type errors. Reproduce with: uv run mypy src"
+            exit 1
+          fi
+
+      # Build with a registry-independent GHA layer cache so the apt/toolchain
+      # layers are not rebuilt on every run.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build dev image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: embedded-cpp-docker:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run host-debug workflow
         run: docker compose run --rm --user root host-debug
 
       - name: Generate coverage reports
         run: |
-          docker compose run --rm --user root embedded-cpp-dev cmake --build build/host --config Debug --target ccov-all
+          docker compose run --rm --user root embedded-cpp-dev \
+            cmake --build build/host --config Debug --target ccov-all
           sudo chown -R runner:docker build/host/ccov
 
       - name: Upload test results
