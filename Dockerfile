@@ -45,6 +45,12 @@ RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100 && 
 # Install uv for fast Python package management (to /usr/local/bin for all users)
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 
+# Bake the project's Python into the image so builds don't download it every time.
+# Ubuntu 24.04 only ships 3.12, so uv manages the interpreter instead.
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
+ENV UV_LINK_MODE=copy
+RUN uv python install 3.14 && chmod -R a+rX /opt/uv-python
+
 # ... Developer comfort tools (optional, for interactive use) ...
 ARG INSTALL_DEV_TOOLS=false
 

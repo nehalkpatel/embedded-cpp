@@ -4,11 +4,13 @@ version = "0.1.0"
 description = "Host emulator for embedded C++ applications"
 authors = [{ name = "Nehal Patel", email = "hereisnehal@gmail.com" }]
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = ["pyzmq>=25"]
+requires-python = ">=3.14"
+dependencies = ["pyzmq>=27"]
 
-[project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=4", "ruff>=0.8", "mypy>=1.14"]
+# PEP 735 dependency group. uv syncs this by default, so `uv run pytest` works
+# without extra flags (unlike an optional-dependencies extra).
+[dependency-groups]
+dev = ["pytest>=9", "pytest-cov>=7", "ruff>=0.14", "mypy>=1.19"]
 
 [build-system]
 requires = ["hatchling"]
@@ -19,7 +21,7 @@ packages = ["src/host_emulator"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py314"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
@@ -33,7 +35,7 @@ select = [
     "UP",    # pyupgrade
     "ARG",   # flake8-unused-arguments
     "SIM",   # flake8-simplify
-    "TCH",   # flake8-type-checking
+    "TC",    # flake8-type-checking
     "PTH",   # flake8-use-pathlib
     "RUF",   # Ruff-specific rules
 ]
@@ -45,17 +47,11 @@ ignore = [
 known-first-party = ["host_emulator"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
+# `strict` already implies warn_return_any, warn_unused_ignores,
+# disallow_untyped_defs/decorators, disallow_incomplete_defs, check_untyped_defs,
+# no_implicit_optional, warn_redundant_casts and warn_unused_configs.
 strict = true
-warn_return_any = true
-warn_unused_ignores = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_configs = true
 
 [[tool.mypy.overrides]]
 module = ["zmq.*"]

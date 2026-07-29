@@ -37,7 +37,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 @pytest.fixture(scope="module")
-def emulator() -> Generator[DeviceEmulator, None, None]:
+def emulator() -> Generator[DeviceEmulator]:
     """Start emulator and ensure it's ready before returning."""
     device_emulator = DeviceEmulator()
 
@@ -77,7 +77,7 @@ def _application_fixture_factory(option_name: str, display_name: str) -> Any:
     @pytest.fixture(scope="module")
     def application_fixture(
         request: pytest.FixtureRequest, emulator: DeviceEmulator
-    ) -> Generator[subprocess.Popen[bytes], None, None]:
+    ) -> Generator[subprocess.Popen[bytes]]:
         """Start application after emulator is ready."""
         _ = emulator  # Ensure emulator is started first
         app_arg = request.config.getoption(option_name)
