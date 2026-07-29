@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "permissions": {
+    "allow": [
+      "Bash(cmake --preset:*)",
+      "Bash(cmake --build:*)",
+      "Bash(cmake --workflow:*)",
+      "Bash(ctest:*)",
+      "Bash(uv run:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv lock:*)",
+      "Bash(uv python:*)",
+      "Bash(docker compose build:*)",
+      "Bash(docker compose run:*)",
+      "Bash(clang-format:*)",
+      "Bash(xargs clang-format:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(echo:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
