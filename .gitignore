@@ -1,7 +1,19 @@
+# Build output
 build/
+Testing/
+CMakeUserPresets.json
+
+# Editor / tooling
 .vscode/
 .cache/
-.claude/
-.ruff_cache/
+.claude/settings.local.json
+
+# Python
 __pycache__/
-CMakeUserPresets.json
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Reference material (not source)
+*.pdf
