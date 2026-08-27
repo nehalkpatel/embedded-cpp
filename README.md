@@ -66,13 +66,13 @@ cmake --workflow --preset=stm32f3_discovery-release
 
 ```bash
 # All tests
-ctest --preset=host -C Debug --output-on-failure
+ctest --preset=host-debug
 
 # Single C++ test
-ctest --preset=host -C Debug -R test_zmq_transport
+ctest --preset=host-debug -R ZmqTransportTest
 
 # Python integration tests (via CTest, which supplies the app paths)
-ctest --preset=host -C Debug -R host_emulator_test
+ctest --preset=host-debug -R host_emulator_test
 ```
 
 ## Example: Running Blinky
