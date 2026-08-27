@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -22,12 +24,14 @@ class HostUartTest : public ::testing::Test {
   }
 
   void SetUp() override {
-    // Start emulator thread
+    // Bind on the test thread, before the emulator thread exists, so the
+    // transport's connect() below happens-after the bind by thread creation
+    // alone. This replaces a 100ms sleep that only made the race unlikely.
+    emulator_socket_.set(zmq::sockopt::linger, 0);
+    emulator_socket_.bind("ipc:///tmp/test_uart_device_emulator.ipc");
+
     emulator_running_ = true;
     emulator_thread_ = std::thread{[this]() { EmulatorLoop(); }};
-
-    // Give emulator time to start
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Create dispatcher with empty receiver map (will update via reference
     // later)
@@ -47,8 +51,12 @@ class HostUartTest : public ::testing::Test {
     // Add UART to receiver map (dispatcher holds reference, so this updates it)
     receiver_map_storage_.emplace_back(IsJson, std::ref(*uart_));
 
-    // Give transport time to connect
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // Wait for the condition rather than for a duration. On a PAIR socket a
+    // send succeeds only once a pipe to the peer exists, so a successful probe
+    // IS the readiness signal, and connect latency is absorbed by SNDTIMEO.
+    // The emulator loop skips anything that fails to decode, so this non-JSON
+    // probe is swallowed with no reply and needs no protocol support.
+    ASSERT_TRUE(device_transport_->Send("probe"));
   }
 
   void TearDown() override {
@@ -56,22 +64,22 @@ class HostUartTest : public ::testing::Test {
     device_transport_.reset();
     dispatcher_.reset();
 
+    // Stop and join before closing anything the thread is using: terminating a
+    // context out from under a running loop throws ETERM inside it.
     emulator_running_ = false;
     if (emulator_thread_.joinable()) {
-      emulator_context_.shutdown();
-      emulator_context_.close();
-      unsolicited_context_.shutdown();
-      unsolicited_context_.close();
       emulator_thread_.join();
     }
+    emulator_socket_.close();
+    emulator_context_.close();
+    unsolicited_context_.close();
   }
 
   void EmulatorLoop() {
     std::vector<std::byte> uart_rx_buffer;
 
     try {
-      zmq::socket_t socket{emulator_context_, zmq::socket_type::pair};
-      socket.bind("ipc:///tmp/test_uart_device_emulator.ipc");
+      zmq::socket_t& socket = emulator_socket_;
 
       while (emulator_running_) {
         std::array<zmq::pollitem_t, 1> items = {
@@ -148,6 +156,7 @@ class HostUartTest : public ::testing::Test {
   std::unique_ptr<mcu::ZmqTransport> device_transport_;
   std::unique_ptr<mcu::HostUart> uart_;
   zmq::context_t emulator_context_{1};
+  zmq::socket_t emulator_socket_{emulator_context_, zmq::socket_type::pair};
   zmq::context_t unsolicited_context_{1};
   std::thread emulator_thread_;
   std::atomic<bool> emulator_running_{false};
@@ -243,14 +252,22 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
   auto init_result = uart_->Init(config);
   ASSERT_TRUE(init_result);
 
-  // Track received data via handler
+  // Track received data via handler. The handler runs on the transport's
+  // server thread while this thread reads the results, so both need
+  // synchronisation -- a plain bool and vector here were a data race
+  // regardless of any sleep.
   std::vector<std::byte> received_data{};
-  bool handler_called{false};
+  std::mutex received_mutex{};
+  std::atomic<bool> handler_called{false};
 
   // Register RxHandler
-  auto handler_result = uart_->SetRxHandler(
-      [&received_data, &handler_called](const std::byte* data, size_t size) {
-        received_data.assign(data, data + size);
+  auto handler_result =
+      uart_->SetRxHandler([&received_data, &received_mutex, &handler_called](
+                              const std::byte* data, size_t size) {
+        {
+          const std::lock_guard<std::mutex> lock(received_mutex);
+          received_data.assign(data, data + size);
+        }
         handler_called = true;
       });
   ASSERT_TRUE(handler_result);
@@ -272,23 +289,32 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
   // arrival)
   zmq::socket_t unsolicited_socket{unsolicited_context_,
                                    zmq::socket_type::pair};
+  // Timeouts instead of a "connect time" sleep. This socket had none, so its
+  // send already blocked until the pipe came up -- the sleep was never what
+  // made this work, it just hid an unbounded wait behind a bounded-looking one.
+  unsolicited_socket.set(zmq::sockopt::linger, 0);
+  unsolicited_socket.set(zmq::sockopt::sndtimeo, 2000);
+  unsolicited_socket.set(zmq::sockopt::rcvtimeo, 2000);
   unsolicited_socket.connect("ipc:///tmp/test_uart_emulator_device.ipc");
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));  // Connect time
 
   const auto request_str = mcu::Encode(unsolicited_request);
-  unsolicited_socket.send(zmq::buffer(request_str), zmq::send_flags::none);
+  ASSERT_TRUE(
+      unsolicited_socket.send(zmq::buffer(request_str), zmq::send_flags::none));
 
-  // Wait for response (dispatcher should route and UART should respond)
+  // Wait for response (dispatcher should route and UART should respond).
+  //
+  // This recv is also the handler barrier, which is why no sleep follows it:
+  // HostUart::Receive invokes rx_handler_ before it builds the ack, and the
+  // server thread only replies once Dispatch has returned. A reply in hand
+  // therefore happens-after the handler ran.
   zmq::message_t response_msg{};
   const auto recv_result{
       unsolicited_socket.recv(response_msg, zmq::recv_flags::none)};
   ASSERT_TRUE(recv_result.has_value());
 
-  // Give handler time to execute
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
   // Verify handler was called with correct data
   EXPECT_TRUE(handler_called);
+  const std::lock_guard<std::mutex> lock(received_mutex);
   EXPECT_EQ(received_data, test_data);
 }
 

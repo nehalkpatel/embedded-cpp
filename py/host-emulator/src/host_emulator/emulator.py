@@ -188,8 +188,10 @@ class DeviceEmulator:
 
         self.to_device_socket.connect(self.to_device_endpoint)
         logger.debug("Connected to %s", self.to_device_endpoint)
-
-        time.sleep(0.05)
+        # No settling sleep here. connect() is asynchronous and the device may
+        # not even have bound yet; libzmq retries in the background regardless.
+        # PAIR blocks rather than drops, and SNDTIMEO bounds the wait, so the
+        # sleep bought nothing. Test-side readiness is _wait_for_process_ready.
 
     def stop(self) -> None:
         """Stop emulator and clean up resources."""
