@@ -16,7 +16,8 @@
       "cacheVariables": {
         "CMAKE_PRESET": "${presetName}",
         "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/bin"
-      }
+      },
+      "hidden": true
     },
     {
       "name": "host",
@@ -86,27 +87,36 @@
       "name": "default",
       "displayName": "Default",
       "description": "Default build using Ninja",
-      "configurePreset": "default"
+      "configurePreset": "default",
+      "hidden": true
     },
     {
       "name": "host",
       "displayName": "Host",
       "description": "Host build using Ninja",
-      "configurePreset": "host"
+      "configurePreset": "host",
+      "hidden": true
     },
     {
       "name": "host-debug",
       "displayName": "Host Debug",
       "description": "Host build (Debug) using Ninja",
-      "configurePreset": "host",
-      "configuration": "Debug"
+      "configuration": "Debug",
+      "inherits": "host"
     },
     {
       "name": "host-release",
       "displayName": "Host Release",
       "description": "Host build (Release) using Ninja",
-      "configurePreset": "host",
-      "configuration": "Release"
+      "configuration": "Release",
+      "inherits": "host"
+    },
+    {
+      "name": "host-relwithdebinfo",
+      "displayName": "Host RelWithDebInfo",
+      "description": "Host build (RelWithDebInfo) using Ninja",
+      "inherits": "host",
+      "configuration": "RelWithDebInfo"
     },
     {
       "name": "stm32f3_discovery",
@@ -152,8 +162,6 @@
     },
     {
       "name": "host",
-      "displayName": "Unit Tests",
-      "description": "Unit test using CTest",
       "configurePreset": "host",
       "output": {
         "outputOnFailure": true
@@ -162,35 +170,29 @@
         "noTestsAction": "error",
         "stopOnFailure": true
       },
-      "configuration": "Debug"
+      "hidden": true,
+      "inherits": "default"
     },
     {
       "name": "host-debug",
       "displayName": "Unit Tests (Debug)",
       "description": "Unit test using CTest (Debug)",
-      "configurePreset": "host",
-      "output": {
-        "outputOnFailure": true
-      },
-      "execution": {
-        "noTestsAction": "error",
-        "stopOnFailure": true
-      },
-      "configuration": "Debug"
+      "configuration": "Debug",
+      "inherits": "host"
     },
     {
       "name": "host-release",
       "displayName": "Unit Tests (Release)",
       "description": "Unit test using CTest (Release)",
-      "configurePreset": "host",
-      "output": {
-        "outputOnFailure": true
-      },
-      "execution": {
-        "noTestsAction": "error",
-        "stopOnFailure": true
-      },
-      "configuration": "Release"
+      "configuration": "Release",
+      "inherits": "host"
+    },
+    {
+      "name": "host-relwithdebinfo",
+      "displayName": "Unit Tests (RelWithDebInfo)",
+      "description": "Unit test using CTest (RelWithDebInfo)",
+      "inherits": "host",
+      "configuration": "RelWithDebInfo"
     }
   ],
   "workflowPresets": [
@@ -229,6 +231,25 @@
         {
           "type": "test",
           "name": "host-release"
+        }
+      ]
+    },
+    {
+      "name": "host-relwithdebinfo",
+      "displayName": "Host RelWithDebInfo - Build & Test",
+      "description": "Configure, build (RelWithDebInfo), and test for host platform",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "host"
+        },
+        {
+          "type": "build",
+          "name": "host-relwithdebinfo"
+        },
+        {
+          "type": "test",
+          "name": "host-relwithdebinfo"
         }
       ]
     },

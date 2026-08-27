@@ -11,14 +11,14 @@ cmake --workflow --preset=host-release
 
 # Manual steps
 cmake --preset=host                          # Configure
-cmake --build --preset=host --config Debug   # Build
-ctest --preset=host -C Debug                 # Test all
+cmake --build --preset=host-debug            # Build
+ctest --preset=host-debug                    # Test all
 
 # Run single C++ test
-ctest --preset=host -C Debug -R test_zmq_transport
+ctest --preset=host-debug -R ZmqTransportTest
 
 # Run all Python integration tests (wires up executable paths for you)
-ctest --preset=host -C Debug -R host_emulator_test
+ctest --preset=host-debug -R host_emulator_test
 
 # Run a single Python integration test directly (needs the app path;
 # --extra dev pulls in pytest, which lives in the dev optional-dependency group)
