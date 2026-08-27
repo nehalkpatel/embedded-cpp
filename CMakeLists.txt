@@ -7,13 +7,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Warnings only. Optimization and debug-info flags are per-configuration and must
+# not be set here: these options are appended after the per-config flags, and the
+# last -O on the command line wins, so a global -Os silently overrode Release's
+# -O3 and made Debug builds optimized. The ARM toolchain sets its own
+# CMAKE_*_FLAGS_{DEBUG,RELEASE}_INIT (cmake/toolchain/armgcc.cmake); the host
+# build uses CMake's defaults.
 set(COMMON_COMPILE_OPTIONS
   -Wall
   -Wextra
   -Werror
   -Wpedantic
-  -Os
-  -g
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
