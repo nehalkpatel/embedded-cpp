@@ -28,7 +28,10 @@ cd py/host-emulator && uv run --extra dev pytest tests/test_blinky.py -v \
 # Python lint / type-check
 cd py/host-emulator && uv run --extra dev ruff check . && uv run --extra dev mypy src
 
-# Cross-compile for ARM
+# Cross-compile for ARM - not yet functional. Presets and toolchain files exist,
+# but src/libs/mcu/CMakeLists.txt does add_subdirectory(${EMBEDDED_CPP_MCU}) and
+# only the `host` implementation exists, so configure fails on the missing
+# arm_cm4/ directory. Host build and emulation come first; hardware follows.
 cmake --workflow --preset=stm32f3_discovery-release
 
 # Docker alternative

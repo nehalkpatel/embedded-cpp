@@ -56,7 +56,9 @@ Application (apps/)  →  Board (libs/board/)  →  MCU (libs/mcu/)  →  Platfo
 cmake --workflow --preset=host-debug
 cmake --workflow --preset=host-release
 
-# ARM targets
+# ARM targets - not yet functional (see Implementation Status below).
+# The presets and toolchain files are in place, but configuring fails until
+# the MCU layer lands in src/libs/mcu/arm_cm4/ (and arm_cm7/ for the F7).
 cmake --workflow --preset=stm32f3_discovery-release
 ```
 
