@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.27)
-
 add_library(host_mcu host_i2c.cpp host_pin.cpp host_uart.cpp delay.cpp)
 target_compile_options(host_mcu PRIVATE ${COMMON_COMPILE_OPTIONS})
 
@@ -66,11 +64,11 @@ target_link_libraries(test_host_i2c
 
 
 include(GoogleTest)
-gtest_discover_tests(test_host_transport)
-gtest_discover_tests(test_messages)
-gtest_discover_tests(test_dispatcher)
-gtest_discover_tests(test_host_uart)
-gtest_discover_tests(test_host_i2c)
+gtest_discover_tests(test_host_transport PROPERTIES LABELS "unit")
+gtest_discover_tests(test_messages PROPERTIES LABELS "unit")
+gtest_discover_tests(test_dispatcher PROPERTIES LABELS "unit")
+gtest_discover_tests(test_host_uart PROPERTIES LABELS "unit")
+gtest_discover_tests(test_host_i2c PROPERTIES LABELS "unit")
 
 # Code coverage configuration
 if(CODE_COVERAGE)
