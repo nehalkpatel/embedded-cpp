@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.27)
-
 if(CMAKE_PRESET STREQUAL "stm32f3_discovery")
   include(FetchContent)
   FetchContent_Declare(
