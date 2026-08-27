@@ -35,12 +35,13 @@ class HostI2CTest : public ::testing::Test {
     // later)
     dispatcher_ = std::make_unique<mcu::Dispatcher>(receiver_map_storage_);
 
-    // Create transport
-    device_transport_ =
-        mcu::ZmqTransport::Create("ipc:///tmp/test_i2c_device_emulator.ipc",
-                                  "ipc:///tmp/test_i2c_emulator_device.ipc",
-                                  *dispatcher_)
-            .value_or(nullptr);
+    // Create transport. Assert rather than value_or(nullptr): Create can fail,
+    // and a null transport is dereferenced two lines down.
+    auto transport_result = mcu::ZmqTransport::Create(
+        "ipc:///tmp/test_i2c_device_emulator.ipc",
+        "ipc:///tmp/test_i2c_emulator_device.ipc", *dispatcher_);
+    ASSERT_TRUE(transport_result.has_value());
+    device_transport_ = std::move(transport_result.value());
 
     // Now create I2C with transport
     i2c_ =

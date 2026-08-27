@@ -81,6 +81,9 @@ TEST_F(ZmqTransportTest, SendReceive) {
   auto transport =
       mcu::ZmqTransport::Create("ipc:///tmp/device_emulator.ipc",
                                 "ipc:///tmp/emulator_device.ipc", dispatcher);
+  // has_value() rather than the expected itself: std::expected's operator bool
+  // is explicit, so gtest's AssertionResult will not take it.
+  ASSERT_TRUE(transport.has_value());
   auto result = (*transport)->Send("Hello");
   ASSERT_TRUE(result);
   auto response = (*transport)->Receive();
