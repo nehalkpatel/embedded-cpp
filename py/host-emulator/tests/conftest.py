@@ -51,16 +51,44 @@ def emulator() -> Generator[DeviceEmulator]:
             device_emulator.stop()
 
 
+def _endpoint_path(endpoint: str) -> Path | None:
+    """Filesystem path an ipc:// endpoint binds to, or None for other transports."""
+    if not endpoint.startswith("ipc://"):
+        return None
+    return Path(endpoint.removeprefix("ipc://"))
+
+
 def _wait_for_process_ready(
-    process: subprocess.Popen[bytes], timeout: float = 1.0
+    process: subprocess.Popen[bytes],
+    ready_path: Path | None,
+    timeout: float = 5.0,
+    poll_interval: float = 0.01,
 ) -> None:
-    """Wait for process to be running and responsive."""
-    start_time = time.time()
-    while time.time() - start_time < timeout:
+    """Block until the application has bound its receive endpoint.
+
+    Readiness is the appearance of the app's ipc socket file: the C++ transport
+    binds it inside ZmqTransport::Create(), before Create() returns.
+
+    This is narrower than "the app is ready". It does not prove the app finished
+    connecting to the emulator, nor that it reached its main loop -- both happen
+    after the bind and neither is observable from here. The per-test wait_for_*
+    helpers remain the real synchronisation for those.
+
+    The previous version had no success exit at all: it slept out its full
+    timeout on every call and treated "did not die" as ready.
+    """
+    if ready_path is None:
+        return  # No observable readiness signal for non-ipc endpoints.
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
         if process.poll() is not None:
             raise RuntimeError(f"Process exited with code {process.returncode}")
-        time.sleep(0.1)
-    time.sleep(0.1)
+        if ready_path.exists():
+            return
+        time.sleep(poll_interval)
+
+    raise RuntimeError(f"Process did not bind {ready_path} within {timeout}s")
 
 
 def _application_fixture_factory(option_name: str, display_name: str) -> Any:
@@ -89,6 +117,12 @@ def _application_fixture_factory(option_name: str, display_name: str) -> Any:
             f"{display_name} executable not found: {app_executable}"
         )
 
+        # Clear any leftover socket file first, so its later appearance is
+        # evidence of *this* run binding rather than of a previous one.
+        ready_path = _endpoint_path(emulator.to_device_endpoint)
+        if ready_path is not None:
+            ready_path.unlink(missing_ok=True)
+
         app_process = subprocess.Popen(
             [str(app_executable)],
             stdout=subprocess.PIPE,
@@ -96,7 +130,7 @@ def _application_fixture_factory(option_name: str, display_name: str) -> Any:
         )
 
         try:
-            _wait_for_process_ready(app_process)
+            _wait_for_process_ready(app_process, ready_path)
             yield app_process
 
         finally:

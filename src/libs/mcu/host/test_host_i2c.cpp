@@ -24,12 +24,14 @@ class HostI2CTest : public ::testing::Test {
   }
 
   void SetUp() override {
-    // Start emulator thread
+    // Bind on the test thread, before the emulator thread exists, so the
+    // transport's connect() below happens-after the bind by thread creation
+    // alone. This replaces a 100ms sleep that only made the race unlikely.
+    emulator_socket_.set(zmq::sockopt::linger, 0);
+    emulator_socket_.bind("ipc:///tmp/test_i2c_device_emulator.ipc");
+
     emulator_running_ = true;
     emulator_thread_ = std::thread{[this]() { EmulatorLoop(); }};
-
-    // Give emulator time to start
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Create dispatcher with empty receiver map (will update via reference
     // later)
@@ -50,8 +52,12 @@ class HostI2CTest : public ::testing::Test {
     // Add I2C to receiver map (dispatcher holds reference, so this updates it)
     receiver_map_storage_.emplace_back(IsJson, std::ref(*i2c_));
 
-    // Give transport time to connect
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // Wait for the condition rather than for a duration. On a PAIR socket a
+    // send succeeds only once a pipe to the peer exists, so a successful probe
+    // IS the readiness signal, and connect latency is absorbed by SNDTIMEO.
+    // The emulator loop skips anything that fails to decode, so this non-JSON
+    // probe is swallowed with no reply and needs no protocol support.
+    ASSERT_TRUE(device_transport_->Send("probe"));
   }
 
   void TearDown() override {
@@ -59,12 +65,14 @@ class HostI2CTest : public ::testing::Test {
     device_transport_.reset();
     dispatcher_.reset();
 
+    // Stop and join before closing anything the thread is using: terminating a
+    // context out from under a running loop throws ETERM inside it.
     emulator_running_ = false;
     if (emulator_thread_.joinable()) {
-      emulator_context_.shutdown();
-      emulator_context_.close();
       emulator_thread_.join();
     }
+    emulator_socket_.close();
+    emulator_context_.close();
   }
 
   void EmulatorLoop() {
@@ -72,8 +80,7 @@ class HostI2CTest : public ::testing::Test {
     std::map<uint16_t, std::vector<std::byte>> i2c_device_buffers;
 
     try {
-      zmq::socket_t socket{emulator_context_, zmq::socket_type::pair};
-      socket.bind("ipc:///tmp/test_i2c_device_emulator.ipc");
+      zmq::socket_t& socket = emulator_socket_;
 
       while (emulator_running_) {
         std::array<zmq::pollitem_t, 1> items = {
@@ -148,6 +155,7 @@ class HostI2CTest : public ::testing::Test {
   std::unique_ptr<mcu::ZmqTransport> device_transport_;
   std::unique_ptr<mcu::HostI2CController> i2c_;
   zmq::context_t emulator_context_{1};
+  zmq::socket_t emulator_socket_{emulator_context_, zmq::socket_type::pair};
   std::thread emulator_thread_;
   std::atomic<bool> emulator_running_{false};
 };
