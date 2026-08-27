@@ -34,6 +34,10 @@ docker compose run --rm host-debug
 cmake --workflow --preset=host-debug    # Configure + build + test
 ```
 
+If your compilers aren't on `PATH` at the expected versions (common on macOS with
+Homebrew LLVM), copy `CMakeUserPresets.json.example` to `CMakeUserPresets.json`
+and edit the paths. That file is gitignored, so it stays machine-local.
+
 ## Architecture
 
 ```
