@@ -6,14 +6,13 @@ from __future__ import annotations
 import json
 import logging
 import sys
-import time
-from pathlib import Path
-from threading import Thread
+from threading import Event, Thread
 from typing import Any, NoReturn
 
 import zmq
 
 from .common import UnhandledMessageError
+from .endpoint import EndpointLock, has_live_owner
 from .i2c import I2C
 from .pin import Pin, PinDirection, PinState
 from .uart import Uart
@@ -83,7 +82,12 @@ class DeviceEmulator:
         self.i2cs = [self.i2c_1]
 
         self.emulator_thread = Thread(target=self.run)
-        self._ready = False
+        self._endpoint_lock = EndpointLock()
+        # Set once the bind phase has settled, either way. start() waits on
+        # this and then reads _startup_error, so a failure surfaces immediately
+        # with its real cause instead of as a timeout with a generic message.
+        self._bind_settled = Event()
+        self._startup_error: Exception | None = None
 
     def user_led1(self) -> Pin:
         return self.led_1
@@ -100,23 +104,49 @@ class DeviceEmulator:
     def i2c1(self) -> I2C:
         return self.i2c_1
 
+    def _bind(self) -> None:
+        """Claim the receive endpoint and bind it.
+
+        No stale-file cleanup here, despite what the previous version did.
+        libzmq unlinks an ipc path before binding it, so a file left behind by a
+        killed process was never a problem -- and the unconditional unlink that
+        used to live here was itself the hazard: it would displace a *live*
+        emulator and take its endpoint, with no error on either side.
+
+        Two guards instead, in order. The lock is the guarantee: it is atomic,
+        so no other process using it can slip between the check and the bind.
+        The probe is the fallback for an owner that holds no lock.
+        """
+        endpoint = self.from_device_endpoint
+        if not self._endpoint_lock.try_acquire(endpoint):
+            msg = f"Endpoint {endpoint} is locked by another live process"
+            raise RuntimeError(msg)
+        if has_live_owner(endpoint):
+            msg = f"Endpoint {endpoint} is served by another live process"
+            raise RuntimeError(msg)
+
+        self.from_device_socket.bind(endpoint)
+        logger.debug("Bound to %s", endpoint)
+
     def run(self) -> None:
-        """Main emulator thread - BIND first, then signal ready."""
+        """Main emulator thread: bind, publish the outcome, then serve."""
         logger.debug("Starting emulator thread")
         try:
-            if self.from_device_endpoint.startswith("ipc://"):
-                socket_path = Path(self.from_device_endpoint.replace("ipc://", ""))
-                try:
-                    socket_path.unlink()
-                    logger.debug("Removed stale socket file: %s", socket_path)
-                except FileNotFoundError:
-                    pass
+            self._bind()
+        except Exception as exc:  # Recorded here, re-raised by start().
+            self._startup_error = exc
+            logger.error("Emulator failed to bind: %s", exc)
+            self.from_device_socket.close()
+            self._endpoint_lock.release()
+            return
+        finally:
+            # Publish on every path out of the bind phase. start() is blocked
+            # on this; an unpublished outcome makes it wait out its whole
+            # timeout for something that will never arrive.
+            self._bind_settled.set()
 
-            self.from_device_socket.bind(self.from_device_endpoint)
-            logger.debug("Bound to %s", self.from_device_endpoint)
-
+        try:
             self.running = True
-            self._ready = True
 
             while self.running:
                 try:
@@ -149,6 +179,9 @@ class DeviceEmulator:
             logger.exception("Emulator thread error")
         finally:
             self.from_device_socket.close()
+            # Released only once the socket is closed, so the endpoint is never
+            # advertised as free while we still hold it.
+            self._endpoint_lock.release()
             logger.debug("Emulator thread exiting")
 
     def _handle_pin_message(self, json_message: dict[str, Any]) -> None:
@@ -176,15 +209,24 @@ class DeviceEmulator:
         raise UnhandledMessageError(f"I2C not found: {json_message.get('name')}")
 
     def start(self) -> None:
-        """Start emulator and wait until ready."""
+        """Start the emulator, raising if it could not claim its endpoint.
+
+        Waits for the bind outcome rather than for a duration, so the common
+        case returns as soon as the socket is bound and the failure case
+        reports why instead of timing out with a generic message.
+
+        Raises:
+            RuntimeError: If the endpoint is owned by another live process, or
+                the emulator thread never reported a bind outcome.
+        """
         self.emulator_thread.start()
 
-        timeout = 5.0
-        start_time = time.time()
-        while not self._ready:
-            if time.time() - start_time > timeout:
-                raise RuntimeError("Emulator failed to start within timeout")
-            time.sleep(0.01)
+        if not self._bind_settled.wait(timeout=5.0):
+            raise RuntimeError("Emulator thread never reported a bind outcome")
+        if self._startup_error is not None:
+            raise RuntimeError(
+                f"Emulator failed to start: {self._startup_error}"
+            ) from self._startup_error
 
         self.to_device_socket.connect(self.to_device_endpoint)
         logger.debug("Connected to %s", self.to_device_endpoint)
