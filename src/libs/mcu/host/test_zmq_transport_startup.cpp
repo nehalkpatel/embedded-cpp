@@ -8,11 +8,14 @@
 // with it.
 
 #include <gtest/gtest.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <expected>
@@ -173,12 +176,82 @@ auto LeaveStaleSocketFile(const std::string& path) -> void {
   ::close(descriptor);
 }
 
+// Forks kContenders processes that all attempt to bind `contested` at the same
+// instant and returns how many believed they succeeded.
+//
+// The shared spin barrier is the point. Launching processes normally spreads
+// their arrivals over milliseconds, so the first one binds and the rest see a
+// live owner -- the window never opens and the race looks absent. Releasing
+// them together from one store contends it properly.
+//
+// Lives outside the test body to keep TestBody's cognitive complexity under the
+// clang-tidy threshold.
+auto CountConcurrentBindWinners(const std::string& contested) -> int {
+  constexpr int kContenders = 12;
+
+  auto* gate = static_cast<std::atomic<int>*>(
+      ::mmap(nullptr, sizeof(std::atomic<int>), PROT_READ | PROT_WRITE,
+             MAP_SHARED | MAP_ANONYMOUS, -1, 0));
+  if (gate == MAP_FAILED) {
+    return -1;
+  }
+  gate->store(0);
+
+  for (int i = 0; i < kContenders; ++i) {
+    if (::fork() != 0) {
+      continue;  // Parent.
+    }
+    // Child. Exits via _exit so it never runs gtest teardown or atexit handlers
+    // belonging to the parent's test process.
+    common::NullLogger logger;
+    mcu::TransportConfig config{logger};
+    config.startup_timeout = kStartupTimeout;
+    const mcu::ReceiverMap receivers{};
+    mcu::Dispatcher dispatcher{receivers};
+    const std::string own = contested + ".peer" + std::to_string(i);
+
+    while (gate->load(std::memory_order_acquire) == 0) {
+      // Spin rather than sleep: the point is to arrive together.
+    }
+    auto transport =
+        mcu::ZmqTransport::Create(own, contested, dispatcher, config);
+    const bool won = transport.has_value();
+    if (won) {
+      // Hold it briefly so later arrivals genuinely contend.
+      std::this_thread::sleep_for(std::chrono::milliseconds{400});
+    }
+    ::_exit(won ? 0 : 1);
+  }
+
+  std::this_thread::sleep_for(std::chrono::milliseconds{250});  // all spinning
+  gate->store(1, std::memory_order_release);                    // release
+
+  int winners = 0;
+  for (int i = 0; i < kContenders; ++i) {
+    int status = 0;
+    ::wait(&status);
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+      ++winners;
+    }
+  }
+  ::munmap(gate, sizeof(std::atomic<int>));
+
+  std::error_code error{};
+  for (int i = 0; i < kContenders; ++i) {
+    const std::string own = PathOf(contested) + ".peer" + std::to_string(i);
+    std::filesystem::remove(own, error);
+    std::filesystem::remove(own + ".lock", error);
+  }
+  return winners;
+}
+
 class ZmqTransportStartupTest : public ::testing::Test {
  protected:
   void TearDown() override {
     std::error_code error{};
     for (const auto& endpoint : cleanup_) {
       std::filesystem::remove(PathOf(endpoint), error);
+      std::filesystem::remove(PathOf(endpoint) + ".lock", error);
     }
   }
 
@@ -253,7 +326,10 @@ TEST_F(ZmqTransportStartupTest, CreateRefusesToStealEndpointFromLiveOwner) {
   }
   ASSERT_FALSE(outcome->has_value());
   EXPECT_EQ(outcome->error(), common::Error::kOperationFailed);
-  EXPECT_TRUE(thief_logger.Contains("served by another live process"));
+  // Either guard is a correct refusal, and which one fires is an implementation
+  // detail: EndpointLock runs first and will normally catch it, with the
+  // connect(2) probe behind it for an owner that holds no lock.
+  EXPECT_TRUE(thief_logger.Contains("Refusing to bind"));
 
   // The assertion that actually proves no hijack occurred: a fresh peer
   // connecting to the contested endpoint still reaches the original owner.
@@ -285,6 +361,25 @@ TEST_F(ZmqTransportStartupTest, CreateSucceedsOverStaleSocketFile) {
   }
   ASSERT_TRUE(outcome->has_value());
   EXPECT_TRUE(outcome->value()->IsReady());
+}
+
+// Twelve processes contend for one bind endpoint, released together by a shared
+// spin barrier so the decide-then-bind window is genuinely contended rather
+// than spread out by process startup.
+//
+// Exactly one may win. Every additional winner is a process that believes it
+// owns an endpoint libzmq has already unlinked out from under it -- they do not
+// fail, which is precisely what makes this worth a test.
+//
+// Measured with EndpointLock disabled and only the connect(2) probe in place,
+// this produces between 1 and 7 winners per run. That spread is the reason the
+// lock exists: a probe followed by a bind is two syscalls with a window between
+// them, and flock has no window at all.
+TEST_F(ZmqTransportStartupTest, ConcurrentBindsProduceExactlyOneOwner) {
+  const auto contested = TrackForCleanup(UniqueEndpoint("contested"));
+  const int winners = CountConcurrentBindWinners(contested);
+  EXPECT_EQ(winners, 1) << winners << " processes each believe they own "
+                        << contested;
 }
 
 }  // namespace

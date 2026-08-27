@@ -1,6 +1,9 @@
 #include "zmq_transport.hpp"
 
+#include <fcntl.h>
+#include <sys/file.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -21,6 +24,8 @@ namespace mcu {
 namespace {
 
 constexpr std::string_view kIpcScheme{"ipc://"};
+constexpr std::string_view kLockSuffix{".lock"};
+constexpr mode_t kLockFileMode{0600};
 
 // RAII for a bare file descriptor. The liveness probe below is the only place
 // this file talks to POSIX sockets directly, and it must not leak an fd on any
@@ -74,6 +79,40 @@ auto IpcPathHasLiveOwner(const std::string& path) -> bool {
 }
 
 }  // namespace
+
+EndpointLock::~EndpointLock() {
+  if (fd_ >= 0) {
+    ::close(fd_);  // Closing the fd is what releases the lock.
+  }
+}
+
+auto EndpointLock::TryAcquire(const std::string& endpoint) -> bool {
+  const std::string_view endpoint_view{endpoint};
+  if (!endpoint_view.starts_with(kIpcScheme)) {
+    return true;  // No filesystem path to guard.
+  }
+  const std::string lock_path{
+      std::string{endpoint_view.substr(kIpcScheme.size())} +
+      std::string{kLockSuffix}};
+
+  // The lock file is deliberately never unlinked. Removing it would reintroduce
+  // exactly the race it exists to close: one process unlinking the file another
+  // has already opened, leaving the two holding locks on different inodes and
+  // both believing they won. It stays behind as a zero-byte marker.
+  const int descriptor =
+      ::open(lock_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, kLockFileMode);
+  if (descriptor < 0) {
+    // Cannot lock here -- a read-only directory, for instance. Fall through to
+    // the liveness probe rather than refusing to start over a missing luxury.
+    return true;
+  }
+  if (::flock(descriptor, LOCK_EX | LOCK_NB) != 0) {
+    ::close(descriptor);
+    return false;
+  }
+  fd_ = descriptor;
+  return true;
+}
 
 auto ZmqTransport::Create(const std::string& to_emulator,
                           const std::string& from_emulator,
@@ -200,6 +239,10 @@ auto ZmqTransport::SetSocketOptions() -> void {
 //
 // libzmq gives us no way to ask it not to do that, so we check before handing
 // it the endpoint and refuse to start rather than become the thief.
+//
+// On its own this check is racy -- another process can bind between it and our
+// bind. EndpointLock closes that window for anything using the same lock; this
+// remains as the best available answer for an owner that is not.
 auto ZmqTransport::EndpointHasLiveOwner(const std::string& endpoint) const
     -> bool {
   const std::string_view endpoint_view{endpoint};
@@ -320,6 +363,16 @@ auto ZmqTransport::ServerThread(const std::string& endpoint) -> void {
     socket.set(zmq::sockopt::rcvtimeo,
                static_cast<int>(config_.poll_timeout.count()));
 
+    // Two checks, and the order matters. The lock is the guarantee: it is
+    // atomic, so it excludes every other transport that plays by the same
+    // rules, with no window between deciding and binding. The probe is the
+    // fallback for an owner that does not -- an older build, or anything else
+    // that happens to be listening on that path.
+    if (!endpoint_lock_.TryAcquire(endpoint)) {
+      LogError("Refusing to bind: endpoint is locked by another live process");
+      SignalBind(BindOutcome::kFailed);
+      return;
+    }
     if (EndpointHasLiveOwner(endpoint)) {
       LogError("Refusing to bind: endpoint is served by another live process");
       SignalBind(BindOutcome::kFailed);

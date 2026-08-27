@@ -78,6 +78,35 @@ struct TransportConfig {
   }
 };
 
+// Exclusive advisory ownership of a bind endpoint, held for the lifetime of the
+// transport that took it.
+//
+// This is what makes "may I bind here" atomic. A connect(2) liveness probe
+// cannot be: another process can bind in the window between the probe and our
+// own bind, and libzmq will then unlink whichever socket file it finds. flock
+// is arbitrated by the kernel, so that window does not exist.
+//
+// It is also crash-safe, which an O_EXCL lock file is not: the lock lives on
+// the open file description and the kernel drops it when the fd closes --
+// including when the process dies -- so a SIGKILLed run leaves nothing behind
+// that would block the next one.
+class EndpointLock {
+ public:
+  EndpointLock() = default;
+  EndpointLock(const EndpointLock&) = delete;
+  EndpointLock(EndpointLock&&) = delete;
+  auto operator=(const EndpointLock&) -> EndpointLock& = delete;
+  auto operator=(EndpointLock&&) -> EndpointLock& = delete;
+  ~EndpointLock();
+
+  // Takes the lock guarding `endpoint`. False means another live process holds
+  // it. Endpoints with no lockable path succeed trivially.
+  auto TryAcquire(const std::string& endpoint) -> bool;
+
+ private:
+  int fd_{-1};
+};
+
 class ZmqTransport : public Transport {
  public:
   ZmqTransport() = delete;
@@ -153,6 +182,9 @@ class ZmqTransport : public Transport {
   zmq::context_t from_emulator_context_{1};
 
   std::atomic<bool> running_{true};
+  // Taken on the server thread, released when this object is destroyed -- after
+  // the destructor has joined that thread, so the two never race.
+  EndpointLock endpoint_lock_;
   BindOutcome bind_outcome_{BindOutcome::kPending};  // guarded by bind_mutex_
   std::condition_variable bind_cv_;
   std::mutex bind_mutex_;
