@@ -20,13 +20,13 @@ ctest --preset=host-debug -R ZmqTransportTest
 # Run all Python integration tests (wires up executable paths for you)
 ctest --preset=host-debug -R host_emulator_test
 
-# Run a single Python integration test directly (needs the app path;
-# --extra dev pulls in pytest, which lives in the dev optional-dependency group)
-cd py/host-emulator && uv run --extra dev pytest tests/test_blinky.py -v \
+# Run a single Python integration test directly (needs the app path; pytest comes
+# from the PEP 735 dev dependency group, which uv syncs by default)
+cd py/host-emulator && uv run pytest tests/test_blinky.py -v \
     --blinky=../../build/host/bin/Debug/blinky
 
 # Python lint / type-check
-cd py/host-emulator && uv run --extra dev ruff check . && uv run --extra dev mypy src
+cd py/host-emulator && uv run ruff check . && uv run mypy src
 
 # Cross-compile for ARM - not yet functional. Presets and toolchain files exist,
 # but src/libs/mcu/CMakeLists.txt does add_subdirectory(${EMBEDDED_CPP_MCU}) and
