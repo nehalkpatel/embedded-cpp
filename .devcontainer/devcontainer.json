@@ -8,6 +8,12 @@
   "workspaceFolder": "/home/vscode/workspace",
   "remoteUser": "vscode",
   "overrideCommand": true,
+  // Interactive conveniences only. Build/test tooling belongs in the Dockerfile
+  // so `docker compose run` and CI get it too; features apply to this
+  // devcontainer alone.
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
   "customizations": {
     "vscode": {
       "extensions": [
