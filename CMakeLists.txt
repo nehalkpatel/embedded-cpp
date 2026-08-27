@@ -64,7 +64,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   CmakeScripts
   GIT_REPOSITORY https://github.com/StableCoder/cmake-scripts.git
-  GIT_TAG main
+  GIT_TAG 25.08
 )
 
 FetchContent_GetProperties(CmakeScripts)
