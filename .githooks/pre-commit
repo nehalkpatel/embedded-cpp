@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#
+# Rejects a commit whose staged content is not formatted the way CI expects.
+#
+# Installed by pointing core.hooksPath at this directory, which the CMake
+# configure step does automatically (-DINSTALL_GIT_HOOKS=OFF opts out). Unlike
+# .git/hooks, this directory is version controlled, so the hook arrives with a
+# clone instead of relying on everyone remembering to copy it in.
+#
+# All the logic lives in tools/format.sh, which CI and the CMake targets also
+# call. A hook with its own copy of the rules is a hook that eventually
+# disagrees with CI.
+#
+# Bypass with `git commit --no-verify` when you genuinely need to.
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+formatter="${repo_root}/tools/format.sh"
+
+# Not an error: a branch predating the script, or a partial checkout. Refusing
+# to commit because the checker is missing would be worse than not checking.
+if [[ ! -x "${formatter}" ]]; then
+  exit 0
+fi
+
+exec "${formatter}" --staged

@@ -115,6 +115,11 @@ if(CMAKE_PRESET STREQUAL "arm-cm7")
   FetchContent_MakeAvailable(stm32cubef7)
 endif()
 
+# `format` / `format-check` targets, and the pre-commit hook. Included for every
+# preset: formatting is not host-specific, and a cross-compiling developer
+# should get the same guard rails.
+include("${PROJECT_SOURCE_DIR}/cmake/format.cmake")
+
 clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
 add_subdirectory(src)
 add_subdirectory(test)
