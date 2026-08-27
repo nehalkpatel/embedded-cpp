@@ -1,9 +1,13 @@
 #include <gtest/gtest.h>
+#include <unistd.h>
 
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <filesystem>
 #include <libs/common/error.hpp>
+#include <string>
+#include <system_error>
 #include <thread>
 #include <zmq.hpp>
 
@@ -13,14 +17,18 @@
 namespace mcu {
 namespace {
 
-// Deliberately not the emulator's real endpoints. This fixture used to bind
-// ipc:///tmp/device_emulator.ipc -- byte-identical to HostBoard::Endpoints and
-// to DeviceEmulator's defaults -- so running the unit tests while an emulator
-// or blinky was up had them fighting over the same paths.
-constexpr auto kEmulatorEndpoint =
-    "ipc:///tmp/test_transport_device_emulator.ipc";
-constexpr auto kDeviceEndpoint =
-    "ipc:///tmp/test_transport_emulator_device.ipc";
+// Deliberately not the emulator's real endpoints, and per-process.
+//
+// This fixture used to bind ipc:///tmp/device_emulator.ipc -- byte-identical to
+// HostBoard::Endpoints and to DeviceEmulator's defaults -- so running the unit
+// tests while an emulator or blinky was up had them fighting over one path. The
+// pid suffix additionally lets `ctest -j` work: gtest_discover_tests gives each
+// case its own process, and with a fixed path those processes contended for the
+// same endpoint.
+auto Endpoint(std::string_view role) -> std::string {
+  return "ipc:///tmp/test_transport_" + std::string{role} + "_" +
+         std::to_string(::getpid()) + ".ipc";
+}
 
 class ZmqTransportTest : public ::testing::Test {
  protected:
@@ -31,7 +39,7 @@ class ZmqTransportTest : public ::testing::Test {
     // test called Create() immediately, racing it -- nothing ordered the two,
     // and only ZMQ's connect retry hid the race.
     socket_.set(zmq::sockopt::linger, 0);
-    socket_.bind(kEmulatorEndpoint);
+    socket_.bind(emulator_endpoint_);
     server_thread_ = std::thread{[this]() { ServerLoop(); }};
   }
 
@@ -48,6 +56,16 @@ class ZmqTransportTest : public ::testing::Test {
     }
     socket_.close();
     context_.close();
+
+    // The transport never unlinks its own lock file (that would reopen the race
+    // it closes), so clean up this process's endpoints here.
+    std::error_code error{};
+    for (const auto& endpoint : {emulator_endpoint_, device_endpoint_}) {
+      const std::string path{
+          endpoint.substr(std::string_view{"ipc://"}.size())};
+      std::filesystem::remove(path, error);
+      std::filesystem::remove(path + ".lock", error);
+    }
   }
 
  private:
@@ -80,6 +98,11 @@ class ZmqTransportTest : public ::testing::Test {
     }
   }
 
+ protected:
+  const std::string emulator_endpoint_{Endpoint("device_emulator")};
+  const std::string device_endpoint_{Endpoint("emulator_device")};
+
+ private:
   zmq::context_t context_{1};
   zmq::socket_t socket_{context_, zmq::socket_type::pair};
   std::thread server_thread_;
@@ -89,8 +112,8 @@ class ZmqTransportTest : public ::testing::Test {
 TEST_F(ZmqTransportTest, SendReceive) {
   const ReceiverMap receiver_map{};
   Dispatcher dispatcher{receiver_map};
-  auto transport =
-      mcu::ZmqTransport::Create(kEmulatorEndpoint, kDeviceEndpoint, dispatcher);
+  auto transport = mcu::ZmqTransport::Create(emulator_endpoint_,
+                                             device_endpoint_, dispatcher);
   // has_value() rather than the expected itself: std::expected's operator bool
   // is explicit, so gtest's AssertionResult will not take it.
   ASSERT_TRUE(transport.has_value());

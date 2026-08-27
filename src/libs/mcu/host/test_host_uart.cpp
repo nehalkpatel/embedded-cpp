@@ -1,12 +1,15 @@
 #include <gtest/gtest.h>
+#include <unistd.h>
 
 #include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <filesystem>
 #include <mutex>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -23,12 +26,20 @@ class HostUartTest : public ::testing::Test {
     return message.starts_with("{") && message.ends_with("}");
   }
 
+  // Per-process endpoints. gtest_discover_tests gives every case its own
+  // process, so a fixed path made `ctest -j` cases contend for one endpoint --
+  // silently corrupting each other before EndpointLock, loudly after.
+  static auto Endpoint(std::string_view role) -> std::string {
+    return "ipc:///tmp/test_uart_" + std::string{role} + "_" +
+           std::to_string(::getpid()) + ".ipc";
+  }
+
   void SetUp() override {
     // Bind on the test thread, before the emulator thread exists, so the
     // transport's connect() below happens-after the bind by thread creation
     // alone. This replaces a 100ms sleep that only made the race unlikely.
     emulator_socket_.set(zmq::sockopt::linger, 0);
-    emulator_socket_.bind("ipc:///tmp/test_uart_device_emulator.ipc");
+    emulator_socket_.bind(device_emulator_endpoint_);
 
     emulator_running_ = true;
     emulator_thread_ = std::thread{[this]() { EmulatorLoop(); }};
@@ -40,8 +51,7 @@ class HostUartTest : public ::testing::Test {
     // Create transport. Assert rather than value_or(nullptr): Create can fail,
     // and a null transport is dereferenced two lines down.
     auto transport_result = mcu::ZmqTransport::Create(
-        "ipc:///tmp/test_uart_device_emulator.ipc",
-        "ipc:///tmp/test_uart_emulator_device.ipc", *dispatcher_);
+        device_emulator_endpoint_, emulator_device_endpoint_, *dispatcher_);
     ASSERT_TRUE(transport_result.has_value());
     device_transport_ = std::move(transport_result.value());
 
@@ -73,6 +83,18 @@ class HostUartTest : public ::testing::Test {
     emulator_socket_.close();
     emulator_context_.close();
     unsolicited_context_.close();
+
+    // The transport never unlinks its own lock file -- doing so would reopen
+    // the race it closes -- so per-process test endpoints would otherwise pile
+    // up in /tmp, one pair per test case per run.
+    std::error_code error{};
+    for (const auto& endpoint :
+         {device_emulator_endpoint_, emulator_device_endpoint_}) {
+      const std::string path{
+          endpoint.substr(std::string_view{"ipc://"}.size())};
+      std::filesystem::remove(path, error);
+      std::filesystem::remove(path + ".lock", error);
+    }
   }
 
   void EmulatorLoop() {
@@ -151,6 +173,8 @@ class HostUartTest : public ::testing::Test {
     }
   }
 
+  const std::string device_emulator_endpoint_{Endpoint("device_emulator")};
+  const std::string emulator_device_endpoint_{Endpoint("emulator_device")};
   mcu::ReceiverMap receiver_map_storage_;
   std::unique_ptr<mcu::Dispatcher> dispatcher_;
   std::unique_ptr<mcu::ZmqTransport> device_transport_;
@@ -295,7 +319,7 @@ TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
   unsolicited_socket.set(zmq::sockopt::linger, 0);
   unsolicited_socket.set(zmq::sockopt::sndtimeo, 2000);
   unsolicited_socket.set(zmq::sockopt::rcvtimeo, 2000);
-  unsolicited_socket.connect("ipc:///tmp/test_uart_emulator_device.ipc");
+  unsolicited_socket.connect(emulator_device_endpoint_);
 
   const auto request_str = mcu::Encode(unsolicited_request);
   ASSERT_TRUE(
