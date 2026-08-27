@@ -34,16 +34,8 @@ jobs:
       # Pin to clang-format-18 to match the version in the dev container
       # (Dockerfile aliases clang-format -> clang-format-18). An unpinned
       # clang-format can disagree with local formatting.
-      - name: Check C++ formatting
-        run: |
-          sudo apt-get update && sudo apt-get install -y clang-format-18
-
-          if ! find src \( -name '*.cpp' -o -name '*.hpp' \) -print0 \
-               | xargs -r0 clang-format-18 --dry-run --Werror; then
-            echo "::error::C++ formatting errors. Fix with:"
-            echo "  find src \( -name '*.cpp' -o -name '*.hpp' \) | xargs clang-format -i"
-            exit 1
-          fi
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format-18
 
       # uv resolves ruff/mypy/Python from py/host-emulator/uv.lock and
       # .python-version, so CI runs the exact versions the container does.
@@ -53,19 +45,21 @@ jobs:
           enable-cache: true
           cache-dependency-glob: py/host-emulator/uv.lock
 
-      - name: Lint and type-check Python
+      # The same script the pre-commit hook and the `format-check` CMake target
+      # run. Sharing one implementation is the point: a local check that has
+      # drifted from CI is worse than no local check, because it is trusted.
+      - name: Check formatting
+        run: |
+          if ! tools/format.sh --check; then
+            echo "::error::Formatting errors. Fix with: tools/format.sh --fix"
+            exit 1
+          fi
+
+      # Not part of format.sh: type checking is not a formatting concern, and is
+      # too slow to belong in a commit hook.
+      - name: Type-check Python
         working-directory: py/host-emulator
         run: |
-          if ! uv run --frozen ruff check .; then
-            echo "::error::Python lint errors. Fix with: uv run ruff check --fix ."
-            exit 1
-          fi
-
-          if ! uv run --frozen ruff format --check .; then
-            echo "::error::Python formatting errors. Fix with: uv run ruff format ."
-            exit 1
-          fi
-
           if ! uv run --frozen mypy src; then
             echo "::error::Python type errors. Reproduce with: uv run mypy src"
             exit 1

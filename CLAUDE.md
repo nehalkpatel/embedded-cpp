@@ -25,8 +25,19 @@ ctest --preset=host-debug -R host_emulator_test
 cd py/host-emulator && uv run pytest tests/test_blinky.py -v \
     --blinky=../../build/host/bin/Debug/blinky
 
-# Python lint / type-check
-cd py/host-emulator && uv run ruff check . && uv run mypy src
+# Formatting (C++ and Python). CI, the pre-commit hook, and these targets all
+# call tools/format.sh, so they cannot disagree about what "formatted" means.
+tools/format.sh --fix                        # Reformat in place
+tools/format.sh --check                      # Verify, exactly as CI does
+cmake --build build/host --target format     # Same, via CMake
+cmake --build build/host --target format-check
+
+# The pre-commit hook is installed by the CMake configure step, which points
+# core.hooksPath at .githooks. Opt out with -DINSTALL_GIT_HOOKS=OFF; bypass a
+# single commit with `git commit --no-verify`.
+
+# Python type-check (not covered by format.sh - types are not formatting)
+cd py/host-emulator && uv run mypy src
 
 # Cross-compile for ARM - not yet functional. Presets and toolchain files exist,
 # but src/libs/mcu/CMakeLists.txt does add_subdirectory(${EMBEDDED_CPP_MCU}) and
