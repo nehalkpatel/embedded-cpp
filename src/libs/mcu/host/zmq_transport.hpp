@@ -1,7 +1,14 @@
 #pragma once
 
+#include <atomic>
+#include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <expected>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <string_view>
 #include <thread>
 #include <zmq.hpp>
 
@@ -12,11 +19,30 @@
 
 namespace mcu {
 
-enum class TransportState {
-  kDisconnected,
-  kConnecting,
-  kConnected,
-  kError,
+// What the transport knows about ITSELF.
+//
+// No value here claims anything about the peer process. Both sockets are
+// ZMQ_PAIR, and ZMQ offers no connection callback without a socket monitor,
+// which this class deliberately does not use. Whether a peer is attached is
+// only ever knowable from the result of the operation you just attempted --
+// which is why a missing emulator surfaces as Send() returning kTimeout rather
+// than as a state value.
+enum class TransportState : uint8_t {
+  // Constructed, startup not yet begun. Not observable from outside: the
+  // constructor moves to kStarting before any other thread holds a reference.
+  kUninitialized,
+  // Server thread launched; the bind outcome is not yet known.
+  kStarting,
+  // Our receive socket is bound and connect() has been issued on our send
+  // socket. The only state in which Send()/Receive() are permitted.
+  //
+  // This does NOT mean a peer is attached. connect() is asynchronous and
+  // returns before any peer exists, so a Send() in this state can still sit in
+  // ZMQ's mute state for send_timeout and come back as kTimeout.
+  kReady,
+  // Startup failed; terminal. Send()/Receive() return kInvalidState from here
+  // on, and StartupStatus() carries the reason.
+  kFailed,
 };
 
 struct RetryConfig {
@@ -27,8 +53,11 @@ struct RetryConfig {
 
 struct TransportConfig {
   std::chrono::milliseconds poll_timeout{50};
-  std::chrono::milliseconds connect_timeout{5000};
-  std::chrono::milliseconds shutdown_timeout{2000};
+  // Bounds the one wait the constructor performs: the server thread's bind
+  // handshake. There is deliberately no connect timeout to go with it --
+  // connect() on a PAIR socket is asynchronous and completes without a peer,
+  // so there would be nothing to wait for.
+  std::chrono::milliseconds startup_timeout{5000};
   std::chrono::milliseconds send_timeout{1000};
   std::chrono::milliseconds recv_timeout{5000};
   int linger_ms{0};  // Discard pending messages on close
@@ -62,25 +91,44 @@ class ZmqTransport : public Transport {
       -> std::expected<void, common::Error> override;
   auto Receive() -> std::expected<std::string, common::Error> override;
 
-  // New methods for connection management
   auto State() const -> TransportState { return state_.load(); }
-  auto IsConnected() const -> bool {
-    return state_.load() == TransportState::kConnected;
+  auto IsReady() const -> bool {
+    return state_.load() == TransportState::kReady;
   }
-  auto WaitForConnection(std::chrono::milliseconds timeout)
-      -> std::expected<void, common::Error>;
+
+  // Outcome of the startup sequence the constructor ran. Never blocks: by the
+  // time the constructor has returned, startup has already succeeded, failed,
+  // or timed out.
+  auto StartupStatus() const -> std::expected<void, common::Error> {
+    const auto error{startup_error_.load()};
+    if (error != common::Error::kOk) {
+      return std::unexpected(error);
+    }
+    return {};
+  }
+
   // Factory method - preferred way to create transport
   static auto Create(const std::string& to_emulator,
                      const std::string& from_emulator, Dispatcher& dispatcher,
                      const TransportConfig& config = {})
       -> std::expected<std::unique_ptr<ZmqTransport>, common::Error>;
 
-  // Constructor - prefer using Create() factory method
+  // Never throws, and never blocks past config.startup_timeout. On failure the
+  // object is still fully constructed but permanently unusable: State() is
+  // kFailed, every Send()/Receive() returns kInvalidState, and StartupStatus()
+  // carries the reason. Prefer Create(), which makes that check for you.
   ZmqTransport(const std::string& to_emulator, const std::string& from_emulator,
                Dispatcher& dispatcher, const TransportConfig& config = {});
 
  private:
+  enum class BindOutcome : uint8_t { kPending, kBound, kFailed };
+
   auto ServerThread(const std::string& endpoint) -> void;
+  auto ServeLoop(zmq::socket_t& socket) -> void;
+  auto SignalBind(BindOutcome outcome) -> void;
+  auto AwaitBind() -> BindOutcome;
+  auto FailStartup(common::Error error, std::string_view msg) -> void;
+  auto EndpointHasLiveOwner(const std::string& endpoint) const -> bool;
   auto SetSocketOptions() -> void;
 
   // Logging helpers to reduce cognitive complexity
@@ -96,7 +144,8 @@ class ZmqTransport : public Transport {
   }
 
   TransportConfig config_;
-  std::atomic<TransportState> state_{TransportState::kDisconnected};
+  std::atomic<TransportState> state_{TransportState::kUninitialized};
+  std::atomic<common::Error> startup_error_{common::Error::kOk};
 
   zmq::context_t to_emulator_context_{1};
   zmq::socket_t to_emulator_socket_{to_emulator_context_,
@@ -104,7 +153,7 @@ class ZmqTransport : public Transport {
   zmq::context_t from_emulator_context_{1};
 
   std::atomic<bool> running_{true};
-  std::atomic<bool> server_bound_{false};
+  BindOutcome bind_outcome_{BindOutcome::kPending};  // guarded by bind_mutex_
   std::condition_variable bind_cv_;
   std::mutex bind_mutex_;
 
