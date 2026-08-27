@@ -24,7 +24,10 @@ function(add_host_unit_test name source)
   add_executable(${name} ${source})
   target_compile_options(${name} PRIVATE ${COMMON_COMPILE_OPTIONS})
   target_link_libraries(${name} PRIVATE GTest::GTest ${ARGN})
-  gtest_discover_tests(${name} PROPERTIES LABELS "unit")
+  # TIMEOUT is a backstop, not a budget: unit tests here run in well under a
+  # second, and a startup bug in the transport used to wedge the constructor
+  # forever rather than fail. A hung test should fail CI, not stall it.
+  gtest_discover_tests(${name} PROPERTIES LABELS "unit" TIMEOUT 60)
   if(CODE_COVERAGE)
     # Exclusions are inherited from global add_code_coverage_all_targets()
     target_code_coverage(${name} AUTO ALL)
@@ -33,6 +36,11 @@ endfunction()
 
 # cppzmq is needed because zmq_transport.hpp includes zmq.hpp
 add_host_unit_test(test_host_transport test_zmq_transport.cpp host_transport cppzmq)
+# Separate binary from test_host_transport on purpose: these tests bound a
+# potential hang with a watchdog that hard-exits the process, which must not
+# take unrelated tests down with it.
+add_host_unit_test(test_host_transport_startup test_zmq_transport_startup.cpp
+  host_transport cppzmq)
 add_host_unit_test(test_messages test_messages.cpp nlohmann_json::nlohmann_json)
 add_host_unit_test(test_dispatcher test_dispatcher.cpp)
 add_host_unit_test(test_host_uart test_host_uart.cpp

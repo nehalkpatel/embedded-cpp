@@ -33,12 +33,13 @@ class HostUartTest : public ::testing::Test {
     // later)
     dispatcher_ = std::make_unique<mcu::Dispatcher>(receiver_map_storage_);
 
-    // Create transport
-    device_transport_ =
-        mcu::ZmqTransport::Create("ipc:///tmp/test_uart_device_emulator.ipc",
-                                  "ipc:///tmp/test_uart_emulator_device.ipc",
-                                  *dispatcher_)
-            .value_or(nullptr);
+    // Create transport. Assert rather than value_or(nullptr): Create can fail,
+    // and a null transport is dereferenced two lines down.
+    auto transport_result = mcu::ZmqTransport::Create(
+        "ipc:///tmp/test_uart_device_emulator.ipc",
+        "ipc:///tmp/test_uart_emulator_device.ipc", *dispatcher_);
+    ASSERT_TRUE(transport_result.has_value());
+    device_transport_ = std::move(transport_result.value());
 
     // Now create UART with transport
     uart_ = std::make_unique<mcu::HostUart>("UART 1", *device_transport_);
