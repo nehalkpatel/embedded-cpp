@@ -11,7 +11,11 @@ add_test(
     WORKING_DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-set_tests_properties(host_emulator_test PROPERTIES DEPENDS "blinky;uart_echo;i2c_demo")
-set_tests_properties(host_emulator_test PROPERTIES DEPENDS host_emulator_venv)
-set_tests_properties(host_emulator_test PROPERTIES FIXTURES_SETUP host_emulator_venv)
+# No DEPENDS here: it names tests, not targets, and the executables under test are
+# built before ctest runs. The venv is created at configure time by configure_venv()
+# above, so it is not a test either and cannot be a fixture.
+set_tests_properties(host_emulator_test PROPERTIES
+    TIMEOUT 300
+    LABELS "integration"
+)
 
