@@ -25,8 +25,8 @@ namespace mcu {
 // ZMQ_PAIR, and ZMQ offers no connection callback without a socket monitor,
 // which this class deliberately does not use. Whether a peer is attached is
 // only ever knowable from the result of the operation you just attempted --
-// which is why a missing emulator surfaces as Send() returning kTimeout rather
-// than as a state value.
+// which is why a missing emulator surfaces as a failed Send() or Receive()
+// rather than as a state value.
 enum class TransportState : uint8_t {
   // Constructed, startup not yet begun. Not observable from outside: the
   // constructor moves to kStarting before any other thread holds a reference.
@@ -37,14 +37,30 @@ enum class TransportState : uint8_t {
   // socket. The only state in which Send()/Receive() are permitted.
   //
   // This does NOT mean a peer is attached. connect() is asynchronous and
-  // returns before any peer exists, so a Send() in this state can still sit in
-  // ZMQ's mute state for send_timeout and come back as kTimeout.
+  // returns before any peer exists.
+  //
+  // Nor does a successful Send() in this state mean one is: connect() creates
+  // the outbound pipe whether or not the far end is reachable, and libzmq
+  // queues into it, so sends to nobody succeed until ZMQ_SNDHWM messages are
+  // outstanding. Only past that point does a send block for send_timeout and
+  // come back as kTimeout.
   kReady,
   // Startup failed; terminal. Send()/Receive() return kInvalidState from here
   // on, and StartupStatus() carries the reason.
   kFailed,
 };
 
+// Bounds Send()'s retry loop. Read together with TransportConfig::send_timeout,
+// which is the budget for ONE attempt while total_timeout is the budget for all
+// of them: the two are only meaningful if
+//
+//   max_attempts * send_timeout + (max_attempts - 1) * retry_delay
+//       <= total_timeout
+//
+// Give a single attempt the whole budget and the first EAGAIN already arrives
+// at the deadline, so Send() gives up having tried exactly once and the two
+// fields below describe behaviour that cannot happen. ZmqTransport enforces the
+// invariant at construction by shrinking send_timeout to fit.
 struct RetryConfig {
   uint32_t max_attempts{3};
   std::chrono::milliseconds retry_delay{10};
@@ -58,7 +74,10 @@ struct TransportConfig {
   // connect() on a PAIR socket is asynchronous and completes without a peer,
   // so there would be nothing to wait for.
   std::chrono::milliseconds startup_timeout{5000};
-  std::chrono::milliseconds send_timeout{1000};
+  // One attempt's worth of ZMQ_SNDTIMEO, not the whole send. The default is
+  // sized so all of retry.max_attempts fit inside retry.total_timeout with the
+  // inter-attempt delays: 3 * 300ms + 2 * 10ms = 920ms <= 1000ms.
+  std::chrono::milliseconds send_timeout{300};
   std::chrono::milliseconds recv_timeout{5000};
   int linger_ms{0};  // Discard pending messages on close
   RetryConfig retry{};
@@ -152,6 +171,13 @@ class ZmqTransport : public Transport {
  private:
   enum class BindOutcome : uint8_t { kPending, kBound, kFailed };
 
+  // How one send attempt ended. kWouldBlock is the only retryable outcome, and
+  // it deliberately covers both ways ZMQ reports a full/mute socket -- see
+  // TrySendOnce.
+  enum class SendAttempt : uint8_t { kSent, kWouldBlock, kFailed };
+
+  auto TrySendOnce(std::string_view data) -> SendAttempt;
+  auto ClampSendTimeoutToRetryBudget() -> void;
   auto ServerThread(const std::string& endpoint) -> void;
   auto ServeLoop(zmq::socket_t& socket) -> void;
   auto SignalBind(BindOutcome outcome) -> void;
