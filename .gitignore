@@ -3,6 +3,12 @@ build/
 Testing/
 CMakeUserPresets.json
 
+# Coverage counters. The Debug preset builds with CODE_COVERAGE, and every run
+# of an instrumented binary drops one of these wherever it was invoked from --
+# usually the repo root.
+*.profraw
+*.profdata
+
 # Editor / tooling
 .vscode/
 .cache/
