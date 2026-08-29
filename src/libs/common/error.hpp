@@ -4,7 +4,7 @@
 
 namespace common {
 
-enum class Error : uint32_t {
+enum class Error : std::uint8_t {
   kOk = 1,
   kUnknown,
   kInvalidArgument,

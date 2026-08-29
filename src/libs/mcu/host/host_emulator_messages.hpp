@@ -12,9 +12,9 @@
 
 namespace mcu {
 
-enum class MessageType { kRequest = 1, kResponse };
-enum class OperationType { kSet = 1, kGet, kSend, kReceive };
-enum class ObjectType { kPin = 1, kUart, kI2C };
+enum class MessageType : std::uint8_t { kRequest = 1, kResponse };
+enum class OperationType : std::uint8_t { kSet = 1, kGet, kSend, kReceive };
+enum class ObjectType : std::uint8_t { kPin = 1, kUart, kI2C };
 
 struct PinEmulatorRequest {
   MessageType type{MessageType::kRequest};
