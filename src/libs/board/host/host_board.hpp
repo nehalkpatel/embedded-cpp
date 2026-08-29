@@ -41,10 +41,6 @@ class HostBoard : public Board {
   auto Uart1() -> mcu::Uart& override;
 
  private:
-  static constexpr auto IsJson(std::string_view message) -> bool {
-    return message.starts_with("{") && message.ends_with("}");
-  }
-
   // Endpoint configuration (declared first to be initialized first)
   Endpoints endpoints_{};
 
@@ -55,9 +51,10 @@ class HostBoard : public Board {
   std::unique_ptr<mcu::HostUart> uart_1_;
   std::unique_ptr<mcu::HostI2CController> i2c_1_;
 
-  // Receiver map and dispatcher (built in Init() after components exist)
+  // The dispatcher observes receiver_map_ by reference, so it can be built
+  // here while the map is filled later, in Init(), once the components exist.
   mcu::ReceiverMap receiver_map_;
-  std::optional<mcu::Dispatcher> dispatcher_;
+  mcu::Dispatcher dispatcher_{receiver_map_};
   std::unique_ptr<mcu::ZmqTransport> zmq_transport_;
 };
 }  // namespace board

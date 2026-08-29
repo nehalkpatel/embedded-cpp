@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <expected>
+#include <functional>
 #include <string>
 
 #include "dispatcher.hpp"
@@ -10,97 +12,66 @@
 namespace mcu {
 namespace {
 
-constexpr auto AcceptAll(std::string_view message) -> bool {
-  static_cast<void>(message);
-  return true;
-}
+// Mirrors the real receivers' contract: accept only messages addressed to it
+// (an unexpected return means "not mine, keep looking"), and record what it
+// accepted.
+class NamedReceiver : public Receiver {
+ public:
+  explicit NamedReceiver(std::string name) : name_{std::move(name)} {}
 
-constexpr auto RejectAll(std::string_view message) -> bool {
-  static_cast<void>(message);
-  return false;
-}
-
-constexpr auto IsHello(std::string_view message) -> bool {
-  return message == "Hello";
-}
-
-constexpr auto IsWorld(std::string_view message) -> bool {
-  return message == "World";
-}
-
-class DispatcherTest : public ::testing::Test {
- protected:
-  void SetUp() override {}
-
-  void TearDown() override {}
-
-  class SimpleReceiver : public Receiver {
-   public:
-    auto Receive(std::string_view message)
-        -> std::expected<std::string, common::Error> override {
-      received_message = message;
-      return {"Received message"};
+  auto Receive(std::string_view message)
+      -> std::expected<std::string, common::Error> override {
+    if (message != name_) {
+      return std::unexpected(common::Error::kInvalidArgument);
     }
-    std::string_view received_message;
-  };
+    received_message = std::string{message};
+    return {"Received message"};
+  }
+
+  std::string received_message;
+
+ private:
+  std::string name_;
 };
 
-TEST_F(DispatcherTest, DispatchMessage) {
-  const std::string sent_message{"Hello"};
-  SimpleReceiver receiver;
-  const ReceiverMap receiver_map{{AcceptAll, std::ref(receiver)}};
+struct RoutingCase {
+  std::string message;
+  size_t expected_receiver;
+};
+
+class DispatcherRoutingTest : public ::testing::TestWithParam<RoutingCase> {};
+
+TEST_P(DispatcherRoutingTest, DeliversToTheReceiverThatClaimsTheMessage) {
+  const auto& [message, expected_receiver] = GetParam();
+  std::array<NamedReceiver, 2> receivers{NamedReceiver{"Hello"},
+                                         NamedReceiver{"World"}};
+  const ReceiverMap receiver_map{std::ref(receivers[0]),
+                                 std::ref(receivers[1])};
   const Dispatcher dispatcher{receiver_map};
-  auto reply = dispatcher.Dispatch(sent_message);
-  EXPECT_TRUE(reply.has_value());
+
+  auto reply = dispatcher.Dispatch(message);
+
+  ASSERT_TRUE(reply.has_value());
   EXPECT_EQ(reply.value(), "Received message");
-  EXPECT_EQ(receiver.received_message, sent_message);
+  for (size_t index = 0; index < receivers.size(); ++index) {
+    const auto& expected = index == expected_receiver ? message : std::string{};
+    EXPECT_EQ(receivers.at(index).received_message, expected);
+  }
 }
 
-TEST_F(DispatcherTest, DispatchMessageReject) {
-  const std::string sent_message{"Hello"};
-  SimpleReceiver receiver;
-  const ReceiverMap receiver_map{{RejectAll, std::ref(receiver)}};
-  const Dispatcher dispatcher{receiver_map};
-  auto reply = dispatcher.Dispatch(sent_message);
-  EXPECT_FALSE(reply.has_value());
-  EXPECT_EQ(receiver.received_message, "");
-}
+INSTANTIATE_TEST_SUITE_P(EachReceiver, DispatcherRoutingTest,
+                         ::testing::Values(RoutingCase{"Hello", 0},
+                                           RoutingCase{"World", 1}));
 
-TEST_F(DispatcherTest, DispatchMessageMultipleReceivers) {
-  const std::string sent_message{"Hello"};
-  SimpleReceiver receiver1;
-  SimpleReceiver receiver2;
-  const ReceiverMap receiver_map{{IsHello, std::ref(receiver1)},
-                                 {IsWorld, std::ref(receiver2)}};
+TEST(DispatcherTest, ReportsUnhandledWhenNoReceiverClaimsTheMessage) {
+  NamedReceiver receiver{"Hello"};
+  const ReceiverMap receiver_map{std::ref(receiver)};
   const Dispatcher dispatcher{receiver_map};
-  auto reply = dispatcher.Dispatch(sent_message);
-  EXPECT_TRUE(reply.has_value());
-  EXPECT_EQ(reply.value(), "Received message");
-  EXPECT_EQ(receiver1.received_message, sent_message);
-  EXPECT_EQ(receiver2.received_message, "");
-}
 
-TEST_F(DispatcherTest, DispatchMessageMultipleReceiversSecond) {
-  const std::string sent_message{"World"};
-  SimpleReceiver receiver1;
-  SimpleReceiver receiver2;
-  const ReceiverMap receiver_map{{IsHello, std::ref(receiver1)},
-                                 {IsWorld, std::ref(receiver2)}};
-  const Dispatcher dispatcher{receiver_map};
-  auto reply = dispatcher.Dispatch(sent_message);
-  EXPECT_TRUE(reply.has_value());
-  EXPECT_EQ(reply.value(), "Received message");
-  EXPECT_EQ(receiver1.received_message, "");
-  EXPECT_EQ(receiver2.received_message, sent_message);
-}
+  auto reply = dispatcher.Dispatch("Unhandled");
 
-TEST_F(DispatcherTest, DispatchMessageUnhandled) {
-  const std::string sent_message{"Unhandled"};
-  SimpleReceiver receiver;
-  const ReceiverMap receiver_map{{IsHello, std::ref(receiver)}};
-  const Dispatcher dispatcher{receiver_map};
-  auto reply = dispatcher.Dispatch(sent_message);
-  EXPECT_FALSE(reply.has_value());
+  ASSERT_FALSE(reply.has_value());
+  EXPECT_EQ(reply.error(), common::Error::kUnhandled);
   EXPECT_EQ(receiver.received_message, "");
 }
 
