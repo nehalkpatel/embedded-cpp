@@ -208,15 +208,13 @@ class ZmqTransportRetryTest : public ::testing::Test {
   static auto MakeConfig(
       common::Logger& logger, std::chrono::milliseconds send_timeout,
       std::chrono::milliseconds total_timeout) -> TransportConfig {
-    // TransportConfig has user-provided constructors, so it is not an
-    // aggregate: designated initialisers will not compile. Assign after
-    // construction.
-    TransportConfig config{logger};
-    config.send_timeout = send_timeout;
-    config.retry.max_attempts = kAttempts;
-    config.retry.retry_delay = kRetryDelay;
-    config.retry.total_timeout = total_timeout;
-    return config;
+    return TransportConfig{
+        .send_timeout = send_timeout,
+        .retry = {.max_attempts = kAttempts,
+                  .retry_delay = kRetryDelay,
+                  .total_timeout = total_timeout},
+        .logger = logger,
+    };
   }
 
   static constexpr uint32_t kAttempts{3};

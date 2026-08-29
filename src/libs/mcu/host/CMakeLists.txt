@@ -11,11 +11,11 @@ target_link_libraries(host_mcu
   PUBLIC mcu nlohmann_json::nlohmann_json
   PRIVATE project_options host_transport)
 
-add_library(host_transport zmq_transport.cpp)
+add_library(host_transport zmq_transport.cpp endpoint_lock.cpp)
 target_sources(host_transport PUBLIC
   FILE_SET HEADERS
   BASE_DIRS ${PROJECT_SOURCE_DIR}/src
-  FILES zmq_transport.hpp transport.hpp)
+  FILES zmq_transport.hpp transport.hpp endpoint_lock.hpp)
 # cppzmq and logger are PUBLIC because zmq_transport.hpp includes their headers.
 target_link_libraries(host_transport
   PUBLIC cppzmq logger error

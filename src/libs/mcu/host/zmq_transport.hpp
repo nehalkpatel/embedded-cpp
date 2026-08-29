@@ -13,6 +13,7 @@
 #include <zmq.hpp>
 
 #include "dispatcher.hpp"
+#include "endpoint_lock.hpp"
 #include "libs/common/error.hpp"
 #include "libs/common/logger.hpp"
 #include "transport.hpp"
@@ -67,6 +68,16 @@ struct RetryConfig {
   std::chrono::milliseconds total_timeout{1000};
 };
 
+// The default (discarding) logger for components that are not handed one.
+inline auto DefaultLogger() -> common::Logger& {
+  static common::NullLogger null_logger{};
+  return null_logger;
+}
+
+// An aggregate on purpose: a reference member would force user-provided
+// constructors and kill designated initializers, so the logger is a
+// reference_wrapper with a default instead. Callers write
+// TransportConfig{.send_timeout = 100ms, .logger = my_logger}.
 struct TransportConfig {
   std::chrono::milliseconds poll_timeout{50};
   // Bounds the one wait the constructor performs: the server thread's bind
@@ -81,49 +92,7 @@ struct TransportConfig {
   std::chrono::milliseconds recv_timeout{5000};
   int linger_ms{0};  // Discard pending messages on close
   RetryConfig retry{};
-  common::Logger& logger;  // Logger reference (defaults to NullLogger)
-
-  // Default constructor uses NullLogger
-  TransportConfig() : logger(GetDefaultLogger()) {}
-
-  // Allow custom logger via dependency injection
-  explicit TransportConfig(common::Logger& custom_logger)
-      : logger(custom_logger) {}
-
- private:
-  static auto GetDefaultLogger() -> common::Logger& {
-    static common::NullLogger null_logger{};
-    return null_logger;
-  }
-};
-
-// Exclusive advisory ownership of a bind endpoint, held for the lifetime of the
-// transport that took it.
-//
-// This is what makes "may I bind here" atomic. A connect(2) liveness probe
-// cannot be: another process can bind in the window between the probe and our
-// own bind, and libzmq will then unlink whichever socket file it finds. flock
-// is arbitrated by the kernel, so that window does not exist.
-//
-// It is also crash-safe, which an O_EXCL lock file is not: the lock lives on
-// the open file description and the kernel drops it when the fd closes --
-// including when the process dies -- so a SIGKILLed run leaves nothing behind
-// that would block the next one.
-class EndpointLock {
- public:
-  EndpointLock() = default;
-  EndpointLock(const EndpointLock&) = delete;
-  EndpointLock(EndpointLock&&) = delete;
-  auto operator=(const EndpointLock&) -> EndpointLock& = delete;
-  auto operator=(EndpointLock&&) -> EndpointLock& = delete;
-  ~EndpointLock();
-
-  // Takes the lock guarding `endpoint`. False means another live process holds
-  // it. Endpoints with no lockable path succeed trivially.
-  auto TryAcquire(const std::string& endpoint) -> bool;
-
- private:
-  int fd_{-1};
+  std::reference_wrapper<common::Logger> logger{DefaultLogger()};
 };
 
 class ZmqTransport : public Transport {
@@ -183,19 +152,19 @@ class ZmqTransport : public Transport {
   auto SignalBind(BindOutcome outcome) -> void;
   auto AwaitBind() -> BindOutcome;
   auto FailStartup(common::Error error, std::string_view msg) -> void;
-  auto EndpointHasLiveOwner(const std::string& endpoint) const -> bool;
   auto SetSocketOptions() -> void;
 
-  // Logging helpers to reduce cognitive complexity
   auto LogDebug(std::string_view msg) const -> void {
-    config_.logger.Debug(msg);
+    config_.logger.get().Debug(msg);
   }
-  auto LogInfo(std::string_view msg) const -> void { config_.logger.Info(msg); }
+  auto LogInfo(std::string_view msg) const -> void {
+    config_.logger.get().Info(msg);
+  }
   auto LogWarning(std::string_view msg) const -> void {
-    config_.logger.Warning(msg);
+    config_.logger.get().Warning(msg);
   }
   auto LogError(std::string_view msg) const -> void {
-    config_.logger.Error(msg);
+    config_.logger.get().Error(msg);
   }
 
   TransportConfig config_;
