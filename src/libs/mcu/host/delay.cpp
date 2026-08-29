@@ -4,7 +4,7 @@
 #include <thread>
 
 namespace mcu {
-auto Delay(std::chrono::microseconds usecs) -> void {
-  std::this_thread::sleep_for(usecs);
+auto Delay(std::chrono::microseconds duration) -> void {
+  std::this_thread::sleep_for(duration);
 }
 }  // namespace mcu

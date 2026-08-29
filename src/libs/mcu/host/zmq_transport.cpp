@@ -1,141 +1,40 @@
 #include "zmq_transport.hpp"
 
-#include <fcntl.h>
-#include <sys/file.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
-#include <unistd.h>
-
 #include <algorithm>
-#include <cerrno>
 #include <chrono>
 #include <expected>
-#include <filesystem>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <thread>
 #include <utility>
 #include <zmq.hpp>
 
 #include "dispatcher.hpp"
+#include "endpoint_lock.hpp"
 #include "libs/common/error.hpp"
 
 namespace mcu {
-namespace {
-
-constexpr std::string_view kIpcScheme{"ipc://"};
-constexpr std::string_view kLockSuffix{".lock"};
-constexpr mode_t kLockFileMode{0600};
-
-// RAII for a bare file descriptor. The liveness probe below is the only place
-// this file talks to POSIX sockets directly, and it must not leak an fd on any
-// of its several early returns.
-class FdGuard {
- public:
-  explicit FdGuard(int descriptor) : fd_{descriptor} {}
-  FdGuard(const FdGuard&) = delete;
-  FdGuard(FdGuard&&) = delete;
-  auto operator=(const FdGuard&) -> FdGuard& = delete;
-  auto operator=(FdGuard&&) -> FdGuard& = delete;
-  ~FdGuard() {
-    if (fd_ >= 0) {
-      ::close(fd_);
-    }
-  }
-
-  [[nodiscard]] auto Get() const -> int { return fd_; }
-
- private:
-  int fd_;
-};
-
-// True if some process is currently accepting on the AF_UNIX socket at `path`.
-//
-// libzmq's ipc:// transport is AF_UNIX/SOCK_STREAM, so a plain connect(2) is a
-// valid liveness probe with no ZMQ machinery involved: a path left behind by a
-// killed process refuses the connection, a live listener accepts it.
-//
-// Every "cannot tell" answer is reported as live, so the caller never proceeds
-// past something it does not understand. Refusing to start is recoverable; the
-// hijack described in EndpointHasLiveOwner is not.
-auto IpcPathHasLiveOwner(const std::string& path) -> bool {
-  sockaddr_un address{};
-  address.sun_family = AF_UNIX;
-  if (path.size() >= sizeof(address.sun_path)) {
-    return true;  // Too long to probe; assume live rather than guess.
-  }
-  path.copy(static_cast<char*>(address.sun_path), path.size());
-
-  const FdGuard probe{::socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0)};
-  if (probe.Get() < 0) {
-    return true;
-  }
-
-  const auto* const address_ptr = reinterpret_cast<const sockaddr*>(&address);
-  if (::connect(probe.Get(), address_ptr, sizeof(address)) == 0) {
-    return true;  // Someone is listening -- hands off.
-  }
-  return errno != ECONNREFUSED;  // ECONNREFUSED means the owner is gone.
-}
-
-}  // namespace
-
-EndpointLock::~EndpointLock() {
-  if (fd_ >= 0) {
-    ::close(fd_);  // Closing the fd is what releases the lock.
-  }
-}
-
-auto EndpointLock::TryAcquire(const std::string& endpoint) -> bool {
-  const std::string_view endpoint_view{endpoint};
-  if (!endpoint_view.starts_with(kIpcScheme)) {
-    return true;  // No filesystem path to guard.
-  }
-  const std::string lock_path{
-      std::string{endpoint_view.substr(kIpcScheme.size())} +
-      std::string{kLockSuffix}};
-
-  // The lock file is deliberately never unlinked. Removing it would reintroduce
-  // exactly the race it exists to close: one process unlinking the file another
-  // has already opened, leaving the two holding locks on different inodes and
-  // both believing they won. It stays behind as a zero-byte marker.
-  const int descriptor =
-      ::open(lock_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, kLockFileMode);
-  if (descriptor < 0) {
-    // Cannot lock here -- a read-only directory, for instance. Fall through to
-    // the liveness probe rather than refusing to start over a missing luxury.
-    return true;
-  }
-  if (::flock(descriptor, LOCK_EX | LOCK_NB) != 0) {
-    ::close(descriptor);
-    return false;
-  }
-  fd_ = descriptor;
-  return true;
-}
 
 auto ZmqTransport::Create(const std::string& to_emulator,
                           const std::string& from_emulator,
                           Dispatcher& dispatcher, const TransportConfig& config)
     -> std::expected<std::unique_ptr<ZmqTransport>, common::Error> {
   try {
-    config.logger.Info("Creating ZmqTransport");
+    config.logger.get().Info("Creating ZmqTransport");
 
     auto transport{std::make_unique<ZmqTransport>(to_emulator, from_emulator,
                                                   dispatcher, config)};
 
     if (auto status{transport->StartupStatus()}; !status) {
-      config.logger.Error("ZmqTransport startup failed");
+      config.logger.get().Error("ZmqTransport startup failed");
       return std::unexpected(status.error());
     }
 
-    config.logger.Info("ZmqTransport created successfully");
+    config.logger.get().Info("ZmqTransport created successfully");
     return transport;
   } catch (...) {  // NOLINT
-    // The constructor no longer throws, so this covers allocation failure only.
-    config.logger.Error("Unknown error during creation");
+    // The constructor does not throw, so this covers allocation failure only.
+    config.logger.get().Error("Unknown error during creation");
     return std::unexpected(common::Error::kUnknown);
   }
 }
@@ -220,8 +119,7 @@ auto ZmqTransport::SignalBind(BindOutcome outcome) -> void {
 // ZMQ_SNDTIMEO bounds a single attempt; retry.total_timeout bounds the whole
 // Send(). If one attempt may consume the entire budget then the first EAGAIN
 // arrives at or after the deadline and Send() returns having tried once --
-// max_attempts and retry_delay become dead configuration. That was the shipped
-// default: send_timeout and total_timeout were both 1000ms.
+// max_attempts and retry_delay become dead configuration.
 //
 // Shrinking the per-attempt slice is preferred to rejecting the config. A
 // caller who asks for three attempts within a second has said something
@@ -258,45 +156,6 @@ auto ZmqTransport::SetSocketOptions() -> void {
                           static_cast<int>(config_.recv_timeout.count()));
 }
 
-// Whether another live process is already serving this endpoint.
-//
-// This is deliberately NOT stale-file cleanup. libzmq unlinks an ipc path
-// before binding it, unconditionally, so a file left behind by a crashed
-// process is already a non-problem -- bind() simply succeeds.
-//
-// The same unlink is what makes a *live* owner a problem. libzmq will happily
-// remove a path another process is actively listening on and bind its own
-// socket in place (verified: a second bind() to a held endpoint succeeds).
-// Neither side sees an error. The original owner keeps its existing
-// connections, because the inode outlives the name, but every subsequent
-// connect() reaches the thief instead -- so a second app instance, or a unit
-// test run while the emulator is up, silently splits the bus in two.
-//
-// libzmq gives us no way to ask it not to do that, so we check before handing
-// it the endpoint and refuse to start rather than become the thief.
-//
-// On its own this check is racy -- another process can bind between it and our
-// bind. EndpointLock closes that window for anything using the same lock; this
-// remains as the best available answer for an owner that is not.
-auto ZmqTransport::EndpointHasLiveOwner(const std::string& endpoint) const
-    -> bool {
-  const std::string_view endpoint_view{endpoint};
-  if (!endpoint_view.starts_with(kIpcScheme)) {
-    return false;  // Only ipc:// is probeable this way.
-  }
-  const std::string path{endpoint_view.substr(kIpcScheme.size())};
-
-  std::error_code error{};
-  if (!std::filesystem::exists(path, error) || error) {
-    return false;  // Nothing there at all.
-  }
-  if (!std::filesystem::is_socket(path, error) || error) {
-    LogWarning("Endpoint path exists and is not a socket");
-    return true;  // Not ours to reason about; do not bind over it.
-  }
-  return IpcPathHasLiveOwner(path);
-}
-
 ZmqTransport::~ZmqTransport() {
   try {
     LogDebug("Shutting down ZmqTransport");
@@ -331,13 +190,11 @@ ZmqTransport::~ZmqTransport() {
 //
 // The classification is the substance here. cppzmq's send() reports an expired
 // ZMQ_SNDTIMEO by returning an EMPTY result and throws error_t only for
-// everything else -- so the timeout this retry loop exists to absorb is a falsy
-// return, not an exception. The previous code looked for it exclusively in a
-// catch block, treated the falsy return as a hard failure, and so left the
-// retry path unreachable even once the timeouts allowed for it.
+// everything else -- so the timeout this retry loop exists to absorb is a
+// falsy return, not an exception, and both paths must map to kWouldBlock.
 //
-// ETIMEDOUT is still caught for the same outcome: no libzmq version in use
-// raises it here, but it means precisely what EAGAIN means and costs one line.
+// ETIMEDOUT is caught for the same outcome: no libzmq version in use raises it
+// here, but it means precisely what EAGAIN means and costs one line.
 auto ZmqTransport::TrySendOnce(std::string_view data) -> SendAttempt {
   try {
     const auto result{

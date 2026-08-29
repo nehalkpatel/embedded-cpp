@@ -98,11 +98,8 @@ auto PathOf(const std::string& endpoint) -> std::string {
 }
 
 auto MakeConfig(common::Logger& logger) -> mcu::TransportConfig {
-  // TransportConfig has user-provided constructors, so it is not an aggregate:
-  // designated initialisers will not compile. Assign after construction.
-  mcu::TransportConfig config{logger};
-  config.startup_timeout = kStartupTimeout;
-  return config;
+  return mcu::TransportConfig{.startup_timeout = kStartupTimeout,
+                              .logger = logger};
 }
 
 // Runs `fn` with a hard time budget.
@@ -203,9 +200,7 @@ auto CountConcurrentBindWinners(const std::string& contested) -> int {
     }
     // Child. Exits via _exit so it never runs gtest teardown or atexit handlers
     // belonging to the parent's test process.
-    common::NullLogger logger;
-    mcu::TransportConfig config{logger};
-    config.startup_timeout = kStartupTimeout;
+    const mcu::TransportConfig config{.startup_timeout = kStartupTimeout};
     const mcu::ReceiverMap receivers{};
     mcu::Dispatcher dispatcher{receivers};
     const std::string own = contested + ".peer" + std::to_string(i);
