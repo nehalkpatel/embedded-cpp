@@ -38,8 +38,11 @@ struct UartConfig {
   } flow_control{FlowControl::kNone};
 };
 
-/// @brief UART peripheral interface
-/// Implementations may use interrupts, DMA, or blocking internally
+/// @brief UART peripheral interface: blocking transfers plus an RxHandler for
+/// unsolicited incoming data.
+/// Async (interrupt/DMA-driven) send and receive are future work: they join
+/// this interface when a hardware platform can implement them with genuinely
+/// different behavior (see docs/PROJECT_PLAN.md).
 class Uart {
  public:
   virtual ~Uart() = default;
@@ -63,38 +66,6 @@ class Uart {
   [[nodiscard]] virtual auto Receive(std::span<std::byte> buffer,
                                      uint32_t timeout_ms)
       -> std::expected<size_t, common::Error> = 0;
-
-  /// @brief Send data asynchronously
-  /// Implementation may use interrupts or DMA
-  /// @param data Span of bytes to send
-  /// @param callback Called when transfer completes
-  /// @return Success or error code
-  [[nodiscard]] virtual auto SendAsync(
-      std::span<const std::byte> data,
-      std::function<void(std::expected<void, common::Error>)> callback)
-      -> std::expected<void, common::Error> = 0;
-
-  /// @brief Receive data asynchronously
-  /// Implementation may use interrupts or DMA
-  /// @param buffer Buffer to store received data
-  /// @param callback Called when data is received (with number of bytes)
-  /// @return Success or error code
-  [[nodiscard]] virtual auto ReceiveAsync(
-      std::span<std::byte> buffer,
-      std::function<void(std::expected<size_t, common::Error>)> callback)
-      -> std::expected<void, common::Error> = 0;
-
-  /// @brief Check if UART is busy transmitting
-  /// @return True if busy, false otherwise
-  [[nodiscard]] virtual auto IsBusy() const -> bool = 0;
-
-  /// @brief Get number of bytes available to read
-  /// @return Number of bytes in receive buffer
-  [[nodiscard]] virtual auto Available() const -> size_t = 0;
-
-  /// @brief Flush transmit buffer (wait for all data to be sent)
-  /// @return Success or error code
-  [[nodiscard]] virtual auto Flush() -> std::expected<void, common::Error> = 0;
 
   /// @brief Set handler for unsolicited incoming data
   /// Similar to pin interrupts, this allows the UART to notify the

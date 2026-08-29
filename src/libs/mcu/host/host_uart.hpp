@@ -31,19 +31,6 @@ class HostUart final : public Uart, public Receiver {
   auto Receive(std::span<std::byte> buffer, uint32_t timeout_ms)
       -> std::expected<size_t, common::Error> override;
 
-  auto SendAsync(std::span<const std::byte> data,
-                 std::function<void(std::expected<void, common::Error>)>
-                     callback) -> std::expected<void, common::Error> override;
-
-  auto ReceiveAsync(
-      std::span<std::byte> buffer,
-      std::function<void(std::expected<size_t, common::Error>)> callback)
-      -> std::expected<void, common::Error> override;
-
-  [[nodiscard]] auto IsBusy() const -> bool override;
-  [[nodiscard]] auto Available() const -> size_t override;
-  auto Flush() -> std::expected<void, common::Error> override;
-
   auto SetRxHandler(std::function<void(const std::byte*, size_t)> handler)
       -> std::expected<void, common::Error> override;
 
@@ -56,17 +43,9 @@ class HostUart final : public Uart, public Receiver {
   Transport& transport_;
   UartConfig config_{};
   bool initialized_{false};
-  bool busy_{false};
-
-  // Async callback storage
-  std::function<void(std::expected<void, common::Error>)> send_callback_;
-  std::function<void(std::expected<size_t, common::Error>)> receive_callback_;
 
   // Receive handler for unsolicited incoming data
   std::function<void(const std::byte*, size_t)> rx_handler_;
-
-  // Receive buffer for async operations
-  std::vector<std::byte> receive_buffer_;
 };
 
 }  // namespace mcu

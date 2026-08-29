@@ -46,38 +46,6 @@ auto HostI2CController::ReceiveData(uint16_t address,
       });
 }
 
-auto HostI2CController::SendDataInterrupt(
-    uint16_t address, std::span<const std::byte> data,
-    std::function<void(std::expected<void, common::Error>)> callback)
-    -> std::expected<void, common::Error> {
-  callback(SendData(address, data));
-  return {};
-}
-
-auto HostI2CController::ReceiveDataInterrupt(
-    uint16_t address, std::span<std::byte> buffer,
-    std::function<void(std::expected<size_t, common::Error>)> callback)
-    -> std::expected<void, common::Error> {
-  callback(ReceiveData(address, buffer));
-  return {};
-}
-
-auto HostI2CController::SendDataDma(
-    uint16_t address, std::span<const std::byte> data,
-    std::function<void(std::expected<void, common::Error>)> callback)
-    -> std::expected<void, common::Error> {
-  callback(SendData(address, data));
-  return {};
-}
-
-auto HostI2CController::ReceiveDataDma(
-    uint16_t address, std::span<std::byte> buffer,
-    std::function<void(std::expected<size_t, common::Error>)> callback)
-    -> std::expected<void, common::Error> {
-  callback(ReceiveData(address, buffer));
-  return {};
-}
-
 auto HostI2CController::Receive(std::string_view message)
     -> std::expected<std::string, common::Error> {
   static_cast<void>(message);

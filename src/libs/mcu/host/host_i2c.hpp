@@ -27,22 +27,6 @@ class HostI2CController final : public I2CController, public Receiver {
   auto ReceiveData(uint16_t address, std::span<std::byte> buffer)
       -> std::expected<size_t, common::Error> override;
 
-  auto SendDataInterrupt(
-      uint16_t address, std::span<const std::byte> data,
-      std::function<void(std::expected<void, common::Error>)> callback)
-      -> std::expected<void, common::Error> override;
-  auto ReceiveDataInterrupt(
-      uint16_t address, std::span<std::byte> buffer,
-      std::function<void(std::expected<size_t, common::Error>)> callback)
-      -> std::expected<void, common::Error> override;
-
-  auto SendDataDma(uint16_t address, std::span<const std::byte> data,
-                   std::function<void(std::expected<void, common::Error>)>
-                       callback) -> std::expected<void, common::Error> override;
-  auto ReceiveDataDma(
-      uint16_t address, std::span<std::byte> buffer,
-      std::function<void(std::expected<size_t, common::Error>)> callback)
-      -> std::expected<void, common::Error> override;
   auto Receive(std::string_view message)
       -> std::expected<std::string, common::Error> override;
 

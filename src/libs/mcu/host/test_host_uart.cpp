@@ -236,40 +236,6 @@ TEST_F(HostUartTest, ReceiveWithoutInit) {
   EXPECT_EQ(result.error(), common::Error::kInvalidState);
 }
 
-TEST_F(HostUartTest, IsBusy) {
-  const mcu::UartConfig config{};
-  auto init_result = uart_->Init(config);
-  ASSERT_TRUE(init_result);
-
-  EXPECT_FALSE(uart_->IsBusy());
-
-  const std::array<std::byte, 5> send_data{std::byte{0x01}, std::byte{0x02},
-                                           std::byte{0x03}, std::byte{0x04},
-                                           std::byte{0x05}};
-  std::ignore = uart_->Send(send_data);
-
-  EXPECT_FALSE(uart_->IsBusy());  // Blocking operation completes immediately
-}
-
-TEST_F(HostUartTest, Available) {
-  const mcu::UartConfig config{};
-  auto init_result = uart_->Init(config);
-  ASSERT_TRUE(init_result);
-
-  // For host implementation, Available() always returns 0
-  // (data is retrieved on-demand from emulator)
-  EXPECT_EQ(uart_->Available(), 0);
-}
-
-TEST_F(HostUartTest, Flush) {
-  const mcu::UartConfig config{};
-  auto init_result = uart_->Init(config);
-  ASSERT_TRUE(init_result);
-
-  auto result = uart_->Flush();
-  EXPECT_TRUE(result);
-}
-
 TEST_F(HostUartTest, RxHandlerUnsolicitedData) {
   // Initialize UART
   const mcu::UartConfig config{};
