@@ -28,7 +28,7 @@ docker compose run --rm host-debug
 
 ### Local Build
 
-**Requirements**: CMake 3.27+, Ninja, Clang 18+, Python 3.11+, [uv](https://docs.astral.sh/uv/), ZeroMQ (libzmq3-dev)
+**Requirements**: CMake 3.27+, Ninja, Clang 18+, Python 3.14+, [uv](https://docs.astral.sh/uv/), ZeroMQ (libzmq3-dev)
 
 ```bash
 cmake --workflow --preset=host-debug    # Configure + build + test
