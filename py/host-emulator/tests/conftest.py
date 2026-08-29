@@ -1,21 +1,22 @@
 """Pytest configuration and fixtures for host-emulator tests."""
 
-from __future__ import annotations
-
 import logging
 import subprocess
 import time
+from collections.abc import Callable, Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from host_emulator import DeviceEmulator
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
+from host_emulator.endpoint import endpoint_path
 
 logger = logging.getLogger(__name__)
+
+type AppFixture = Callable[
+    [pytest.FixtureRequest, DeviceEmulator],
+    Generator[subprocess.Popen[bytes]],
+]
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -51,11 +52,21 @@ def emulator() -> Generator[DeviceEmulator]:
             device_emulator.stop()
 
 
-def _endpoint_path(endpoint: str) -> Path | None:
-    """Filesystem path an ipc:// endpoint binds to, or None for other transports."""
-    if not endpoint.startswith("ipc://"):
-        return None
-    return Path(endpoint.removeprefix("ipc://"))
+@pytest.fixture(autouse=True)
+def reset_peripheral_hooks(request: pytest.FixtureRequest) -> Generator[None]:
+    """Uninstall any on_request/on_response hooks a test left behind.
+
+    The emulator (and the app) are module-scoped for speed, so state crosses
+    tests. Buffers are cleared explicitly by the tests that care -- some state
+    is deliberately shared (the UART greeting arrives once, at app start) --
+    but a leftover hook firing during an unrelated test is never intentional.
+    """
+    yield
+    if "emulator" in request.fixturenames:
+        emulator: DeviceEmulator = request.getfixturevalue("emulator")
+        for peripheral in emulator.all_peripherals():
+            peripheral.on_request = None
+            peripheral.on_response = None
 
 
 def _wait_for_process_ready(
@@ -91,8 +102,8 @@ def _wait_for_process_ready(
     raise RuntimeError(f"Process did not bind {ready_path} within {timeout}s")
 
 
-def _application_fixture_factory(option_name: str, display_name: str) -> Any:
-    """Factory function to create application fixtures with common lifecycle management.
+def _application_fixture_factory(option_name: str, display_name: str) -> AppFixture:
+    """Create an application fixture with common lifecycle management.
 
     Args:
         option_name: CLI option name (e.g., "--blinky")
@@ -113,13 +124,12 @@ def _application_fixture_factory(option_name: str, display_name: str) -> Any:
             pytest.skip(f"{option_name} not provided")
 
         app_executable = Path(str(app_arg)).resolve()
-        assert app_executable.exists(), (
-            f"{display_name} executable not found: {app_executable}"
-        )
+        if not app_executable.exists():
+            pytest.fail(f"{display_name} executable not found: {app_executable}")
 
         # Clear any leftover socket file first, so its later appearance is
         # evidence of *this* run binding rather than of a previous one.
-        ready_path = _endpoint_path(emulator.to_device_endpoint)
+        ready_path = endpoint_path(emulator.to_device_endpoint)
         if ready_path is not None:
             ready_path.unlink(missing_ok=True)
 

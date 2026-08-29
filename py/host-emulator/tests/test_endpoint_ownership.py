@@ -10,21 +10,16 @@ These are pure emulator tests -- no application binary -- so they run without
 any of the --blinky/--uart-echo/--i2c-demo options.
 """
 
-from __future__ import annotations
-
 import socket
 import subprocess
 import sys
+from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 
 from host_emulator import DeviceEmulator
 from host_emulator.endpoint import EndpointLock, endpoint_path, has_live_owner
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
 
 
 @pytest.fixture

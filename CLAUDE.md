@@ -37,7 +37,7 @@ cmake --build build/host --target format-check
 # single commit with `git commit --no-verify`.
 
 # Python type-check (not covered by format.sh - types are not formatting)
-cd py/host-emulator && uv run mypy src
+cd py/host-emulator && uv run mypy
 
 # Cross-compile for ARM - not yet functional. Toolchain files and configure
 # presets exist, but only the `host` MCU/board implementations do; configuring

@@ -1,41 +1,36 @@
 """Integration tests for UART echo application with RxHandler."""
 
-from __future__ import annotations
+import subprocess
+from typing import Any
 
-from typing import TYPE_CHECKING, Any
+import pytest
 
-if TYPE_CHECKING:
-    import subprocess
+from host_emulator import DeviceEmulator
 
-    from host_emulator import DeviceEmulator
+# Mirrors the greeting uart_echo prints on startup
+# (src/apps/uart_echo/uart_echo.cpp is the source of truth).
+GREETING = "UART Echo ready"
 
 
-def test_uart_echo_starts(
-    emulator: DeviceEmulator, uart_echo: subprocess.Popen[bytes]
-) -> None:
+def test_uart_echo_starts(uart_echo: subprocess.Popen[bytes]) -> None:
     """Test that uart_echo starts successfully."""
-    _ = emulator  # Ensure emulator is running
     assert uart_echo.poll() is None, "uart_echo process terminated unexpectedly"
 
 
-def test_uart_echo_sends_greeting(
-    emulator: DeviceEmulator, uart_echo: subprocess.Popen[bytes]
-) -> None:
+@pytest.mark.usefixtures("uart_echo")
+def test_uart_echo_sends_greeting(emulator: DeviceEmulator) -> None:
     """Test that uart_echo sends a greeting message on startup."""
-    _ = uart_echo  # Ensure uart_echo is running
     assert emulator.uart1().wait_for_data(min_bytes=1, timeout=2.0), (
         "No greeting received from uart_echo"
     )
 
     greeting = bytes(emulator.uart1().rx_buffer).decode("utf-8", errors="ignore")
-    assert "UART Echo ready" in greeting, f"Unexpected greeting: {greeting}"
+    assert GREETING in greeting, f"Unexpected greeting: {greeting}"
 
 
-def test_uart_echo_echoes_data(
-    emulator: DeviceEmulator, uart_echo: subprocess.Popen[bytes]
-) -> None:
+@pytest.mark.usefixtures("uart_echo")
+def test_uart_echo_echoes_data(emulator: DeviceEmulator) -> None:
     """Test that uart_echo echoes received data back."""
-    _ = uart_echo  # Ensure uart_echo is running
     emulator.uart1().rx_buffer.clear()
 
     test_data = [0x48, 0x65, 0x6C, 0x6C, 0x6F]  # "Hello"
@@ -51,11 +46,9 @@ def test_uart_echo_echoes_data(
     assert list(emulator.uart1().rx_buffer) == test_data
 
 
-def test_uart_echo_handler_receives_echoed_data(
-    emulator: DeviceEmulator, uart_echo: subprocess.Popen[bytes]
-) -> None:
+@pytest.mark.usefixtures("uart_echo")
+def test_uart_echo_handler_receives_echoed_data(emulator: DeviceEmulator) -> None:
     """Test that UART handler callback is invoked when device sends data."""
-    _ = uart_echo  # Ensure uart_echo is running
     emulator.uart1().rx_buffer.clear()
 
     received_via_handler: list[int] = []

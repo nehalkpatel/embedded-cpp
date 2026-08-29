@@ -101,6 +101,12 @@ class DeviceEmulator:
     def i2c1(self) -> I2C:
         return self.i2c_1
 
+    def all_peripherals(self) -> list[Peripheral]:
+        """Every emulated peripheral, across all object types."""
+        return [
+            peripheral for group in self._peripherals.values() for peripheral in group
+        ]
+
     def _bind(self) -> None:
         """Claim the receive endpoint and bind it.
 

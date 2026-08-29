@@ -13,7 +13,7 @@ host-emulator = "host_emulator.emulator:main"
 # PEP 735 dependency group. uv syncs this by default, so `uv run pytest` works
 # without extra flags (unlike an optional-dependencies extra).
 [dependency-groups]
-dev = ["pytest>=9", "pytest-cov>=7", "ruff>=0.14", "mypy>=1.19"]
+dev = ["pytest>=9", "ruff>=0.14", "mypy>=1.19"]
 
 [build-system]
 requires = ["hatchling"]
@@ -56,6 +56,8 @@ known-first-party = ["host_emulator"]
 
 [tool.mypy]
 python_version = "3.14"
+# Both trees, so `uv run mypy` with no arguments checks everything CI checks.
+files = ["src", "tests"]
 # `strict` already implies warn_return_any, warn_unused_ignores,
 # disallow_untyped_defs/decorators, disallow_incomplete_defs, check_untyped_defs,
 # no_implicit_optional, warn_redundant_casts and warn_unused_configs.
@@ -67,4 +69,6 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Redundant with the editable install uv sync performs, but it lets a bare
+# `pytest` (no uv, no install) still resolve the package.
 pythonpath = ["src"]
