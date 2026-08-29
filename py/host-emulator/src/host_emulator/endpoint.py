@@ -13,8 +13,6 @@ The two implementations must agree on the lock file naming, or they do not
 exclude each other.
 """
 
-from __future__ import annotations
-
 import fcntl
 import logging
 import os
