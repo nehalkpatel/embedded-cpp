@@ -93,15 +93,15 @@ class MyApp {
 
 1. Define interface in `libs/mcu/*.hpp` (for peripherals) or `libs/board/board.hpp`
 2. Implement host version in `libs/mcu/host/` with ZMQ messaging
-3. Add message types to `host_emulator_messages.hpp`
-4. Update Python emulator in `py/host-emulator/src/host_emulator/`
+3. Add message types to `host_emulator_messages.hpp` and their JSON tables to `emulator_message_json_encoder.hpp`
+4. Update the Python emulator in `py/host-emulator/src/host_emulator/`. The wire protocol is documented in `py/host-emulator/README.md`; the C++ and Python vocabularies mirror each other and must change together
 5. Write unit tests (C++) and integration tests (Python)
 6. Implement hardware versions in board-specific directories
 
 ## Testing
 
 - **C++ unit tests**: Colocated with code (`src/libs/mcu/host/test_*.cpp`), use Google Test
-- **Python integration tests**: `py/host-emulator/tests/`, use pytest with fixtures that manage emulator/app lifecycle. CTest builds a uv venv under `build/host/host_emulator_venv` and runs them as the `host_emulator_test` target
+- **Python integration tests**: `py/host-emulator/tests/`, use pytest with fixtures that manage emulator/app lifecycle. They run as the `host_emulator_test` CTest target; a CTest setup fixture syncs a uv venv under `build/host/host_emulator_venv` first (a no-op once synced)
 - **System tests**: none yet — end-to-end coverage lives in the Python integration tests. Add a dedicated harness only when a test doesn't fit the emulator harness
 - **clang-tidy**: Runs automatically during build, no separate step needed
 - **Python tooling**: uv + ruff + strict mypy, all configured in `py/host-emulator/pyproject.toml`
@@ -112,4 +112,5 @@ class MyApp {
 - `src/libs/mcu/pin.hpp` - Pin abstraction (InputPin, OutputPin, BidirectionalPin)
 - `src/libs/mcu/uart.hpp` - UART with RxHandler callback pattern
 - `src/libs/board/board.hpp` - Board interface aggregating all peripherals
+- `py/host-emulator/README.md` - The ZeroMQ/JSON wire protocol (canonical doc)
 - `CMakePresets.json` - Build configurations for host and ARM targets

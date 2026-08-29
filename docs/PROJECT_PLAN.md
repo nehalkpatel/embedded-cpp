@@ -1,71 +1,41 @@
 # Embedded C++ BSP - Project Plan
 
-**Last Updated**: 2025-11-22
+**Last Updated**: 2026-08-29
 **Project Status**: Educational/Demonstrative (Active Development)
+
+This document is forward-looking: milestones, priorities, and open work.
+Current implementation status lives in the README's Implementation Status
+table; what exists is best read from the code and `ctest -N`.
 
 ## Project Vision
 
-Explore modern C++ (C++23) and software engineering practices in embedded systems through:
+Explore modern C++ (C++23) and software engineering practices in embedded
+systems through:
 - Type-safe hardware abstraction layers
 - Host-based development and testing
 - Correct-by-construction design patterns
 - Comprehensive testing infrastructure
 
-## Current Status
-
-### ✅ Completed (Production Quality)
-
-| Component | Description | Status |
-|-----------|-------------|--------|
-| **Host Emulation Platform** | ZeroMQ-based IPC with Python hardware simulator | ✅ Complete |
-| **Blinky Example App** | LED blink + button interrupt demo | ✅ Complete |
-| **UART Echo Example App** | UART RxHandler demo with async reception | ✅ Complete |
-| **MCU Abstraction Layer** | Pin, UART, I2C, Delay interfaces | ✅ Complete |
-| **Board Abstraction Layer** | Board interface with host implementation | ✅ Complete |
-| **Error Handling** | `std::expected<T, Error>` pattern | ✅ Complete |
-| **C++ Unit Tests** | Google Test for transport, messages, dispatcher | ✅ Complete |
-| **Python Integration Tests** | pytest for end-to-end behavior | ✅ Complete |
-| **Build System** | CMake with presets, multi-config Ninja | ✅ Complete |
-| **Docker Environment** | Complete development environment | ✅ Complete |
-| **DevContainer** | VS Code integration with extensions | ✅ Complete |
-| **CI/CD Pipeline** | GitHub Actions for automated builds/tests | ✅ Complete |
-| **Documentation** | CLAUDE.md, README.md comprehensive docs | ✅ Complete |
-
-### 🚧 In Progress (Partial Implementation)
-
-| Component | Status | What's Missing |
-|-----------|--------|----------------|
-| **STM32F3 Discovery Board** | 🚧 Partial | C++ board implementation, pin mappings |
-| **STM32F7 Nucleo Board** | 🚧 Partial | C++ board implementation, pin mappings |
-
-### ⚠️ Placeholder (Not Started)
-
-| Component | Status | Description |
-|-----------|--------|-------------|
-| **nRF52832 DK Board** | ⚠️ Placeholder | Minimal CMake setup only |
-| **SPI Peripheral** | ⚠️ Not Started | SPI controller interface |
-| **ADC Peripheral** | ⚠️ Not Started | ADC interface |
-| **PWM Peripheral** | ⚠️ Not Started | PWM interface |
-
 ## Milestones
 
 ### Milestone 1: Foundation 🚧 IN PROGRESS
+
 **Goal**: Establish development infrastructure and prove the concept
 
 - [x] Host emulation platform with ZeroMQ
 - [x] Basic pin abstraction (Input, Output, Bidirectional)
-- [x] Example application (blinky)
+- [x] Example applications (blinky, uart_echo, i2c_demo)
 - [x] Unit testing framework
 - [x] Integration testing with Python emulator
 - [x] CMake build system with presets
 - [x] Docker development environment
 - [x] DevContainer for VS Code
 - [x] CI/CD pipeline
-- [x] Comprehensive documentation
 - [x] Code coverage reporting
-- [x] Add static analysis through clang-tidy by default
-- [x] Add UART abstraction with RxHandler
-- [x] Add I2C abstraction
+- [x] Static analysis through clang-tidy by default
+- [x] UART abstraction with RxHandler
+- [x] I2C abstraction
+- [x] Wire-protocol documentation (py/host-emulator/README.md)
 - [ ] Add SPI abstraction
 - [ ] Add PWM abstraction
 - [ ] Add ADC abstraction
@@ -75,163 +45,90 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 - [ ] Upload code coverage reports to GitHub pages
 - [ ] Increase test coverage for error paths
 
-**Status**: 🚧 IN PROGRESS (2025-11-22)
+### Milestone 2: Hardware Board Support 📋 PLANNED
 
-### Milestone 2: Hardware Board Support 🚧 IN PROGRESS
-**Goal**: Complete STM32F7 Nucleo board implementation
+**Goal**: First physical board (STM32F7 Nucleo)
+
+The repository currently carries only the ARM toolchain files and configure
+presets; the vendor HAL trees that briefly lived in-tree were removed while
+unreachable (git history preserves them, and CubeMX regenerates them fresher).
 
 **Tasks**:
-- [ ] Implement STM32F7 Nucleo C++ board class
-  - [ ] Map LED pins to STM32F7 hardware
-  - [ ] Map button pins to STM32F7 hardware
-  - [ ] Implement GPIO initialization
-  - [ ] Add interrupt handler setup
-- [ ] Create STM32F7-specific pin implementations
-  - [ ] Extend base pin interface for STM32 HAL
-  - [ ] Handle GPIO port/pin mapping
-- [ ] Test on actual hardware
-  - [ ] Verify blinky builds for STM32F7
-  - [ ] Flash and test LED behavior
-  - [ ] Test button interrupts
-- [ ] Document hardware-specific setup
-  - [ ] Pin mapping tables
-  - [ ] Flashing instructions
-  - [ ] Debugging setup
+- [ ] Implement the `arm_cm7` MCU backend (`src/libs/mcu/arm_cm7/`)
+- [ ] Implement the STM32F7 Nucleo board directory (pin maps, GPIO init,
+      interrupt wiring) against the vendor HAL
+- [ ] Verify blinky builds, flashes, and runs on the physical board
+- [ ] Document hardware setup: pin mapping tables, flashing, debugging
 
 **Success Criteria**:
-- Blinky app runs on physical STM32F7 Discovery board
-- All features from host emulator work on hardware
+- Blinky runs on a physical STM32F7 Nucleo board
+- All features exercised by the host emulator work on hardware
 - Documentation enables others to replicate
 
 ### Milestone 3: Multi-Board Support 📋 PLANNED
+
 **Goal**: Demonstrate portability across different MCUs
 
 **Tasks**:
-- [ ] Complete STM32F3 Discovery implementation
-  - [ ] Implement board class for STM32F3
-  - [ ] Map pins to Nucleo hardware
-  - [ ] Test on physical hardware
-- [ ] Add additional example application
-  - [ ] Multi-LED pattern app
-  - [ ] Demonstrates more complex behavior
-- [ ] Cross-board compatibility validation
-  - [ ] Ensure blinky works on both STM32F3 and STM32F7
-  - [ ] Verify abstraction portability
-
-**Success Criteria**:
-- Blinky runs on both STM32F3 and STM32F7 without modification
-- Additional example app demonstrates abstraction benefits
+- [ ] STM32F3 Discovery support (`arm_cm4` backend + board directory)
+- [ ] Additional example application exercising more complex behavior
+- [ ] Cross-board validation: blinky runs on both boards unmodified
 
 ### Milestone 4: Advanced Features 🔮 FUTURE
-**Goal**: Demonstrate advanced embedded patterns
 
-**Potential Features**:
-- [ ] RTOS integration (FreeRTOS)
-  - [ ] Task abstraction
-  - [ ] Queue/mutex abstractions
-- [ ] Power management
-  - [ ] Sleep modes
-  - [ ] Wake-up sources
-- [ ] DMA abstractions
-  - [ ] Memory-to-peripheral transfers
-  - [ ] Circular buffers
-- [ ] Flash memory abstraction
-  - [ ] Non-volatile storage
-  - [ ] Configuration persistence
-
-**Status**: Exploratory - not committed
+**Potential Features** (exploratory, not committed):
+- RTOS integration (FreeRTOS): task, queue, and mutex abstractions
+- Power management: sleep modes, wake-up sources
+- DMA abstractions: memory-to-peripheral transfers, circular buffers
+- Flash memory abstraction: non-volatile storage, config persistence
+- nRF52832 DK board (a second silicon vendor)
 
 ## Current Priorities
 
-### High Priority
-1. **I2C Implementation** (Milestone 1, Priority 1)
-   - Current stub needs completion
-   - Demonstrates peripheral abstraction beyond GPIO
-
-2. **Complete STM32F7 Nucleo Board** (Milestone 2)
-   - Most important for proving hardware portability
-   - Builds on completed foundation
-
-### Medium Priority
-3. **STM32F3 Discovery Board** (Milestone 3)
-   - Proves multi-board portability
-   - Demonstrates Cortex-M4 support
-
-4. **Additional Example Applications**
-   - Shows real-world patterns
-   - More engaging demonstrations
-
-### Low Priority
-5. **nRF52832 DK Board**
-   - Different MCU vendor (Nordic vs STM)
-   - Would demonstrate even broader portability
-   - Currently just placeholder
+1. **Complete STM32F7 Nucleo board** (Milestone 2) — proves hardware
+   portability, builds on the completed host foundation
+2. **STM32F3 Discovery board** (Milestone 3) — proves multi-board portability
+3. **Additional example applications** — more engaging demonstrations
 
 ## Technical Debt & Improvements
 
-### Code Quality
-- [ ] Add more C++ unit tests for board implementations
-
-### Documentation
-- [x] ✅ Update CLAUDE.md with DevContainer setup
-- [x] ✅ Refresh README.md
-- [ ] Add hardware setup guides
-- [ ] Add architecture diagrams
-
-### Build System
-- [x] ✅ Fix Docker permission issues
+- [ ] Add C++ unit tests for board implementations
+- [ ] Add hardware setup guides and architecture diagrams
 - [ ] Optimize Docker layer caching
 - [ ] Add release builds to CI
-- [ ] Cross-compilation verification in CI
-
-### Host Emulator
-- [ ] Add GUI visualization (instead of just console logs)
-- [ ] Support for more complex I2C devices in emulator
-- [ ] Timing simulation (delays, interrupt timing)
+- [ ] Cross-compilation verification in CI (once an ARM backend exists)
+- [ ] Host emulator: GUI visualization, richer I2C device models, timing
+      simulation
+- [ ] Wire up Python test coverage if it earns its keep (pytest-cov was
+      removed while unused)
 
 ## Decision Log
 
-### 2025-11-23: UART RxHandler Implementation
-- ✅ Added UART abstraction with event-driven RxHandler (similar to Pin interrupts)
-- ✅ Implemented HostUart with ZMQ transport and message routing
-- ✅ Created uart_echo example app demonstrating asynchronous reception
-- ✅ Added C++ unit tests for RxHandler functionality
-- ✅ Created Python integration tests for uart_echo app
-- ✅ UART initialization is explicit (not in Board::Init()) to avoid unnecessary emulator connections
-- ✅ Improved HostBoard::Init() error handling pattern with scoped blocks
-- ✅ All 20 tests passing (19 C++ + 6 Python integration)
+### 2026-08-29: Simplification pass
+- Codebase-wide review against the project's educational goals; the themes:
+  one canonical form per idea (a single Transact/Peripheral implementation
+  instead of three divergent copies), target-based CMake usage requirements,
+  and docs that match behavior
+- Trimmed Uart/I2C to the surface the host honors; async/interrupt/DMA modes
+  recorded above as future work
+- Parked the unreachable STM32 vendor trees and broken ARM workflow presets;
+  kept toolchains and configure presets behind a clear "not implemented"
+  configure error
 
-### 2025-11-22: DevContainer & CI Integration
-- ✅ Added VS Code DevContainer support
-- ✅ Configured GitHub Actions CI/CD
-- ✅ Resolved Docker permission issues with dynamic UID/GID
-- ✅ Updated documentation (CLAUDE.md, README.md)
+### 2025-11-23: UART RxHandler implementation
+- UART abstraction with event-driven RxHandler (similar to pin interrupts),
+  HostUart with ZMQ transport and message routing, uart_echo example app,
+  C++ unit tests and Python integration tests
+- UART initialization is explicit (not in Board::Init()) to avoid unnecessary
+  emulator connections
 
-### 2025-11-20: Foundation Complete
-- ✅ Host emulation platform working end-to-end
-- ✅ Blinky example app with tests
-- ✅ CMake build system with presets
-- ✅ Python integration testing framework
+### 2025-11-22: DevContainer & CI integration
+- VS Code DevContainer support, GitHub Actions CI/CD, Docker permission
+  handling, documentation updates
 
-## Success Metrics
-
-### Educational Value
-- ✅ Demonstrates modern C++ features (C++23, std::expected)
-- ✅ Shows correct-by-construction patterns
-- ✅ Proves host-based development viability
-- 🚧 Multiple hardware boards (1 of 3 complete)
-
-### Code Quality
-- ✅ All warnings as errors
-- ✅ clang-tidy enforcement
-- ✅ Comprehensive testing (unit + integration)
-- ✅ CI/CD automation
-
-### Developer Experience
-- ✅ Easy setup (DevContainer)
-- ✅ Fast iteration (host builds)
-- ✅ Clear documentation
-- 🚧 Hardware debugging setup (not yet documented)
+### 2025-11-20: Foundation complete
+- Host emulation platform working end-to-end; blinky with tests; CMake preset
+  build system; Python integration testing framework
 
 ## Resources
 
@@ -241,9 +138,8 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 
 ### Technologies
 - [CMake](https://cmake.org/) - Build system
-- [Embedded Template Library](https://www.etlcpp.com/) - STL alternative for embedded
 - [ZeroMQ](https://zeromq.org/) - IPC transport
 - [Google Test](https://github.com/google/googletest) - C++ testing
 - [pytest](https://pytest.org/) - Python testing
-
----
+- [Embedded Template Library](https://www.etlcpp.com/) - STL alternative to
+  consider when hardware targets arrive (not currently a dependency)
