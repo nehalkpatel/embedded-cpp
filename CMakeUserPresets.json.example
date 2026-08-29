@@ -14,8 +14,7 @@
       "cacheVariables": {
         "CMAKE_PRESET": "host",
         "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
-        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
-        "CMAKE_LINKER": "/opt/homebrew/opt/llvm/bin/clang"
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
       }
     },
     {
