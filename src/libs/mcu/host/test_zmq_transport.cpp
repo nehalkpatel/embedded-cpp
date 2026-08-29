@@ -19,22 +19,14 @@
 
 #include "dispatcher.hpp"
 #include "libs/common/logger.hpp"
+#include "libs/mcu/host/test_support.hpp"
 #include "zmq_transport.hpp"
 
 namespace mcu {
 namespace {
 
-// Deliberately not the emulator's real endpoints, and per-process.
-//
-// This fixture used to bind ipc:///tmp/device_emulator.ipc -- byte-identical to
-// HostBoard::Endpoints and to DeviceEmulator's defaults -- so running the unit
-// tests while an emulator or blinky was up had them fighting over one path. The
-// pid suffix additionally lets `ctest -j` work: gtest_discover_tests gives each
-// case its own process, and with a fixed path those processes contended for the
-// same endpoint.
 auto Endpoint(std::string_view role) -> std::string {
-  return "ipc:///tmp/test_transport_" + std::string{role} + "_" +
-         std::to_string(::getpid()) + ".ipc";
+  return test::MakeEndpoint("test_transport", role);
 }
 
 class ZmqTransportTest : public ::testing::Test {
@@ -64,15 +56,8 @@ class ZmqTransportTest : public ::testing::Test {
     socket_.close();
     context_.close();
 
-    // The transport never unlinks its own lock file (that would reopen the race
-    // it closes), so clean up this process's endpoints here.
-    std::error_code error{};
-    for (const auto& endpoint : {emulator_endpoint_, device_endpoint_}) {
-      const std::string path{
-          endpoint.substr(std::string_view{"ipc://"}.size())};
-      std::filesystem::remove(path, error);
-      std::filesystem::remove(path + ".lock", error);
-    }
+    test::RemoveEndpointArtifacts(emulator_endpoint_);
+    test::RemoveEndpointArtifacts(device_endpoint_);
   }
 
  private:
@@ -133,34 +118,6 @@ TEST_F(ZmqTransportTest, SendReceive) {
   ASSERT_EQ(response.value(), "World");
 }
 
-// Counts log lines, so a test can assert how many times Send() went round its
-// retry loop rather than merely that it eventually failed. The mutex guards
-// against the server thread logging concurrently with the test thread.
-class CountingLogger : public common::Logger {
- public:
-  auto Debug(std::string_view msg) -> void override { Record(msg); }
-  auto Info(std::string_view msg) -> void override { Record(msg); }
-  auto Warning(std::string_view msg) -> void override { Record(msg); }
-  auto Error(std::string_view msg) -> void override { Record(msg); }
-
-  auto Count(std::string_view needle) const -> std::size_t {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    return static_cast<std::size_t>(
-        std::ranges::count_if(messages_, [needle](const std::string& msg) {
-          return msg.find(needle) != std::string::npos;
-        }));
-  }
-
- private:
-  auto Record(std::string_view msg) -> void {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    messages_.emplace_back(msg);
-  }
-
-  mutable std::mutex mutex_;
-  std::vector<std::string> messages_;
-};
-
 // Drives Send() into genuine backpressure, and reports the send that met it.
 //
 // The obvious setup -- point the transport at an endpoint nobody binds -- does
@@ -197,13 +154,7 @@ auto SendUntilQueueBlocks(ZmqTransport& transport) -> BlockedSend {
 
 class ZmqTransportRetryTest : public ::testing::Test {
  protected:
-  void TearDown() override {
-    std::error_code error{};
-    const std::string path{
-        own_endpoint_.substr(std::string_view{"ipc://"}.size())};
-    std::filesystem::remove(path, error);
-    std::filesystem::remove(path + ".lock", error);
-  }
+  void TearDown() override { test::RemoveEndpointArtifacts(own_endpoint_); }
 
   static auto MakeConfig(
       common::Logger& logger, std::chrono::milliseconds send_timeout,
@@ -222,7 +173,7 @@ class ZmqTransportRetryTest : public ::testing::Test {
 
   const std::string absent_peer_endpoint_{Endpoint("absent_peer")};
   const std::string own_endpoint_{Endpoint("retry_own")};
-  CountingLogger logger_;
+  test::RecordingLogger logger_;
   const ReceiverMap receiver_map_;
 };
 

@@ -1,183 +1,68 @@
 #include <gtest/gtest.h>
-#include <unistd.h>
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
-#include <filesystem>
 #include <map>
+#include <memory>
+#include <optional>
 #include <string>
-#include <system_error>
-#include <thread>
+#include <string_view>
 #include <vector>
 
-#include "libs/mcu/host/dispatcher.hpp"
 #include "libs/mcu/host/emulator_message_json_encoder.hpp"
 #include "libs/mcu/host/host_emulator_messages.hpp"
 #include "libs/mcu/host/host_i2c.hpp"
-#include "libs/mcu/host/zmq_transport.hpp"
+#include "libs/mcu/host/host_peripheral_test_infra.hpp"
 #include "libs/mcu/i2c.hpp"
 
-class HostI2CTest : public ::testing::Test {
+class HostI2CTest : public mcu::test::HostPeripheralTest {
  protected:
-  // Per-process endpoints. gtest_discover_tests gives every case its own
-  // process, so a fixed path made `ctest -j` cases contend for one endpoint --
-  // silently corrupting each other before EndpointLock, loudly after.
-  static auto Endpoint(std::string_view role) -> std::string {
-    return "ipc:///tmp/test_i2c_" + std::string{role} + "_" +
-           std::to_string(::getpid()) + ".ipc";
+  auto MakeReceiver(mcu::Transport& transport) -> mcu::Receiver& override {
+    i2c_ = std::make_unique<mcu::HostI2CController>("I2C 1", transport);
+    return *i2c_;
   }
 
-  void SetUp() override {
-    // Bind on the test thread, before the emulator thread exists, so the
-    // transport's connect() below happens-after the bind by thread creation
-    // alone. This replaces a 100ms sleep that only made the race unlikely.
-    emulator_socket_.set(zmq::sockopt::linger, 0);
-    emulator_socket_.bind(device_emulator_endpoint_);
-
-    emulator_running_ = true;
-    emulator_thread_ = std::thread{[this]() { EmulatorLoop(); }};
-
-    // Create dispatcher with empty receiver map (will update via reference
-    // later)
-    dispatcher_ = std::make_unique<mcu::Dispatcher>(receiver_map_storage_);
-
-    // Create transport. Assert rather than value_or(nullptr): Create can fail,
-    // and a null transport is dereferenced two lines down.
-    auto transport_result = mcu::ZmqTransport::Create(
-        device_emulator_endpoint_, emulator_device_endpoint_, *dispatcher_);
-    ASSERT_TRUE(transport_result.has_value());
-    device_transport_ = std::move(transport_result.value());
-
-    // Now create I2C with transport
-    i2c_ =
-        std::make_unique<mcu::HostI2CController>("I2C 1", *device_transport_);
-
-    // Add I2C to receiver map (dispatcher holds reference, so this updates it)
-    receiver_map_storage_.emplace_back(std::ref(*i2c_));
-
-    // Wait for the condition rather than for a duration. On a PAIR socket a
-    // send succeeds only once a pipe to the peer exists, so a successful probe
-    // IS the readiness signal, and connect latency is absorbed by SNDTIMEO.
-    // The emulator loop skips anything that fails to decode, so this non-JSON
-    // probe is swallowed with no reply and needs no protocol support.
-    ASSERT_TRUE(device_transport_->Send("probe"));
-  }
-
-  void TearDown() override {
-    i2c_.reset();
-    device_transport_.reset();
-    dispatcher_.reset();
-
-    // Stop and join before closing anything the thread is using: terminating a
-    // context out from under a running loop throws ETERM inside it.
-    emulator_running_ = false;
-    if (emulator_thread_.joinable()) {
-      emulator_thread_.join();
+  // Emulator side of the I2C protocol: one loopback buffer per device address.
+  auto HandleRequest(std::string_view message)
+      -> std::optional<std::string> override {
+    auto request_result = mcu::Decode<mcu::I2CEmulatorRequest>(message);
+    if (!request_result) {
+      return std::nullopt;  // Skip malformed messages
     }
-    emulator_socket_.close();
-    emulator_context_.close();
+    const auto& request = *request_result;
+    mcu::I2CEmulatorResponse response{
+        .name = request.name,
+        .address = request.address,
+        .data = {},
+        .bytes_transferred = 0,
+        .status = common::Error::kOk,
+    };
 
-    // The transport never unlinks its own lock file -- doing so would reopen
-    // the race it closes -- so per-process test endpoints would otherwise pile
-    // up in /tmp, one pair per test case per run.
-    std::error_code error{};
-    for (const auto& endpoint :
-         {device_emulator_endpoint_, emulator_device_endpoint_}) {
-      const std::string path{
-          endpoint.substr(std::string_view{"ipc://"}.size())};
-      std::filesystem::remove(path, error);
-      std::filesystem::remove(path + ".lock", error);
-    }
-  }
-
-  void EmulatorLoop() {
-    // Simulate I2C device buffers (address -> data)
-    std::map<uint16_t, std::vector<std::byte>> i2c_device_buffers;
-
-    try {
-      zmq::socket_t& socket = emulator_socket_;
-
-      while (emulator_running_) {
-        std::array<zmq::pollitem_t, 1> items = {
-            {{.socket = static_cast<void*>(socket),
-              .fd = 0,
-              .events = ZMQ_POLLIN,
-              .revents = 0}}};
-
-        const int ret{
-            zmq::poll(items.data(), 1, std::chrono::milliseconds{50})};
-
-        if (ret == 0) {
-          continue;  // Timeout
-        }
-        if (ret <= 0) {
-          continue;
-        }
-
-        zmq::message_t message{};
-        if (!socket.recv(message, zmq::recv_flags::none)) {
-          continue;
-        }
-
-        const std::string_view message_str{
-            static_cast<const char*>(message.data()), message.size()};
-
-        auto request_result =
-            mcu::Decode<mcu::I2CEmulatorRequest>(std::string{message_str});
-        if (!request_result) {
-          continue;  // Skip malformed messages
-        }
-        const auto& request = *request_result;
-        mcu::I2CEmulatorResponse response{
-            .type = mcu::MessageType::kResponse,
-            .object = mcu::ObjectType::kI2C,
-            .name = request.name,
-            .address = request.address,
-            .data = {},
-            .bytes_transferred = 0,
-            .status = common::Error::kOk,
-        };
-
-        if (request.operation == mcu::OperationType::kSend) {
-          // Device sent data to I2C peripheral - store in device buffer
-          i2c_device_buffers[request.address] = request.data;
-          response.bytes_transferred = request.data.size();
-        } else if (request.operation == mcu::OperationType::kReceive) {
-          // Device wants to receive data from I2C peripheral
-          if (i2c_device_buffers.contains(request.address)) {
-            const auto& buffer = i2c_device_buffers[request.address];
-            const size_t bytes_to_send{std::min(request.size, buffer.size())};
-            response.data = std::vector<std::byte>(
-                buffer.begin(),
-                buffer.begin() + static_cast<std::ptrdiff_t>(bytes_to_send));
-            response.bytes_transferred = bytes_to_send;
-          }
-        }
-
-        const auto response_str = mcu::Encode(response);
-        socket.send(zmq::buffer(response_str), zmq::send_flags::none);
-      }
-    } catch (const zmq::error_t& e) {
-      // Socket closed during shutdown, expected behavior
-      if (e.num() != ETERM) {
-        throw;
+    if (request.operation == mcu::OperationType::kSend) {
+      device_buffers_[request.address] = request.data;
+      response.bytes_transferred = request.data.size();
+    } else if (request.operation == mcu::OperationType::kReceive) {
+      if (device_buffers_.contains(request.address)) {
+        const auto& buffer = device_buffers_[request.address];
+        const size_t bytes_to_send{std::min(request.size, buffer.size())};
+        response.data = std::vector<std::byte>(
+            buffer.begin(),
+            buffer.begin() + static_cast<std::ptrdiff_t>(bytes_to_send));
+        response.bytes_transferred = bytes_to_send;
       }
     }
+
+    return mcu::Encode(response);
   }
 
-  const std::string device_emulator_endpoint_{Endpoint("device_emulator")};
-  const std::string emulator_device_endpoint_{Endpoint("emulator_device")};
-  mcu::ReceiverMap receiver_map_storage_;
-  std::unique_ptr<mcu::Dispatcher> dispatcher_;
-  std::unique_ptr<mcu::ZmqTransport> device_transport_;
   std::unique_ptr<mcu::HostI2CController> i2c_;
-  zmq::context_t emulator_context_{1};
-  zmq::socket_t emulator_socket_{emulator_context_, zmq::socket_type::pair};
-  std::thread emulator_thread_;
-  std::atomic<bool> emulator_running_{false};
+
+ private:
+  // Touched only from the emulator thread.
+  std::map<uint16_t, std::vector<std::byte>> device_buffers_;
 };
 
 TEST_F(HostI2CTest, SendData) {
