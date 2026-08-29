@@ -16,14 +16,7 @@ namespace app {
 using std::chrono::operator""ms;
 
 auto AppMain(board::Board& board) -> std::expected<void, common::Error> {
-  UartEcho uart_echo{board};
-  if (!uart_echo.Init()) {
-    return std::unexpected(common::Error::kUnknown);
-  }
-  if (!uart_echo.Run()) {
-    return std::unexpected(common::Error::kUnknown);
-  }
-  return {};
+  return RunApp<UartEcho>(board);
 }
 
 auto UartEcho::Init() -> std::expected<void, common::Error> {
@@ -59,7 +52,6 @@ auto UartEcho::Run() -> std::expected<void, common::Error> {
     mcu::Delay(200ms);
     std::ignore = board_.UserLed2().Toggle();
   }
-  return {};
 }
 
 }  // namespace app
