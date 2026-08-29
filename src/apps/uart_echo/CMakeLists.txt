@@ -1,3 +1,2 @@
 add_executable(uart_echo uart_echo.cpp)
-target_compile_options(uart_echo PRIVATE ${COMMON_COMPILE_OPTIONS})
-target_link_libraries(uart_echo PRIVATE error sys mcu)
+target_link_libraries(uart_echo PRIVATE project_options app sys mcu error)

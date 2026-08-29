@@ -1,5 +1,8 @@
-add_library(app INTERFACE app.hpp)
-target_compile_options(app INTERFACE ${COMMON_COMPILE_OPTIONS})
+add_library(app INTERFACE)
+target_sources(app INTERFACE
+  FILE_SET HEADERS
+  BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+  FILES app.hpp)
 target_link_libraries(app INTERFACE board error)
 
 add_subdirectory(blinky)

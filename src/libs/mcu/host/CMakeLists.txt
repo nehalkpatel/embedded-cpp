@@ -1,15 +1,36 @@
 add_library(host_mcu host_i2c.cpp host_pin.cpp host_uart.cpp delay.cpp)
-target_compile_options(host_mcu PRIVATE ${COMMON_COMPILE_OPTIONS})
+target_sources(host_mcu PUBLIC
+  FILE_SET HEADERS
+  BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+  FILES host_i2c.hpp host_pin.hpp host_uart.hpp
+        dispatcher.hpp receiver.hpp
+        host_emulator_messages.hpp emulator_message_json_encoder.hpp)
+# nlohmann_json is PUBLIC because emulator_message_json_encoder.hpp, a public
+# header, includes <nlohmann/json.hpp>.
+target_link_libraries(host_mcu
+  PUBLIC mcu nlohmann_json::nlohmann_json
+  PRIVATE project_options host_transport)
 
 add_library(host_transport zmq_transport.cpp)
-target_compile_options(host_transport PRIVATE ${COMMON_COMPILE_OPTIONS})
+target_sources(host_transport PUBLIC
+  FILE_SET HEADERS
+  BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+  FILES zmq_transport.hpp transport.hpp)
+# cppzmq and logger are PUBLIC because zmq_transport.hpp includes their headers.
+target_link_libraries(host_transport
+  PUBLIC cppzmq logger error
+  PRIVATE project_options)
 
-target_link_libraries(host_transport PRIVATE cppzmq logger)
-target_link_libraries(host_mcu INTERFACE mcu PRIVATE host_transport nlohmann_json::nlohmann_json)
+# Coverage instrumentation for the libraries under test (the test executables
+# themselves are handled by add_host_unit_test below).
+if(CODE_COVERAGE)
+  target_code_coverage(host_mcu)
+  target_code_coverage(host_transport)
+endif()
 
-FetchContent_MakeAvailable(googletest)
-add_library(GTest::GTest INTERFACE IMPORTED)
-target_link_libraries(GTest::GTest INTERFACE gtest_main)
+if(NOT BUILD_TESTING)
+  return()
+endif()
 
 include(GoogleTest)
 
@@ -22,8 +43,7 @@ include(GoogleTest)
 # built from test_zmq_transport.cpp.
 function(add_host_unit_test name source)
   add_executable(${name} ${source})
-  target_compile_options(${name} PRIVATE ${COMMON_COMPILE_OPTIONS})
-  target_link_libraries(${name} PRIVATE GTest::GTest ${ARGN})
+  target_link_libraries(${name} PRIVATE project_options GTest::gtest_main ${ARGN})
   # TIMEOUT is a backstop, not a budget: unit tests here run in well under a
   # second, and a startup bug in the transport used to wedge the constructor
   # forever rather than fail. A hung test should fail CI, not stall it.
@@ -34,23 +54,13 @@ function(add_host_unit_test name source)
   endif()
 endfunction()
 
-# cppzmq is needed because zmq_transport.hpp includes zmq.hpp
-add_host_unit_test(test_host_transport test_zmq_transport.cpp host_transport cppzmq)
+add_host_unit_test(test_host_transport test_zmq_transport.cpp host_transport)
 # Separate binary from test_host_transport on purpose: these tests bound a
 # potential hang with a watchdog that hard-exits the process, which must not
 # take unrelated tests down with it.
 add_host_unit_test(test_host_transport_startup test_zmq_transport_startup.cpp
-  host_transport cppzmq)
-add_host_unit_test(test_messages test_messages.cpp nlohmann_json::nlohmann_json)
-add_host_unit_test(test_dispatcher test_dispatcher.cpp)
-add_host_unit_test(test_host_uart test_host_uart.cpp
-  host_mcu host_transport nlohmann_json::nlohmann_json cppzmq)
-add_host_unit_test(test_host_i2c test_host_i2c.cpp
-  host_mcu host_transport nlohmann_json::nlohmann_json cppzmq)
-
-# Coverage instrumentation for the libraries under test (the test executables
-# themselves are handled by add_host_unit_test above).
-if(CODE_COVERAGE)
-  target_code_coverage(host_mcu)
-  target_code_coverage(host_transport)
-endif()
+  host_transport)
+add_host_unit_test(test_messages test_messages.cpp host_mcu)
+add_host_unit_test(test_dispatcher test_dispatcher.cpp host_mcu)
+add_host_unit_test(test_host_uart test_host_uart.cpp host_mcu host_transport)
+add_host_unit_test(test_host_i2c test_host_i2c.cpp host_mcu host_transport)
