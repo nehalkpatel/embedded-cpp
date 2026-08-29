@@ -37,6 +37,7 @@
 #include "libs/common/logger.hpp"
 #include "libs/mcu/host/dispatcher.hpp"
 #include "libs/mcu/host/receiver.hpp"
+#include "libs/mcu/host/test_support.hpp"
 #include "libs/mcu/host/zmq_transport.hpp"
 
 namespace {
@@ -47,32 +48,7 @@ using CreateResult =
 constexpr auto kWatchdogBudget = std::chrono::seconds{10};
 constexpr auto kStartupTimeout = std::chrono::milliseconds{2000};
 
-// Collects log output so a test can assert on the reason for a failure, not
-// merely that one occurred. The mutex is load-bearing: the bind phase logs from
-// the server thread while the test thread is still inside the constructor.
-class RecordingLogger : public common::Logger {
- public:
-  auto Debug(std::string_view msg) -> void override { Record(msg); }
-  auto Info(std::string_view msg) -> void override { Record(msg); }
-  auto Warning(std::string_view msg) -> void override { Record(msg); }
-  auto Error(std::string_view msg) -> void override { Record(msg); }
-
-  auto Contains(std::string_view needle) const -> bool {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    return std::ranges::any_of(messages_, [needle](const std::string& msg) {
-      return msg.find(needle) != std::string::npos;
-    });
-  }
-
- private:
-  auto Record(std::string_view msg) -> void {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    messages_.emplace_back(msg);
-  }
-
-  mutable std::mutex mutex_;
-  std::vector<std::string> messages_;
-};
+using mcu::test::RecordingLogger;
 
 // Answers anything, so a test can prove a message reached a given transport's
 // dispatcher rather than some other process that stole the endpoint.
@@ -94,7 +70,7 @@ auto UniqueEndpoint(std::string_view suffix) -> std::string {
 }
 
 auto PathOf(const std::string& endpoint) -> std::string {
-  return endpoint.substr(std::string_view{"ipc://"}.size());
+  return mcu::test::EndpointPath(endpoint);
 }
 
 auto MakeConfig(common::Logger& logger) -> mcu::TransportConfig {
@@ -231,11 +207,8 @@ auto CountConcurrentBindWinners(const std::string& contested) -> int {
   }
   ::munmap(gate, sizeof(std::atomic<int>));
 
-  std::error_code error{};
   for (int i = 0; i < kContenders; ++i) {
-    const std::string own = PathOf(contested) + ".peer" + std::to_string(i);
-    std::filesystem::remove(own, error);
-    std::filesystem::remove(own + ".lock", error);
+    mcu::test::RemoveEndpointArtifacts(contested + ".peer" + std::to_string(i));
   }
   return winners;
 }
@@ -243,10 +216,8 @@ auto CountConcurrentBindWinners(const std::string& contested) -> int {
 class ZmqTransportStartupTest : public ::testing::Test {
  protected:
   void TearDown() override {
-    std::error_code error{};
     for (const auto& endpoint : cleanup_) {
-      std::filesystem::remove(PathOf(endpoint), error);
-      std::filesystem::remove(PathOf(endpoint) + ".lock", error);
+      mcu::test::RemoveEndpointArtifacts(endpoint);
     }
   }
 
