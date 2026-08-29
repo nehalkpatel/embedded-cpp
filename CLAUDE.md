@@ -39,11 +39,11 @@ cmake --build build/host --target format-check
 # Python type-check (not covered by format.sh - types are not formatting)
 cd py/host-emulator && uv run mypy src
 
-# Cross-compile for ARM - not yet functional. Presets and toolchain files exist,
-# but src/libs/mcu/CMakeLists.txt does add_subdirectory(${EMBEDDED_CPP_MCU}) and
-# only the `host` implementation exists, so configure fails on the missing
-# arm_cm4/ directory. Host build and emulation come first; hardware follows.
-cmake --workflow --preset=stm32f3_discovery-release
+# Cross-compile for ARM - not yet functional. Toolchain files and configure
+# presets exist, but only the `host` MCU/board implementations do; configuring
+# an ARM preset stops with a message saying the backend is not implemented.
+# Host build and emulation come first; hardware follows.
+cmake --preset=stm32f3_discovery
 
 # Docker alternative
 docker compose run --rm host-debug

@@ -46,7 +46,7 @@ Application (apps/)  →  Board (libs/board/)  →  MCU (libs/mcu/)  →  Platfo
 
 - **apps/**: Example applications (blinky, uart_echo, i2c_demo)
 - **libs/mcu/**: Hardware abstractions (Pin, UART, I2C, Delay) with host emulation
-- **libs/board/**: Board-specific implementations (host, STM32F3, STM32F7, nRF52)
+- **libs/board/**: Board-specific implementations (host today; hardware boards planned)
 - **py/host-emulator/**: Python hardware simulator for desktop testing
 
 ## Build Commands
@@ -57,9 +57,10 @@ cmake --workflow --preset=host-debug
 cmake --workflow --preset=host-release
 
 # ARM targets - not yet functional (see Implementation Status below).
-# The presets and toolchain files are in place, but configuring fails until
-# the MCU layer lands in src/libs/mcu/arm_cm4/ (and arm_cm7/ for the F7).
-cmake --workflow --preset=stm32f3_discovery-release
+# Toolchain files and configure presets are in place, but configuring stops
+# with a clear message until the MCU layer lands in src/libs/mcu/arm_cm4/
+# (and arm_cm7/ for Cortex-M7 parts).
+cmake --preset=stm32f3_discovery
 ```
 
 ## Running Tests
@@ -94,7 +95,7 @@ cd py/host-emulator && uv run python -m host_emulator.emulator
 | Compilers | Clang 18 (host), ARM GCC (embedded) |
 | Testing | Google Test, pytest |
 | IPC | ZeroMQ + JSON |
-| Targets | STM32F3, STM32F7, nRF52832 |
+| Targets | Host emulation (hardware targets planned) |
 
 ## Code Quality
 
@@ -113,8 +114,8 @@ cd py/host-emulator && uv run python -m host_emulator.emulator
 | Python integration tests | ✅ Working |
 | Docker/DevContainer | ✅ Working |
 | CI/CD | ✅ Working |
-| STM32F3/F7 | 🚧 Partial |
-| nRF52832 | ⚠️ Placeholder |
+| ARM cross-compile toolchain | 🚧 Toolchain/presets only |
+| Hardware boards (STM32, nRF52) | 📋 Planned |
 
 ## Resources
 
