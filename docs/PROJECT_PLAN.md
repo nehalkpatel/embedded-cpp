@@ -69,6 +69,9 @@ Explore modern C++ (C++23) and software engineering practices in embedded system
 - [ ] Add SPI abstraction
 - [ ] Add PWM abstraction
 - [ ] Add ADC abstraction
+- [ ] Add async (interrupt- and DMA-driven) transfer modes to the UART and
+      I2C interfaces, once a hardware platform exists that can implement them
+      with genuinely different behavior than the blocking paths
 - [ ] Upload code coverage reports to GitHub pages
 - [ ] Increase test coverage for error paths
 

@@ -33,10 +33,6 @@ auto HostUart::Send(std::span<const std::byte> data)
     return std::unexpected(common::Error::kInvalidState);
   }
 
-  if (busy_) {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
   const UartEmulatorRequest request{
       .name = name_,
       .operation = OperationType::kSend,
@@ -50,10 +46,6 @@ auto HostUart::Receive(std::span<std::byte> buffer, uint32_t timeout_ms)
     -> std::expected<size_t, common::Error> {
   if (!initialized_) {
     return std::unexpected(common::Error::kInvalidState);
-  }
-
-  if (busy_) {
-    return std::unexpected(common::Error::kInvalidOperation);
   }
 
   const UartEmulatorRequest request{
@@ -72,91 +64,6 @@ auto HostUart::Receive(std::span<std::byte> buffer, uint32_t timeout_ms)
       });
 }
 
-auto HostUart::SendAsync(std::span<const std::byte> data,
-                         std::function<void(std::expected<void, common::Error>)>
-                             callback) -> std::expected<void, common::Error> {
-  if (!initialized_) {
-    return std::unexpected(common::Error::kInvalidState);
-  }
-
-  if (busy_) {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  busy_ = true;
-  send_callback_ = std::move(callback);
-
-  const UartEmulatorRequest request{
-      .name = name_,
-      .operation = OperationType::kSend,
-      .data = std::vector<std::byte>(data.begin(), data.end()),
-  };
-
-  auto result = transport_.Send(Encode(request));
-  if (!result) {
-    busy_ = false;
-    send_callback_ = {};
-    return std::unexpected(result.error());
-  }
-
-  // Response will come asynchronously via Receive() method
-  return {};
-}
-
-auto HostUart::ReceiveAsync(
-    std::span<std::byte> buffer,
-    std::function<void(std::expected<size_t, common::Error>)> callback)
-    -> std::expected<void, common::Error> {
-  if (!initialized_) {
-    return std::unexpected(common::Error::kInvalidState);
-  }
-
-  if (busy_) {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  busy_ = true;
-  receive_callback_ = std::move(callback);
-  receive_buffer_.resize(buffer.size());
-
-  const UartEmulatorRequest request{
-      .name = name_,
-      .operation = OperationType::kReceive,
-      .data = {},
-      .size = buffer.size(),
-  };
-
-  auto result = transport_.Send(Encode(request));
-  if (!result) {
-    busy_ = false;
-    receive_callback_ = {};
-    receive_buffer_.clear();
-    return std::unexpected(result.error());
-  }
-
-  // Response will come asynchronously via Receive() method
-  // The buffer span will be filled when response arrives
-  return {};
-}
-
-auto HostUart::IsBusy() const -> bool { return busy_; }
-
-auto HostUart::Available() const -> size_t {
-  // For host implementation, we don't maintain a receive buffer
-  // Always return 0 (data is retrieved on-demand from emulator)
-  return 0;
-}
-
-auto HostUart::Flush() -> std::expected<void, common::Error> {
-  if (!initialized_) {
-    return std::unexpected(common::Error::kInvalidState);
-  }
-
-  // For host implementation, no buffering occurs
-  // Nothing to flush
-  return {};
-}
-
 auto HostUart::SetRxHandler(std::function<void(const std::byte*, size_t)>
                                 handler) -> std::expected<void, common::Error> {
   if (!initialized_) {
@@ -167,94 +74,40 @@ auto HostUart::SetRxHandler(std::function<void(const std::byte*, size_t)>
   return {};
 }
 
+// Messages arriving via the dispatcher are unsolicited requests from the
+// emulator pushing data at the device; replies to this UART's own blocking
+// operations return through Transport::Receive instead and never come here.
 auto HostUart::Receive(std::string_view message)
     -> std::expected<std::string, common::Error> {
-  // First, try to decode as a request (unsolicited data)
   auto request_result = Decode<UartEmulatorRequest>(message);
-
-  // Handle unsolicited incoming data from emulator (Request type)
-  if (request_result && request_result->type == MessageType::kRequest) {
-    const auto& request = *request_result;
-
-    // Verify this message is for us
-    if (request.name != name_) {
-      return std::unexpected(common::Error::kInvalidArgument);
-    }
-
-    // Only handle "Receive" operation (emulator pushing data to device)
-    if (request.operation != OperationType::kReceive) {
-      return std::unexpected(common::Error::kInvalidOperation);
-    }
-
-    // Invoke RxHandler if registered
-    if (rx_handler_ && !request.data.empty()) {
-      rx_handler_(request.data.data(), request.data.size());
-    }
-
-    // Send acknowledgment response
-    const UartEmulatorResponse ack_response{
-        .name = name_,
-        .data = {},
-        .bytes_transferred = request.data.size(),
-        .status = common::Error::kOk,
-    };
-
-    return Encode(ack_response);
-  }
-
-  // Handle async operation responses
-  auto response_result = Decode<UartEmulatorResponse>(message);
-  if (!response_result) {
+  if (!request_result || request_result->type != MessageType::kRequest) {
     return std::unexpected(common::Error::kInvalidArgument);
   }
-  const auto& response = *response_result;
+  const auto& request = *request_result;
 
   // Verify this message is for us
-  if (response.name != name_) {
+  if (request.name != name_) {
     return std::unexpected(common::Error::kInvalidArgument);
   }
 
-  if (!busy_) {
-    return std::unexpected(common::Error::kInvalidState);
+  // Only handle "Receive" operation (emulator pushing data to device)
+  if (request.operation != OperationType::kReceive) {
+    return std::unexpected(common::Error::kInvalidOperation);
   }
 
-  // Handle async send response
-  if (send_callback_) {
-    auto callback = std::move(send_callback_);
-    send_callback_ = {};
-    busy_ = false;
-
-    if (response.status != common::Error::kOk) {
-      callback(std::unexpected(response.status));
-    } else {
-      callback({});
-    }
-    return std::string{};  // Message consumed
+  // Invoke RxHandler if registered
+  if (rx_handler_ && !request.data.empty()) {
+    rx_handler_(request.data.data(), request.data.size());
   }
 
-  // Handle async receive response
-  if (receive_callback_) {
-    auto callback = std::move(receive_callback_);
-    receive_callback_ = {};
-    busy_ = false;
-
-    if (response.status != common::Error::kOk) {
-      receive_buffer_.clear();
-      callback(std::unexpected(response.status));
-    } else {
-      // Copy received data to buffer (stored for the callback)
-      const size_t bytes_received{response.bytes_transferred};
-      receive_buffer_.resize(bytes_received);
-      std::copy_n(response.data.begin(), bytes_received,
-                  receive_buffer_.begin());
-      callback(bytes_received);
-    }
-    return std::string{};  // Message consumed
-  }
-
-  // No callback registered - unexpected state
-  busy_ = false;
-  return std::unexpected(common::Error::kInvalidState);
+  // Send acknowledgment response
+  const UartEmulatorResponse ack_response{
+      .name = name_,
+      .data = {},
+      .bytes_transferred = request.data.size(),
+      .status = common::Error::kOk,
+  };
+  return Encode(ack_response);
 }
 
 }  // namespace mcu
