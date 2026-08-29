@@ -22,10 +22,6 @@
 
 class HostI2CTest : public ::testing::Test {
  protected:
-  static constexpr auto IsJson(std::string_view message) -> bool {
-    return message.starts_with("{") && message.ends_with("}");
-  }
-
   // Per-process endpoints. gtest_discover_tests gives every case its own
   // process, so a fixed path made `ctest -j` cases contend for one endpoint --
   // silently corrupting each other before EndpointLock, loudly after.
@@ -60,7 +56,7 @@ class HostI2CTest : public ::testing::Test {
         std::make_unique<mcu::HostI2CController>("I2C 1", *device_transport_);
 
     // Add I2C to receiver map (dispatcher holds reference, so this updates it)
-    receiver_map_storage_.emplace_back(IsJson, std::ref(*i2c_));
+    receiver_map_storage_.emplace_back(std::ref(*i2c_));
 
     // Wait for the condition rather than for a duration. On a PAIR socket a
     // send succeeds only once a pipe to the peer exists, so a successful probe

@@ -299,8 +299,7 @@ TEST_F(ZmqTransportStartupTest, CreateFailsFastWhenBindEndpointIsUnbindable) {
 // the only way to keep the first owner's endpoint intact.
 TEST_F(ZmqTransportStartupTest, CreateRefusesToStealEndpointFromLiveOwner) {
   EchoReceiver echo;
-  const mcu::ReceiverMap receivers{
-      {[](std::string_view) { return true; }, std::ref(echo)}};
+  const mcu::ReceiverMap receivers{std::ref(echo)};
   mcu::Dispatcher owner_dispatcher{receivers};
   auto owner_config = MakeConfig(logger_);
 
