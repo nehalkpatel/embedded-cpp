@@ -80,7 +80,7 @@ ctest --preset=host-debug -R host_emulator_test
 
 ```bash
 # Terminal 1: Start emulator
-cd py/host-emulator && uv run python -m host_emulator.emulator
+cd py/host-emulator && uv run host-emulator
 
 # Terminal 2: Run application
 ./build/host/bin/Debug/blinky
