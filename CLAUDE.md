@@ -46,7 +46,7 @@ cd py/host-emulator && uv run mypy
 cmake --preset=stm32f3_discovery
 
 # Docker alternative
-docker compose run --rm host-debug
+docker compose run --rm embedded-cpp-dev cmake --workflow --preset host-debug
 ```
 
 ## Architecture

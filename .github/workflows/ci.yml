@@ -79,14 +79,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Run as the runner's own uid/gid so everything written into the mounted
+      # checkout is owned by the runner: no root-then-chown repair needed. The
+      # CI compose overlay mounts the checkout where a non-1000 uid can reach
+      # it and gives uv a writable HOME (see docker-compose.ci.yml).
       - name: Run host-debug workflow
-        run: docker compose run --rm --user root host-debug
+        run: >
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm
+          --user "$(id -u):$(id -g)" embedded-cpp-dev
+          cmake --workflow --preset host-debug
 
       - name: Generate coverage reports
-        run: |
-          docker compose run --rm --user root embedded-cpp-dev \
-            cmake --build build/host --config Debug --target ccov-all
-          sudo chown -R runner:docker build/host/ccov
+        run: >
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm
+          --user "$(id -u):$(id -g)" embedded-cpp-dev
+          cmake --build build/host --config Debug --target ccov-all
 
       - name: Upload test results
         if: always()

@@ -23,7 +23,7 @@ This project explores:
 ### Docker Compose
 
 ```bash
-docker compose run --rm host-debug
+docker compose run --rm embedded-cpp-dev cmake --workflow --preset host-debug
 ```
 
 ### Local Build
