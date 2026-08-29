@@ -7,6 +7,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# One bin/ directory per build tree (with per-config subdirectories under the
+# multi-config generator). A build-layout decision, so it lives here rather
+# than in the presets.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+
 # Keep a compile_commands.json symlink at the repo root so clangd and IDEs find
 # the database of whichever build tree was configured last. The link is
 # regenerated on every configure and is gitignored.
@@ -62,12 +67,6 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
-  stm32cubef7
-  GIT_REPOSITORY https://github.com/STMicroelectronics/STM32CubeF7
-  GIT_TAG v1.17.1
-)
-
-FetchContent_Declare(
   CmakeScripts
   GIT_REPOSITORY https://github.com/StableCoder/cmake-scripts.git
   GIT_TAG 25.08
@@ -113,10 +112,6 @@ if(CMAKE_PRESET STREQUAL "host")
   FetchContent_MakeAvailable(json)
   include(CTest)
   enable_testing()
-endif()
-
-if(CMAKE_PRESET STREQUAL "arm-cm7")
-  FetchContent_MakeAvailable(stm32cubef7)
 endif()
 
 # `format` / `format-check` targets, and the pre-commit hook. Included for every
