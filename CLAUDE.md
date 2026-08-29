@@ -102,6 +102,7 @@ class MyApp {
 
 - **C++ unit tests**: Colocated with code (`src/libs/mcu/host/test_*.cpp`), use Google Test
 - **Python integration tests**: `py/host-emulator/tests/`, use pytest with fixtures that manage emulator/app lifecycle. CTest builds a uv venv under `build/host/host_emulator_venv` and runs them as the `host_emulator_test` target
+- **System tests**: none yet — end-to-end coverage lives in the Python integration tests. Add a dedicated harness only when a test doesn't fit the emulator harness
 - **clang-tidy**: Runs automatically during build, no separate step needed
 - **Python tooling**: uv + ruff + strict mypy, all configured in `py/host-emulator/pyproject.toml`
 

@@ -108,9 +108,7 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
         }
         // If the MCU is polling the input, then it should NOT be configured
         // for interrupts. Therefore, we should not invoke the handler.
-        // const PinState prev_state{state_};
         state_ = resp->state;
-        // CheckAndInvokeHandler(prev_state, resp.state);
         return resp->state;
       });
 }

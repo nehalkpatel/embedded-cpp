@@ -91,8 +91,6 @@ FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json GIT_TA
 
 FetchContent_MakeAvailable(etl)
 
-add_subdirectory(external)
-
 include(tools)
 include(code-coverage)
 
@@ -100,9 +98,9 @@ include(code-coverage)
 if(CODE_COVERAGE)
   # Create 'ccov-all' target and set global exclusions
   add_code_coverage_all_targets(
-    EXCLUDE "test_*.cpp" "*/test/*" "*/_deps/*" "*/googletest/*" "*/gtest/*" "*/external/*"
-    LLVM_EXCLUDE ".*/test_.*\\.cpp" ".*/test/.*" ".*/_deps/.*" ".*/googletest/.*" ".*/gtest/.*" ".*/external/.*"
-    LCOV_EXCLUDE "*/test_*.cpp" "*/test/*" "*/_deps/*" "*/googletest/*" "*/gtest/*" "*/external/*"
+    EXCLUDE "test_*.cpp" "*/test/*" "*/_deps/*" "*/googletest/*" "*/gtest/*"
+    LLVM_EXCLUDE ".*/test_.*\\.cpp" ".*/test/.*" ".*/_deps/.*" ".*/googletest/.*" ".*/gtest/.*"
+    LCOV_EXCLUDE "*/test_*.cpp" "*/test/*" "*/_deps/*" "*/googletest/*" "*/gtest/*"
   )
 endif()
 
@@ -128,6 +126,5 @@ include("${PROJECT_SOURCE_DIR}/cmake/format.cmake")
 
 clang_tidy("-header-filter=${PROJECT_SOURCE_DIR}/src/.*")
 add_subdirectory(src)
-add_subdirectory(test)
 reset_clang_tidy()
-add_subdirectory(py)   # No clang-tidy for python
+add_subdirectory(py/host-emulator)   # No clang-tidy for python
