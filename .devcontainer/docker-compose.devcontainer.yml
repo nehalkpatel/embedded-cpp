@@ -1,8 +1,9 @@
+# Same image tag as docker-compose.yml on purpose: the devcontainer build (with
+# dev tools) then serves `docker compose run` too, instead of two tags built
+# from one Dockerfile that shadow and rebuild over each other.
 services:
   embedded-cpp-dev:
-    image: embedded-cpp-docker:devcontainer
     user: "1000:1000"
     build:
       args:
         INSTALL_DEV_TOOLS: "true"
-

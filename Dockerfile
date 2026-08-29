@@ -36,11 +36,17 @@ RUN apt-get update && apt-get --no-install-recommends -y full-upgrade && apt-get
     less \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up clang alternatives to use clang-18 as default
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100 && \
-    update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-18 100 && \
-    update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100
+# The LLVM major version this project builds and formats with. The other
+# places that must agree read it from here in spirit: tools/format.sh defaults
+# to the same value (override with CLANG_FORMAT_MAJOR), and ci.yml installs
+# clang-format-<this> on the runner for the fast-fail format check.
+ARG LLVM_VERSION=18
+
+# Set up clang alternatives so the unversioned names resolve to LLVM_VERSION
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_VERSION} 100 && \
+    update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-${LLVM_VERSION} 100 && \
+    update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-${LLVM_VERSION} 100
 
 # Install uv for fast Python package management (to /usr/local/bin for all users)
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh

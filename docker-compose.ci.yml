@@ -1,0 +1,19 @@
+# CI overlay over docker-compose.yml -- the batch counterpart of the
+# devcontainer's overlay in .devcontainer/: one image, two uses.
+#
+# The devcontainer use runs as the image's vscode user (uid 1000) with the repo
+# at /home/vscode/workspace. CI runs as the runner's own uid so that everything
+# written into the checkout stays runner-owned -- and that uid cannot traverse
+# /home/vscode, which the devcontainer base image creates with mode 750. So CI
+# mounts the checkout at a neutral path instead, with a writable HOME for uv's
+# cache. `!override` replaces the base mount rather than adding a second one.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm \
+#     --user "$(id -u):$(id -g)" embedded-cpp-dev cmake --workflow --preset host-debug
+services:
+  embedded-cpp-dev:
+    volumes: !override
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      HOME: /tmp

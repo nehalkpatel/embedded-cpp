@@ -19,11 +19,12 @@ set -uo pipefail
 readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly PY_DIR="${REPO_ROOT}/py/host-emulator"
 
-# Pinned to match .github/workflows/ci.yml and the dev container, which aliases
-# clang-format -> clang-format-18. Versions disagree about formatting, so an
-# unpinned binary produces exactly the local/CI split this script exists to
-# prevent.
-readonly REQUIRED_CLANG_FORMAT_MAJOR=18
+# Pinned to match the dev container's LLVM_VERSION (Dockerfile) and the runner
+# install in .github/workflows/ci.yml. Versions disagree about formatting, so
+# an unpinned binary produces exactly the local/CI split this script exists to
+# prevent. Override with CLANG_FORMAT_MAJOR if your toolchain genuinely
+# differs.
+readonly REQUIRED_CLANG_FORMAT_MAJOR="${CLANG_FORMAT_MAJOR:-18}"
 
 red()   { printf '\033[31m%s\033[0m\n' "$*"; }
 green() { printf '\033[32m%s\033[0m\n' "$*"; }
