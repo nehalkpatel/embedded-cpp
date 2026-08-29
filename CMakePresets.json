@@ -12,9 +12,6 @@
       "description": "Default build using Ninja",
       "generator": "Ninja Multi-Config",
       "binaryDir": "${sourceDir}/build/${presetName}",
-      "cacheVariables": {
-        "CMAKE_PRESET": "${presetName}"
-      },
       "hidden": true
     },
     {

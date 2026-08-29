@@ -39,3 +39,9 @@ set(CMAKE_RANLIB        ${TOOLCHAIN_PREFIX}llvm-ranlib${TOOLCHAIN_SUFFIX})
 # Consumed by the code-coverage module (StableCoder cmake-scripts)
 set(LLVM_COV_PATH       ${TOOLCHAIN_PREFIX}llvm-cov${TOOLCHAIN_SUFFIX})
 set(LLVM_PROFDATA_PATH  ${TOOLCHAIN_PREFIX}llvm-profdata${TOOLCHAIN_SUFFIX})
+
+# libc++ everywhere, including FetchContent-built dependencies: mixing libc++
+# and libstdc++ objects in one link is an ODR/ABI error. A global *_INIT flag
+# in the toolchain is the supported way to say this (project targets must not
+# munge CMAKE_CXX_FLAGS, which belongs to the developer).
+set(CMAKE_CXX_FLAGS_INIT "-stdlib=libc++")

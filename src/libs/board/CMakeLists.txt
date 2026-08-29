@@ -1,6 +1,8 @@
-add_library(board INTERFACE board.hpp)
-target_compile_options(board INTERFACE ${COMMON_COMPILE_OPTIONS})
-set_target_properties(board PROPERTIES LINKER_LANGUAGE CXX)
+add_library(board INTERFACE)
+target_sources(board INTERFACE
+  FILE_SET HEADERS
+  BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+  FILES board.hpp)
 target_link_libraries(board INTERFACE mcu error)
 
 if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${EMBEDDED_CPP_BOARD}")

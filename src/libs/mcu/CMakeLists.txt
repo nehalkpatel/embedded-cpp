@@ -1,5 +1,8 @@
-add_library(mcu INTERFACE pin.hpp uart.hpp i2c.hpp delay.hpp)
-target_compile_options(mcu INTERFACE ${COMMON_COMPILE_OPTIONS})
+add_library(mcu INTERFACE)
+target_sources(mcu INTERFACE
+  FILE_SET HEADERS
+  BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+  FILES pin.hpp uart.hpp i2c.hpp delay.hpp)
 target_link_libraries(mcu INTERFACE error)
 
 if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${EMBEDDED_CPP_MCU}")
