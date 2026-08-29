@@ -38,28 +38,12 @@ auto HostUart::Send(std::span<const std::byte> data)
   }
 
   const UartEmulatorRequest request{
-      .type = MessageType::kRequest,
-      .object = ObjectType::kUart,
       .name = name_,
       .operation = OperationType::kSend,
       .data = std::vector<std::byte>(data.begin(), data.end()),
-      .size = 0,
-      .timeout_ms = 0,
   };
-
-  return transport_.Send(Encode(request))
-      .and_then([this]() { return transport_.Receive(); })
-      .and_then([](const std::string& response_str)
-                    -> std::expected<void, common::Error> {
-        auto response = Decode<UartEmulatorResponse>(response_str);
-        if (!response) {
-          return std::unexpected(response.error());
-        }
-        if (response->status != common::Error::kOk) {
-          return std::unexpected(response->status);
-        }
-        return {};
-      });
+  return Transact<UartEmulatorResponse>(transport_, request)
+      .transform([](const UartEmulatorResponse&) {});
 }
 
 auto HostUart::Receive(std::span<std::byte> buffer, uint32_t timeout_ms)
@@ -73,31 +57,17 @@ auto HostUart::Receive(std::span<std::byte> buffer, uint32_t timeout_ms)
   }
 
   const UartEmulatorRequest request{
-      .type = MessageType::kRequest,
-      .object = ObjectType::kUart,
       .name = name_,
       .operation = OperationType::kReceive,
       .data = {},
       .size = buffer.size(),
       .timeout_ms = timeout_ms,
   };
-
-  return transport_.Send(Encode(request))
-      .and_then([this]() { return transport_.Receive(); })
-      .and_then([](const std::string& response_str) {
-        return Decode<UartEmulatorResponse>(response_str);
-      })
-      .and_then([buffer](const UartEmulatorResponse& response)
-                    -> std::expected<size_t, common::Error> {
-        if (response.status != common::Error::kOk) {
-          return std::unexpected(response.status);
-        }
-
-        // Copy received data to buffer
+  return Transact<UartEmulatorResponse>(transport_, request)
+      .transform([buffer](const UartEmulatorResponse& response) {
         const size_t bytes_to_copy{
             std::min(buffer.size(), response.data.size())};
         std::copy_n(response.data.begin(), bytes_to_copy, buffer.begin());
-
         return bytes_to_copy;
       });
 }
@@ -117,13 +87,9 @@ auto HostUart::SendAsync(std::span<const std::byte> data,
   send_callback_ = std::move(callback);
 
   const UartEmulatorRequest request{
-      .type = MessageType::kRequest,
-      .object = ObjectType::kUart,
       .name = name_,
       .operation = OperationType::kSend,
       .data = std::vector<std::byte>(data.begin(), data.end()),
-      .size = 0,
-      .timeout_ms = 0,
   };
 
   auto result = transport_.Send(Encode(request));
@@ -154,13 +120,10 @@ auto HostUart::ReceiveAsync(
   receive_buffer_.resize(buffer.size());
 
   const UartEmulatorRequest request{
-      .type = MessageType::kRequest,
-      .object = ObjectType::kUart,
       .name = name_,
       .operation = OperationType::kReceive,
       .data = {},
       .size = buffer.size(),
-      .timeout_ms = 0,
   };
 
   auto result = transport_.Send(Encode(request));
@@ -204,7 +167,7 @@ auto HostUart::SetRxHandler(std::function<void(const std::byte*, size_t)>
   return {};
 }
 
-auto HostUart::Receive(const std::string_view& message)
+auto HostUart::Receive(std::string_view message)
     -> std::expected<std::string, common::Error> {
   // First, try to decode as a request (unsolicited data)
   auto request_result = Decode<UartEmulatorRequest>(message);
@@ -230,8 +193,6 @@ auto HostUart::Receive(const std::string_view& message)
 
     // Send acknowledgment response
     const UartEmulatorResponse ack_response{
-        .type = MessageType::kResponse,
-        .object = ObjectType::kUart,
         .name = name_,
         .data = {},
         .bytes_transferred = request.data.size(),

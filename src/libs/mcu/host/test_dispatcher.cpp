@@ -10,21 +10,21 @@
 namespace mcu {
 namespace {
 
-constexpr auto AcceptAll(const std::string_view& message) -> bool {
+constexpr auto AcceptAll(std::string_view message) -> bool {
   static_cast<void>(message);
   return true;
 }
 
-constexpr auto RejectAll(const std::string_view& message) -> bool {
+constexpr auto RejectAll(std::string_view message) -> bool {
   static_cast<void>(message);
   return false;
 }
 
-constexpr auto IsHello(const std::string_view& message) -> bool {
+constexpr auto IsHello(std::string_view message) -> bool {
   return message == "Hello";
 }
 
-constexpr auto IsWorld(const std::string_view& message) -> bool {
+constexpr auto IsWorld(std::string_view message) -> bool {
   return message == "World";
 }
 
@@ -36,7 +36,7 @@ class DispatcherTest : public ::testing::Test {
 
   class SimpleReceiver : public Receiver {
    public:
-    auto Receive(const std::string_view& message)
+    auto Receive(std::string_view message)
         -> std::expected<std::string, common::Error> override {
       received_message = message;
       return {"Received message"};

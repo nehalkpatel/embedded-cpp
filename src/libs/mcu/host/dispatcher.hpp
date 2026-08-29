@@ -12,7 +12,7 @@
 namespace mcu {
 
 using ReceiverMap =
-    std::vector<std::pair<std::function<bool(const std::string_view& message)>,
+    std::vector<std::pair<std::function<bool(std::string_view message)>,
                           std::reference_wrapper<Receiver>>>;
 
 class Dispatcher {
@@ -25,7 +25,7 @@ class Dispatcher {
   auto operator=(const Dispatcher&) -> Dispatcher& = delete;
   auto operator=(Dispatcher&&) -> Dispatcher& = delete;
 
-  [[nodiscard]] auto Dispatch(const std::string_view& message) const
+  [[nodiscard]] auto Dispatch(std::string_view message) const
       -> std::expected<std::string, common::Error> {
     for (const auto& [predicate, receiver_ref] : receivers_) {
       if (predicate(message)) {

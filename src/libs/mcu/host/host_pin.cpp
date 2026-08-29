@@ -17,30 +17,17 @@ auto HostPin::Configure(PinDirection direction)
   return {};
 }
 auto HostPin::SetHigh() -> std::expected<void, common::Error> {
-  if (direction_ == PinDirection::kInput) {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
   return SendState(PinState::kHigh);
 }
 auto HostPin::SetLow() -> std::expected<void, common::Error> {
-  if (direction_ == PinDirection::kInput) {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
   return SendState(PinState::kLow);
 }
 
 auto HostPin::Toggle() -> std::expected<void, common::Error> {
-  if (direction_ == PinDirection::kInput) {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-  auto current_state{GetState()};
-  if (!current_state) {
-    return std::unexpected(current_state.error());
-  }
-  if (current_state.value() == PinState::kHigh) {
-    return SendState(PinState::kLow);
-  }
-  return SendState(PinState::kHigh);
+  return GetState().and_then([this](PinState state) {
+    return SendState(state == PinState::kHigh ? PinState::kLow
+                                              : PinState::kHigh);
+  });
 }
 
 auto HostPin::Get() -> std::expected<PinState, common::Error> {
@@ -56,25 +43,18 @@ auto HostPin::SetInterruptHandler(std::function<void()> handler,
 }
 
 auto HostPin::SendState(PinState state) -> std::expected<void, common::Error> {
+  // Driving the pin only makes sense for an output; the same guard covers
+  // SetHigh, SetLow, and Toggle, which all funnel through here.
+  if (direction_ == PinDirection::kInput) {
+    return std::unexpected(common::Error::kInvalidOperation);
+  }
   const PinEmulatorRequest req = {
       .name = name_,
       .operation = OperationType::kSet,
       .state = state,
   };
-
-  return transport_.Send(Encode(req))
-      .and_then([this]() { return transport_.Receive(); })
-      .and_then([](const std::string& rx_bytes) {
-        return Decode<PinEmulatorResponse>(rx_bytes);
-      })
-      .and_then([this, state](const PinEmulatorResponse& resp)
-                    -> std::expected<void, common::Error> {
-        if (resp.status != common::Error::kOk) {
-          return std::unexpected(resp.status);
-        }
-        state_ = state;
-        return {};
-      });
+  return Transact<PinEmulatorResponse>(transport_, req)
+      .transform([this, state](const PinEmulatorResponse&) { state_ = state; });
 }
 
 auto HostPin::CheckAndInvokeHandler(PinState prev_state,
@@ -97,25 +77,18 @@ auto HostPin::GetState() -> std::expected<PinState, common::Error> {
       .operation = OperationType::kGet,
       .state = PinState::kHighZ,
   };
-
-  return transport_.Send(Encode(req))
-      .and_then([this]() { return transport_.Receive(); })
-      .and_then([this](const std::string& rx_bytes)
-                    -> std::expected<PinState, common::Error> {
-        auto resp = Decode<PinEmulatorResponse>(rx_bytes);
-        if (!resp) {
-          return std::unexpected(resp.error());
-        }
-        // If the MCU is polling the input, then it should NOT be configured
-        // for interrupts. Therefore, we should not invoke the handler.
-        state_ = resp->state;
-        return resp->state;
+  // Polling deliberately bypasses the interrupt handler: if the MCU is
+  // polling the input, it should not also be configured for interrupts.
+  return Transact<PinEmulatorResponse>(transport_, req)
+      .transform([this](const PinEmulatorResponse& resp) {
+        state_ = resp.state;
+        return resp.state;
       });
 }
 
 // Messages received from the external application will always be
 // requests. HostPin will only send responses.
-auto HostPin::Receive(const std::string_view& message)
+auto HostPin::Receive(std::string_view message)
     -> std::expected<std::string, common::Error> {
   auto req = Decode<PinEmulatorRequest>(message);
   if (!req) {
