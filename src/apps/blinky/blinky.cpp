@@ -14,30 +14,19 @@ namespace app {
 using std::chrono::operator""ms;
 
 auto AppMain(board::Board& board) -> std::expected<void, common::Error> {
-  Blinky blinky{board};
-  if (!blinky.Init()) {
-    return std::unexpected(common::Error::kUnknown);
-  }
-  if (!blinky.Run()) {
-    return std::unexpected(common::Error::kUnknown);
-  }
-  return {};
+  return RunApp<Blinky>(board);
 }
 
 auto Blinky::Run() -> std::expected<void, common::Error> {
-  auto status{board_.UserLed1().SetHigh()};
-
-  while (true) {
-    status = status
-                 .and_then([this]() {
-                   mcu::Delay(200ms);
-                   return board_.UserLed1().Toggle();
-                 })
-                 .or_else([](auto error) -> std::expected<void, common::Error> {
-                   return std::unexpected(error);
-                 });
+  if (auto status = board_.UserLed1().SetHigh(); !status) {
+    return status;
   }
-  return {};
+  while (true) {
+    mcu::Delay(200ms);
+    if (auto status = board_.UserLed1().Toggle(); !status) {
+      return status;
+    }
+  }
 }
 
 auto Blinky::Init() -> std::expected<void, common::Error> {

@@ -17,14 +17,7 @@ namespace app {
 using std::chrono::operator""ms;
 
 auto AppMain(board::Board& board) -> std::expected<void, common::Error> {
-  I2CDemo i2c_demo{board};
-  if (!i2c_demo.Init()) {
-    return std::unexpected(common::Error::kUnknown);
-  }
-  if (!i2c_demo.Run()) {
-    return std::unexpected(common::Error::kUnknown);
-  }
-  return {};
+  return RunApp<I2CDemo>(board);
 }
 
 auto I2CDemo::Init() -> std::expected<void, common::Error> {
@@ -86,8 +79,6 @@ auto I2CDemo::Run() -> std::expected<void, common::Error> {
     // Delay before next iteration
     mcu::Delay(200ms);
   }
-
-  return {};
 }
 
 }  // namespace app
