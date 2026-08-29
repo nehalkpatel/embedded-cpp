@@ -7,6 +7,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Keep a compile_commands.json symlink at the repo root so clangd and IDEs find
+# the database of whichever build tree was configured last. The link is
+# regenerated on every configure and is gitignored.
+file(CREATE_LINK "${PROJECT_BINARY_DIR}/compile_commands.json"
+     "${PROJECT_SOURCE_DIR}/compile_commands.json" SYMBOLIC)
+
 # Warnings only. Optimization and debug-info flags are per-configuration and must
 # not be set here: these options are appended after the per-config flags, and the
 # last -O on the command line wins, so a global -Os silently overrode Release's

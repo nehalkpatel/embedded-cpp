@@ -13,6 +13,11 @@ CMakeUserPresets.json
 .vscode/
 .cache/
 .claude/settings.local.json
+.DS_Store
+
+# Symlink into the configured build tree, recreated at configure time by the
+# root CMakeLists.txt.
+/compile_commands.json
 
 # Python
 __pycache__/
@@ -22,4 +27,5 @@ __pycache__/
 .ruff_cache/
 
 # Reference material (not source)
-*.pdf
+/ProfessionalCMake_21st_Edition.pdf
+/ProfessionalCMake_21st_Edition.txt
