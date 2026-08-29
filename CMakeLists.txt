@@ -120,7 +120,7 @@ endif()
 # should get the same guard rails.
 include("${PROJECT_SOURCE_DIR}/cmake/format.cmake")
 
-clang_tidy("-header-filter=${CMAKE_CURRENT_SOURCE_DIR}/src/.*}")
+clang_tidy("-header-filter=${PROJECT_SOURCE_DIR}/src/.*")
 add_subdirectory(src)
 add_subdirectory(test)
 reset_clang_tidy()

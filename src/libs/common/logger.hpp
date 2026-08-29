@@ -1,10 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <string_view>
 
 namespace common {
 
-enum class LogLevel { kDebug, kInfo, kWarning, kError };
+enum class LogLevel : std::uint8_t { kDebug, kInfo, kWarning, kError };
 
 // Abstract logging interface
 class Logger {

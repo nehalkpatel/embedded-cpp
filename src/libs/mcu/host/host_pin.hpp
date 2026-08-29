@@ -42,7 +42,7 @@ class HostPin final : public BidirectionalPin, public Receiver {
   PinDirection direction_{PinDirection::kOutput};
   PinState state_{PinState::kHighZ};
   PinTransition transition_{PinTransition::kBoth};
-  std::function<void()> handler_{};
+  std::function<void()> handler_;
 };
 
 }  // namespace mcu

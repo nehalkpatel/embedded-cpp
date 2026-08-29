@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <expected>
 #include <functional>
 
@@ -7,9 +8,9 @@
 
 namespace mcu {
 
-enum class PinDirection { kInput = 1, kOutput };
-enum class PinState { kLow = 1, kHigh, kHighZ };
-enum class PinTransition { kRising = 1, kFalling, kBoth };
+enum class PinDirection : std::uint8_t { kInput = 1, kOutput };
+enum class PinState : std::uint8_t { kLow = 1, kHigh, kHighZ };
+enum class PinTransition : std::uint8_t { kRising = 1, kFalling, kBoth };
 
 class InputPin {
  public:
@@ -23,7 +24,7 @@ class InputPin {
 
 class OutputPin : public virtual InputPin {
  public:
-  virtual ~OutputPin() = default;
+  ~OutputPin() override = default;
 
   [[nodiscard]] virtual auto SetHigh()
       -> std::expected<void, common::Error> = 0;
@@ -33,7 +34,7 @@ class OutputPin : public virtual InputPin {
 
 class BidirectionalPin : public virtual InputPin, public virtual OutputPin {
  public:
-  virtual ~BidirectionalPin() = default;
+  ~BidirectionalPin() override = default;
 
   [[nodiscard]] virtual auto Configure(PinDirection direction)
       -> std::expected<void, common::Error> = 0;

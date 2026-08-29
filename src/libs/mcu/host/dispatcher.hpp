@@ -25,7 +25,7 @@ class Dispatcher {
   auto operator=(const Dispatcher&) -> Dispatcher& = delete;
   auto operator=(Dispatcher&&) -> Dispatcher& = delete;
 
-  auto Dispatch(const std::string_view& message) const
+  [[nodiscard]] auto Dispatch(const std::string_view& message) const
       -> std::expected<std::string, common::Error> {
     for (const auto& [predicate, receiver_ref] : receivers_) {
       if (predicate(message)) {

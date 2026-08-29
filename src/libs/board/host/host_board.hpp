@@ -49,15 +49,15 @@ class HostBoard : public Board {
   Endpoints endpoints_{};
 
   // Store components (order matters for destruction)
-  std::unique_ptr<mcu::HostPin> user_led_1_{};
-  std::unique_ptr<mcu::HostPin> user_led_2_{};
-  std::unique_ptr<mcu::HostPin> user_button_1_{};
-  std::unique_ptr<mcu::HostUart> uart_1_{};
-  std::unique_ptr<mcu::HostI2CController> i2c_1_{};
+  std::unique_ptr<mcu::HostPin> user_led_1_;
+  std::unique_ptr<mcu::HostPin> user_led_2_;
+  std::unique_ptr<mcu::HostPin> user_button_1_;
+  std::unique_ptr<mcu::HostUart> uart_1_;
+  std::unique_ptr<mcu::HostI2CController> i2c_1_;
 
   // Receiver map and dispatcher (built in Init() after components exist)
-  mcu::ReceiverMap receiver_map_{};
-  std::optional<mcu::Dispatcher> dispatcher_{};
-  std::unique_ptr<mcu::ZmqTransport> zmq_transport_{};
+  mcu::ReceiverMap receiver_map_;
+  std::optional<mcu::Dispatcher> dispatcher_;
+  std::unique_ptr<mcu::ZmqTransport> zmq_transport_;
 };
 }  // namespace board

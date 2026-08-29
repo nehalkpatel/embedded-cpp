@@ -10,19 +10,29 @@
 #include "libs/mcu/host/host_emulator_messages.hpp"
 #include "libs/mcu/pin.hpp"
 
-// Custom JSON serialization for std::byte
+// Custom JSON serialization for std::byte. The function names and signatures
+// are nlohmann's ADL contract, so the project naming convention does not apply.
 namespace nlohmann {
 template <>
 struct adl_serializer<std::byte> {
-  static void to_json(json& j, const std::byte& b) {
-    j = std::to_integer<uint8_t>(b);
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  static void to_json(json& encoded, const std::byte& value) {
+    encoded = std::to_integer<uint8_t>(value);
   }
 
-  static void from_json(const json& j, std::byte& b) {
-    b = static_cast<std::byte>(j.get<uint8_t>());
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  static void from_json(const json& encoded, std::byte& value) {
+    value = static_cast<std::byte>(encoded.get<uint8_t>());
   }
 };
 }  // namespace nlohmann
+
+// The NLOHMANN_* macros below expand to code that cannot satisfy the project's
+// clang-tidy checks (short names, C arrays, pre-C++17 type traits); suppress
+// those checks for the macro expansions only.
+// NOLINTBEGIN(readability-identifier-length)
+// NOLINTBEGIN(modernize-avoid-c-arrays)
+// NOLINTBEGIN(modernize-type-traits)
 
 namespace common {
 
@@ -72,6 +82,10 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {
                                              {ObjectType::kUart, "Uart"},
                                              {ObjectType::kI2C, "I2C"},
                                          })
+
+// NOLINTEND(modernize-type-traits)
+// NOLINTEND(modernize-avoid-c-arrays)
+// NOLINTEND(readability-identifier-length)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(PinEmulatorRequest, type, object, name,
                                    operation, state)

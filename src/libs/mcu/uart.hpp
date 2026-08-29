@@ -61,7 +61,7 @@ class Uart {
   /// @param timeout_ms Timeout in milliseconds (0 = wait forever)
   /// @return Number of bytes received or error
   [[nodiscard]] virtual auto Receive(std::span<std::byte> buffer,
-                                     uint32_t timeout_ms = 0)
+                                     uint32_t timeout_ms)
       -> std::expected<size_t, common::Error> = 0;
 
   /// @brief Send data asynchronously
