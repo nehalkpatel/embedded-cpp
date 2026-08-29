@@ -7,9 +7,16 @@
 
 namespace mcu {
 
+/// A component that can handle messages arriving from the emulator.
+///
+/// Contract: return the encoded reply when the message was handled; return an
+/// unexpected error to mean "not mine" — the Dispatcher then keeps looking for
+/// another receiver, and only reports kUnhandled if none accepts it.
 class Receiver {
  public:
-  virtual auto Receive(const std::string_view& message)
+  virtual ~Receiver() = default;
+
+  [[nodiscard]] virtual auto Receive(std::string_view message)
       -> std::expected<std::string, common::Error> = 0;
 };
 

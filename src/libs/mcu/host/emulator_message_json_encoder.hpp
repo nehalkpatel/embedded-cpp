@@ -8,6 +8,7 @@
 
 #include "libs/common/error.hpp"
 #include "libs/mcu/host/host_emulator_messages.hpp"
+#include "libs/mcu/host/transport.hpp"
 #include "libs/mcu/pin.hpp"
 
 // Custom JSON serialization for std::byte. The function names and signatures
@@ -36,6 +37,10 @@ struct adl_serializer<std::byte> {
 
 namespace common {
 
+// Covers every common::Error enumerator (error.hpp). When adding an
+// enumerator, add its wire name here and in the Python emulator's Status enum
+// (py/host-emulator/src/host_emulator/common.py) — an enumerator missing from
+// this table serializes as null and decodes as the first entry.
 NLOHMANN_JSON_SERIALIZE_ENUM(Error,
                              {
                                  {Error::kOk, "Ok"},
@@ -43,6 +48,14 @@ NLOHMANN_JSON_SERIALIZE_ENUM(Error,
                                  {Error::kInvalidArgument, "InvalidArgument"},
                                  {Error::kInvalidState, "InvalidState"},
                                  {Error::kInvalidOperation, "InvalidOperation"},
+                                 {Error::kOperationFailed, "OperationFailed"},
+                                 {Error::kUnhandled, "Unhandled"},
+                                 {Error::kConnectionRefused,
+                                  "ConnectionRefused"},
+                                 {Error::kConnectionClosed, "ConnectionClosed"},
+                                 {Error::kTimeout, "Timeout"},
+                                 {Error::kWouldBlock, "WouldBlock"},
+                                 {Error::kMessageTooLarge, "MessageTooLarge"},
                              })
 
 }  // namespace common
@@ -106,18 +119,46 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(I2CEmulatorResponse, type, object, name,
                                    address, data, bytes_transferred, status)
 
 template <typename T>
-inline auto Encode(const T& obj) -> std::string {
+auto Encode(const T& obj) -> std::string {
   return nlohmann::json(obj).dump();
-};
+}
 
 template <typename T>
-inline auto Decode(const std::string_view& str)
-    -> std::expected<T, common::Error> {
+auto Decode(std::string_view str) -> std::expected<T, common::Error> {
+  const auto parsed =
+      nlohmann::json::parse(str, nullptr, /*allow_exceptions=*/false);
+  if (parsed.is_discarded()) {
+    return std::unexpected(common::Error::kInvalidArgument);
+  }
+  // get<T>() still throws on a structural mismatch (missing field, wrong
+  // type); this is the one place the nlohmann boundary needs a catch in this
+  // otherwise exception-free codebase.
   try {
-    return nlohmann::json::parse(str).template get<T>();
+    return parsed.template get<T>();
   } catch (const nlohmann::json::exception&) {
     return std::unexpected(common::Error::kInvalidArgument);
   }
+}
+
+/// One request/response exchange with the emulator: encode the request, send
+/// it, wait for the reply, decode it, and fold the emulator's status field
+/// into the error channel. Every host peripheral funnels its blocking
+/// operations through here — it is also the codebase's reference example of
+/// chaining std::expected with and_then.
+template <typename Response, typename Request>
+auto Transact(Transport& transport, const Request& request)
+    -> std::expected<Response, common::Error> {
+  return transport.Send(Encode(request))
+      .and_then([&transport]() { return transport.Receive(); })
+      .and_then(
+          [](const std::string& reply) { return Decode<Response>(reply); })
+      .and_then(
+          [](Response&& response) -> std::expected<Response, common::Error> {
+            if (response.status != common::Error::kOk) {
+              return std::unexpected(response.status);
+            }
+            return std::move(response);
+          });
 }
 
 }  // namespace mcu

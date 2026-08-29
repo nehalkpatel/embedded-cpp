@@ -78,7 +78,7 @@ class RecordingLogger : public common::Logger {
 // dispatcher rather than some other process that stole the endpoint.
 class EchoReceiver : public mcu::Receiver {
  public:
-  auto Receive(const std::string_view& message)
+  auto Receive(std::string_view message)
       -> std::expected<std::string, common::Error> override {
     return std::string{"echo:"} + std::string{message};
   }
@@ -300,7 +300,7 @@ TEST_F(ZmqTransportStartupTest, CreateFailsFastWhenBindEndpointIsUnbindable) {
 TEST_F(ZmqTransportStartupTest, CreateRefusesToStealEndpointFromLiveOwner) {
   EchoReceiver echo;
   const mcu::ReceiverMap receivers{
-      {[](const std::string_view&) { return true; }, std::ref(echo)}};
+      {[](std::string_view) { return true; }, std::ref(echo)}};
   mcu::Dispatcher owner_dispatcher{receivers};
   auto owner_config = MakeConfig(logger_);
 

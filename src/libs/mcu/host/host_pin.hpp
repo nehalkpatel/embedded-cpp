@@ -29,7 +29,7 @@ class HostPin final : public BidirectionalPin, public Receiver {
   auto SetInterruptHandler(std::function<void()> handler,
                            PinTransition transition)
       -> std::expected<void, common::Error> override;
-  auto Receive(const std::string_view& message)
+  auto Receive(std::string_view message)
       -> std::expected<std::string, common::Error> override;
 
  private:

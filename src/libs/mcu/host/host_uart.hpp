@@ -48,7 +48,7 @@ class HostUart final : public Uart, public Receiver {
       -> std::expected<void, common::Error> override;
 
   // Receiver interface for handling async responses from emulator
-  auto Receive(const std::string_view& message)
+  auto Receive(std::string_view message)
       -> std::expected<std::string, common::Error> override;
 
  private:

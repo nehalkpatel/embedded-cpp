@@ -41,7 +41,7 @@ class HostBoard : public Board {
   auto Uart1() -> mcu::Uart& override;
 
  private:
-  static constexpr auto IsJson(const std::string_view& message) -> bool {
+  static constexpr auto IsJson(std::string_view message) -> bool {
     return message.starts_with("{") && message.ends_with("}");
   }
 

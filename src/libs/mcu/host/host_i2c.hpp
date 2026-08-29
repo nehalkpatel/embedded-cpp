@@ -43,7 +43,7 @@ class HostI2CController final : public I2CController, public Receiver {
       uint16_t address, std::span<std::byte> buffer,
       std::function<void(std::expected<size_t, common::Error>)> callback)
       -> std::expected<void, common::Error> override;
-  auto Receive(const std::string_view& message)
+  auto Receive(std::string_view message)
       -> std::expected<std::string, common::Error> override;
 
  private:
