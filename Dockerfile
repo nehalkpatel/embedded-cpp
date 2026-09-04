@@ -27,9 +27,20 @@ RUN apt-get update && apt-get --no-install-recommends -y full-upgrade && apt-get
     # Additional tools
     libzmq3-dev \
     unzip \
-    # ARM GCC toolchain
+    # ARM GCC toolchain. Pinned by the base image at 13.2.rel1, which compiles
+    # every portable header and app source at -std=c++23. libstdc++ 13 has no
+    # <print>, but the only std::println calls live in host-only translation
+    # units. Staying on the distro package keeps a contributor's local
+    # toolchain byte-identical to CI's.
     gcc-arm-none-eabi \
     binutils-arm-none-eabi \
+    # Flashing and on-chip debugging. Note these are for use from the host OS
+    # in the usual devcontainer setup: reaching an ST-LINK from inside the
+    # container needs USB passthrough that is awkward on Linux and effectively
+    # unavailable on macOS/Windows. The F767ZI's USB mass-storage interface
+    # needs no tooling at all -- copy the .bin to the NODE_F767ZI volume.
+    openocd \
+    stlink-tools \
     gdb \
     gdb-multiarch \
     neovim \

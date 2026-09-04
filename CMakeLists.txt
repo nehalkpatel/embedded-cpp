@@ -23,7 +23,20 @@ set(EMBEDDED_CPP_MCU "host" CACHE STRING
 set_property(CACHE EMBEDDED_CPP_MCU PROPERTY STRINGS host arm_cm4 arm_cm7)
 set(EMBEDDED_CPP_BOARD "host" CACHE STRING
     "Board implementation to build (selects src/libs/board/<value>)")
-set_property(CACHE EMBEDDED_CPP_BOARD PROPERTY STRINGS host stm32f3_discovery)
+set_property(CACHE EMBEDDED_CPP_BOARD PROPERTY STRINGS
+             host stm32f3_discovery stm32f767zi_nucleo)
+
+# A hardware MCU backend with the host board would pull in host_board, and with
+# it cppzmq and nlohmann-json -- which the dependency section below deliberately
+# does not fetch when cross-compiling. Catch the mismatch here, where the cause
+# is obvious, rather than as a missing-target error hundreds of lines later.
+if(NOT EMBEDDED_CPP_MCU STREQUAL "host" AND EMBEDDED_CPP_BOARD STREQUAL "host")
+  message(FATAL_ERROR
+    "EMBEDDED_CPP_MCU='${EMBEDDED_CPP_MCU}' needs a matching hardware board, "
+    "but EMBEDDED_CPP_BOARD is still 'host'. The host board is built on "
+    "ZeroMQ/JSON emulation and has no hardware equivalent. Select a board "
+    "with -DEMBEDDED_CPP_BOARD=<board>, or use a preset that sets both.")
+endif()
 
 # One bin/ directory per build tree (with per-config subdirectories under the
 # multi-config generator). A build-layout decision, so it lives here rather
@@ -63,6 +76,25 @@ target_include_directories(project_options INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>)
 target_compile_options(project_options INTERFACE
   $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
+
+# The no-exceptions policy is real on hardware and cannot be project-wide: the
+# host entry point (src/libs/board/host/main.cpp) is an exception boundary by
+# design, because cppzmq and nlohmann-json throw. On a cross build nothing
+# links either, so -fno-exceptions costs nothing and buys the absence of
+# unwind tables and landing pads. std::expected degrades accordingly --
+# .value() on an error aborts instead of throwing bad_expected_access, which
+# is the better failure mode on a target with no way to service an unwind.
+#
+# -fno-threadsafe-statics drops the __cxa_guard_acquire/release pair around
+# every function-local static. Correct on a single-core target with no RTOS.
+# Revisit if FreeRTOS lands (docs/PROJECT_PLAN.md Milestone 4): with two tasks
+# racing through the same function-local static, this flag turns a handled
+# case into a real data race.
+if(CMAKE_CROSSCOMPILING)
+  target_compile_options(project_options INTERFACE
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions;-fno-threadsafe-statics>)
+endif()
+
 target_link_libraries(project_options INTERFACE project_warnings)
 
 # ---------------------------------------------------------------------------
@@ -139,11 +171,28 @@ endif()
 # developer should get the same guard rails.
 include("${PROJECT_SOURCE_DIR}/cmake/format.cmake")
 
+# implemented_backends(): used by the mcu and board layers to report which
+# platform implementations exist when an unknown one is requested.
+include("${PROJECT_SOURCE_DIR}/cmake/backends.cmake")
+
 # ---------------------------------------------------------------------------
 # Targets
 # ---------------------------------------------------------------------------
 
-clang_tidy("-header-filter=${PROJECT_SOURCE_DIR}/src/.*")
+# clang-tidy runs on host builds only. On a cross build it fails before seeing
+# any project code: clang 18 defines __cpp_concepts as 201907L, while
+# libstdc++-13's <expected> guards its contents on __cpp_concepts >= 202002L,
+# so every translation unit reports "no template named 'expected' in namespace
+# 'std'" -- and src/.clang-tidy sets WarningsAsErrors: "*".
+#
+# This is a clang limitation, not a cross-compilation one. The real fix is to
+# raise the host clang pin (cmake/toolchain/host-clang.cmake) to 19 or newer,
+# which defines __cpp_concepts correctly; the dev image currently ships only
+# clang-18. Until then the analysis runs against the host build, which compiles
+# the same portable headers, and cross builds keep clang-format only.
+if(NOT CMAKE_CROSSCOMPILING)
+  clang_tidy("-header-filter=${PROJECT_SOURCE_DIR}/src/.*")
+endif()
 add_subdirectory(src)
 reset_clang_tidy()
 

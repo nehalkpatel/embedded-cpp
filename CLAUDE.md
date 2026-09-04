@@ -39,10 +39,14 @@ cmake --build build/host --target format-check
 # Python type-check (not covered by format.sh - types are not formatting)
 cd py/host-emulator && uv run mypy
 
-# Cross-compile for ARM - not yet functional. Toolchain files and configure
-# presets exist, but only the `host` MCU/board implementations do; configuring
-# an ARM preset stops with a message saying the backend is not implemented.
-# Host build and emulation come first; hardware follows.
+# Cross-compile for the STM32F767ZI Nucleo (Cortex-M7). Configure + build only:
+# firmware has no tests that run on the build machine, so there is no test step
+# and no workflow preset runs ctest. CI verifies the image with readelf/nm.
+cmake --workflow --preset=nucleo-f767zi-debug
+cmake --workflow --preset=nucleo-f767zi-release
+
+# Other ARM presets are toolchain-only: no arm_cm4 backend or stm32f3_discovery
+# board exists yet, so configuring stops with a message naming what does.
 cmake --preset=stm32f3_discovery
 
 # Docker alternative
@@ -58,6 +62,22 @@ Application (apps/)  →  Board (libs/board/)  →  MCU (libs/mcu/)  →  Platfo
 ```
 
 **Host emulation**: C++ apps communicate with Python hardware emulator via ZeroMQ/JSON IPC. This enables desktop development and integration testing without hardware.
+
+**Platform backend contract**. `EMBEDDED_CPP_MCU` and `EMBEDDED_CPP_BOARD` each
+select a sibling directory (`src/libs/mcu/<mcu>`, `src/libs/board/<board>`); an
+unknown name stops the configure with the list of directories that do exist.
+A board backend must define a target named **`platform_entry`** — an OBJECT
+library providing `main()` and calling `app::AppMain(board::Board&)`. The apps
+link it by name (`src/apps/*/CMakeLists.txt`) and know nothing else about the
+platform. OBJECT rather than a static archive because pulling `main()` (or a
+vector table) out of an archive depends on link-order symbol resolution and
+breaks under `--gc-sections`/LTO.
+
+Cross builds differ from the host build in three ways worth knowing: they add
+`-fno-exceptions -fno-threadsafe-statics` (the host entry point is an exception
+boundary by design, since cppzmq throws), they skip cppzmq/JSON/googletest and
+the Python emulator, and they run without clang-tidy — clang 18 cannot parse
+libstdc++-13's `<expected>`, so the fix is a newer host clang, not a workaround.
 
 ## Key Constraints
 
