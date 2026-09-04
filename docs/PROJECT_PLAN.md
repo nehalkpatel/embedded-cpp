@@ -66,11 +66,13 @@ is the open part.
 - [x] Verify blinky flashes and runs on the physical board — LD1 toggles at a
       measured 200 ms and B1 latches LD2 from an EXTI handler, from unmodified
       `blinky.cpp` (2026-09-04)
-- [ ] USART3 to the ST-LINK virtual COM port, replacing the placeholder
+- [x] USART3 to the ST-LINK virtual COM port, replacing the placeholder
 - [ ] I2C1 on PB8/PB9, replacing the placeholder
-- [ ] Replace `nosys.specs` with real newlib syscalls once there is a UART to
-      retarget `_write` to, and a `_sbrk` bounded by the linker script's
-      `__heap_limit`
+- [x] Replace `nosys.specs` with real newlib syscalls: `_write` retargeted to
+      USART3, `_sbrk` bounded by the linker script's `__heap_limit`, and
+      `__malloc_lock` overridden so an allocating interrupt handler cannot
+      re-enter the allocator
+- [ ] Verify `uart_echo` over the virtual COM port on hardware
 
 **Success Criteria**:
 - Blinky runs on a physical STM32F7 Nucleo board

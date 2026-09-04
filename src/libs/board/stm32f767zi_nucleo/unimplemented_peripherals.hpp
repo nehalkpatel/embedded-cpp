@@ -25,38 +25,13 @@
 /// application that reaches for an unimplemented peripheral gets an error at
 /// the call, not silence. They are deleted as the real implementations land.
 ///
-/// These have a delete-by date: B7 removes UnimplementedUart, B8
-/// UnimplementedI2CController. (UnimplementedPin is gone: B4 landed.) A stub
+/// These have a delete-by date: B8 removes UnimplementedI2CController, the
+/// last one. (UnimplementedPin went with B4, UnimplementedUart with B7.) A stub
 /// still here after B8 has stopped being bring-up scaffolding and become
 /// evidence of a separate problem -- that board::Board cannot express "this
 /// board does not have that peripheral" (see Milestone 3 in
 /// docs/PROJECT_PLAN.md).
 namespace board {
-
-class UnimplementedUart final : public mcu::Uart {
- public:
-  [[nodiscard]] auto Init(const mcu::UartConfig& /*config*/)
-      -> std::expected<void, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  [[nodiscard]] auto Send(std::span<const std::byte> /*data*/)
-      -> std::expected<void, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  [[nodiscard]] auto Receive(std::span<std::byte> /*buffer*/,
-                             std::uint32_t /*timeout_ms*/)
-      -> std::expected<std::size_t, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  [[nodiscard]] auto SetRxHandler(
-      std::function<void(const std::byte*, std::size_t)> /*handler*/)
-      -> std::expected<void, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-};
 
 class UnimplementedI2CController final : public mcu::I2CController {
  public:
