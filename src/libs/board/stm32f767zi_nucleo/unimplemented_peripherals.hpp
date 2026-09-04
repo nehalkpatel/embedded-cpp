@@ -24,40 +24,14 @@
 /// Each returns kInvalidOperation rather than pretending to succeed: an
 /// application that reaches for an unimplemented peripheral gets an error at
 /// the call, not silence. They are deleted as the real implementations land.
+///
+/// These have a delete-by date: B7 removes UnimplementedUart, B8
+/// UnimplementedI2CController. (UnimplementedPin is gone: B4 landed.) A stub
+/// still here after B8 has stopped being bring-up scaffolding and become
+/// evidence of a separate problem -- that board::Board cannot express "this
+/// board does not have that peripheral" (see Milestone 3 in
+/// docs/PROJECT_PLAN.md).
 namespace board {
-
-/// Satisfies both pin interfaces: OutputPin inherits InputPin virtually, so a
-/// stand-in for an output pin must answer Get() and SetInterruptHandler() too.
-class UnimplementedPin final : public mcu::BidirectionalPin {
- public:
-  [[nodiscard]] auto Get()
-      -> std::expected<mcu::PinState, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  [[nodiscard]] auto SetInterruptHandler(std::function<void()> /*handler*/,
-                                         mcu::PinTransition /*transition*/)
-      -> std::expected<void, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  [[nodiscard]] auto SetHigh() -> std::expected<void, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  [[nodiscard]] auto SetLow() -> std::expected<void, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  [[nodiscard]] auto Toggle() -> std::expected<void, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-
-  [[nodiscard]] auto Configure(mcu::PinDirection /*direction*/)
-      -> std::expected<void, common::Error> override {
-    return std::unexpected(common::Error::kInvalidOperation);
-  }
-};
 
 class UnimplementedUart final : public mcu::Uart {
  public:

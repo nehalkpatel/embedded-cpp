@@ -68,7 +68,12 @@ check_image() {
 # property of the code today, and this is what keeps it true: an operator new
 # reference in these objects means a handler outgrew the buffer.
 check_no_allocation() {
-  local pattern='_Znwj|_Znaj|_ZdlPvj'
+  # operator new only. operator delete is deliberately not in this pattern:
+  # a polymorphic class's vtable references its deleting destructor, which
+  # references operator delete, whether or not anything is ever allocated --
+  # so every one of these objects has an undefined _ZdlPvj and always will.
+  # An operator new reference is the thing that means a handler allocated.
+  local pattern='_Znwj|_Znaj|_Znw|_Zna'
   local objects
   mapfile -t objects < <(find "${BUILD_DIR}" -name 'gpio_pin.cpp.obj' \
                                           -o -name 'exti.cpp.obj' \
