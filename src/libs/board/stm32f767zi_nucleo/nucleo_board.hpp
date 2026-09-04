@@ -4,9 +4,9 @@
 
 #include "libs/board/board.hpp"
 #include "libs/board/stm32f767zi_nucleo/pin_map.hpp"
-#include "libs/board/stm32f767zi_nucleo/unimplemented_peripherals.hpp"
 #include "libs/common/error.hpp"
 #include "libs/mcu/arm_cm7/gpio_pin.hpp"
+#include "libs/mcu/arm_cm7/i2c.hpp"
 #include "libs/mcu/arm_cm7/usart.hpp"
 #include "libs/mcu/i2c.hpp"
 #include "libs/mcu/pin.hpp"
@@ -48,9 +48,14 @@ class NucleoF767ZiBoard final : public Board {
                          .alternate_function = pin_map::kUart1AlternateFunction,
                      }};
 
-  // Placeholder until the I2C implementation lands. See
-  // unimplemented_peripherals.hpp.
-  UnimplementedI2CController i2c_1_;
+  mcu::I2CBus i2c_1_{mcu::I2CId::kI2C1,
+                     {
+                         .scl_port = pin_map::kI2C1Scl.port,
+                         .scl_pin = pin_map::kI2C1Scl.pin,
+                         .sda_port = pin_map::kI2C1Sda.port,
+                         .sda_pin = pin_map::kI2C1Sda.pin,
+                         .alternate_function = pin_map::kI2C1AlternateFunction,
+                     }};
 };
 
 }  // namespace board

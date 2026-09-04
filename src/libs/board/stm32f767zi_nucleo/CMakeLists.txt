@@ -2,7 +2,7 @@ add_library(nucleo_board nucleo_board.cpp)
 target_sources(nucleo_board PUBLIC
   FILE_SET HEADERS
   BASE_DIRS ${PROJECT_SOURCE_DIR}/src
-  FILES nucleo_board.hpp pin_map.hpp unimplemented_peripherals.hpp)
+  FILES nucleo_board.hpp pin_map.hpp)
 target_link_libraries(nucleo_board
   PUBLIC board mcu arm_cm7_mcu
   PRIVATE project_options)

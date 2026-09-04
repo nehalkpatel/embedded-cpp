@@ -23,7 +23,10 @@ auto NucleoF767ZiBoard::Init() -> std::expected<void, common::Error> {
           [this] { return user_led_2_.Configure(mcu::PinDirection::kOutput); })
       .and_then([this] {
         return user_button_1_.Configure(mcu::PinDirection::kInput);
-      });
+      })
+      // I2C has no Init() in the portable interface -- unlike Uart, which the
+      // application configures itself -- so the board brings the bus up here.
+      .and_then([this] { return i2c_1_.Init(); });
 }
 
 auto NucleoF767ZiBoard::UserLed1() -> mcu::OutputPin& { return user_led_1_; }
