@@ -99,7 +99,13 @@ is for reading. Source: UM1974, *STM32 Nucleo-144 boards*.
 ## What works today
 
 `blinky` is the end-to-end test: LD1 toggles every 200 ms, and pressing B1
-lights LD2 from an interrupt handler.
+lights LD2 from an interrupt handler (which only ever calls `SetHigh()`, so
+LD2 latches on and stays lit).
+
+To check the timing without a scope, count LD1's ON transitions over 10 s and
+expect **25**. Each ON is a full ON→OFF→ON cycle, which is *two* toggles of
+200 ms each — so 50 would mean the delay is running at half its intended
+length, not that it is correct.
 
 `Uart1()` and `I2C1()` are still placeholders that return
 `Error::kInvalidOperation`, so `uart_echo` and `i2c_demo` link and run but
