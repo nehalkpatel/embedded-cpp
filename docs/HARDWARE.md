@@ -135,9 +135,25 @@ later output overwrite the same line.
 `syscalls.cpp`) retargets stdout and stderr to USART3, expanding `\n` to CRLF.
 Output written before `Uart1().Init()` is discarded rather than blocking.
 
-`I2C1()` is still a placeholder that returns `Error::kInvalidOperation`, so
-`i2c_demo` links and runs but fails at its first peripheral call. See
-`unimplemented_peripherals.hpp`.
+`i2c_demo` is the third: it writes `DE AD BE EF` to address 0x50, reads it
+back, and drives LD1 by whether the round trip matched.
+
+```bash
+st-flash --reset write build/nucleo-f767zi/bin/Debug/i2c_demo.bin 0x8000000
+```
+
+With nothing on the bus this is still a real test of the driver: an
+unanswered address NACKs, `SendData` returns `kOperationFailed` within the
+25 ms transfer timeout, and the demo turns LD1 off and retries rather than
+hanging. A scope or analyser on PB8/PB9 shows START, the address, and the NACK.
+
+With a device at 0x50 (a 24Cxx EEPROM, say) the round trip completes. Note the
+demo writes and reads as two separate transactions rather than the
+register-addressed read a real EEPROM driver would use — the bus is exercised,
+the device's addressing is not.
+
+The bus runs at 100 kHz on the internal pull-ups, which are weak (~40 kΩ).
+Adequate for short wiring; a real bus wants external resistors.
 
 ### A note on allocation in interrupt handlers
 

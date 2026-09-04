@@ -67,7 +67,9 @@ is the open part.
       measured 200 ms and B1 latches LD2 from an EXTI handler, from unmodified
       `blinky.cpp` (2026-09-04)
 - [x] USART3 to the ST-LINK virtual COM port, replacing the placeholder
-- [ ] I2C1 on PB8/PB9, replacing the placeholder
+- [x] I2C1 on PB8/PB9, replacing the last placeholder
+- [ ] Verify `i2c_demo` on hardware (NACK path without a device; round trip
+      with one)
 - [x] Replace `nosys.specs` with real newlib syscalls: `_write` retargeted to
       USART3, `_sbrk` bounded by the linker script's `__heap_limit`, and
       `__malloc_lock` overridden so an allocating interrupt handler cannot
