@@ -8,7 +8,7 @@ from typing import Any, NoReturn
 
 import zmq
 
-from .common import UnhandledMessageError
+from .common import MessageType, Status, UnhandledMessageError
 from .endpoint import EndpointLock, has_live_owner
 from .i2c import I2C
 from .peripheral import Peripheral
@@ -162,7 +162,10 @@ class DeviceEmulator:
                     logger.warning("Received non-JSON message: %s", message)
                     continue
 
-                self._dispatch(json_message)
+                try:
+                    self._dispatch(json_message)
+                except UnhandledMessageError as exc:
+                    self._reject(json_message, exc)
 
         except Exception:
             logger.exception("Emulator thread error")
@@ -186,6 +189,45 @@ class DeviceEmulator:
                 return
         raise UnhandledMessageError(
             f"{object_type} not found: {json_message.get('name')}"
+        )
+
+    def _reject(self, json_message: dict[str, Any], exc: Exception) -> None:
+        """Answer a message no peripheral owns, and keep serving.
+
+        An unroutable message is a protocol error, not a fatal one: it says the
+        device knows about a peripheral this emulator was not configured with,
+        which is a bug in one registry or the other. Letting it propagate would
+        kill the serve thread, and the device -- blocked in Transport::Receive
+        on a PAIR socket -- would then hang until its timeout with no clue why.
+        So log it and reply with Unhandled, which the C++ Transact() folds
+        straight into the error channel as common::Error::kUnhandled.
+
+        Only requests get a reply. A Response is the tail of an exchange the
+        emulator itself started; answering one would leave an extra frame on
+        the socket and desynchronize every exchange after it.
+        """
+        logger.error("Unhandled message: %s", exc)
+
+        if json_message.get("type") != MessageType.Request:
+            return
+
+        # The union of the fields the three response structs deserialize, so
+        # this decodes cleanly whichever one the device is expecting. Values
+        # other than status are placeholders: Transact() rejects on a non-Ok
+        # status before the caller ever sees them.
+        self.from_device_socket.send_string(
+            json.dumps(
+                {
+                    "type": MessageType.Response,
+                    "object": json_message.get("object"),
+                    "name": json_message.get("name"),
+                    "state": PinState.Hi_Z,
+                    "address": json_message.get("address", 0),
+                    "data": [],
+                    "bytes_transferred": 0,
+                    "status": Status.Unhandled,
+                }
+            )
         )
 
     def start(self) -> None:
