@@ -54,7 +54,13 @@ set(CMAKE_EXE_LINKER_FLAGS_INIT "--specs=nano.specs --specs=nosys.specs -Wl,--gc
 
 # Firmware images, not host executables. Makes blinky.elf and blinky.bin
 # unambiguous in the build tree and in flashing instructions.
-set(CMAKE_EXECUTABLE_SUFFIX ".elf")
+#
+# Per language: CMake's platform initialization resets the language-agnostic
+# CMAKE_EXECUTABLE_SUFFIX after the toolchain file runs, so setting only that
+# one silently does nothing. The per-language variables survive.
+set(CMAKE_EXECUTABLE_SUFFIX_C ".elf")
+set(CMAKE_EXECUTABLE_SUFFIX_CXX ".elf")
+set(CMAKE_EXECUTABLE_SUFFIX_ASM ".elf")
 
 set(CMAKE_C_FLAGS_DEBUG_INIT "-O0")
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-O0")

@@ -133,6 +133,18 @@ FetchContent_Declare(
   GIT_TAG 0ca0fe433eb70cea0d5761079c0c5b47b736565b # v3.11.2
 )
 
+FetchContent_Declare(
+  cmsis_core
+  GIT_REPOSITORY https://github.com/STMicroelectronics/cmsis_core.git
+  GIT_TAG 455a49f764c3378bcbc7d611deacae58cb027cd9 # v5.9.0
+)
+
+FetchContent_Declare(
+  cmsis_device_f7
+  GIT_REPOSITORY https://github.com/STMicroelectronics/cmsis_device_f7.git
+  GIT_TAG 3ba5bdaf3584a6a907f854e553ee8e5b88f7677c # v1.2.9
+)
+
 FetchContent_MakeAvailable(CmakeScripts)
 list(PREPEND CMAKE_MODULE_PATH "${cmakescripts_SOURCE_DIR}")
 
@@ -147,6 +159,25 @@ if(EMBEDDED_CPP_MCU STREQUAL "host")
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
   endif()
+endif()
+
+# CMSIS: the Cortex-M core headers and ST's register definitions for the F7.
+# Headers only -- the peripheral drivers in src/libs/mcu/arm_cm7 are written
+# against these registers directly rather than against the Cube HAL. The
+# register definitions are mechanical transcriptions of RM0410 and there is
+# nothing to learn from retyping them; the clock ordering and bit layouts that
+# the HAL would hide are exactly what this project is for.
+if(EMBEDDED_CPP_MCU MATCHES "^arm_")
+  FetchContent_MakeAvailable(cmsis_core cmsis_device_f7)
+
+  # Neither repository ships a usable CMakeLists.txt, so wrap them here.
+  add_library(cmsis_f767 INTERFACE)
+  # SYSTEM is not optional: the vendor headers use anonymous structs and unions
+  # that project_warnings' -Wpedantic -Werror rejects.
+  target_include_directories(cmsis_f767 SYSTEM INTERFACE
+    "${cmsis_core_SOURCE_DIR}/Include"
+    "${cmsis_device_f7_SOURCE_DIR}/Include")
+  target_compile_definitions(cmsis_f767 INTERFACE STM32F767xx)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -174,6 +205,10 @@ include("${PROJECT_SOURCE_DIR}/cmake/format.cmake")
 # implemented_backends(): used by the mcu and board layers to report which
 # platform implementations exist when an unknown one is requested.
 include("${PROJECT_SOURCE_DIR}/cmake/backends.cmake")
+
+# add_platform_artifacts(): flashable .bin/.hex beside an application's ELF on
+# cross builds; a no-op on the host.
+include("${PROJECT_SOURCE_DIR}/cmake/platform_artifacts.cmake")
 
 # ---------------------------------------------------------------------------
 # Targets
