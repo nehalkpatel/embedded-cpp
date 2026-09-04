@@ -56,10 +56,18 @@ Application (apps/)  →  Board (libs/board/)  →  MCU (libs/mcu/)  →  Platfo
 cmake --workflow --preset=host-debug
 cmake --workflow --preset=host-release
 
-# ARM targets - not yet functional (see Implementation Status below).
-# Toolchain files and configure presets are in place, but configuring stops
-# with a clear message until the MCU layer lands in src/libs/mcu/arm_cm4/
-# (and arm_cm7/ for Cortex-M7 parts).
+# STM32F767ZI Nucleo (Cortex-M7). Configure and build only: firmware has no
+# tests that run on the build machine, so nothing here runs ctest. See
+# docs/HARDWARE.md for flashing, debugging and the pin map.
+cmake --workflow --preset=nucleo-f767zi-debug
+cmake --workflow --preset=nucleo-f767zi-release
+
+# Structural checks on the linked image -- vector table address, entry point,
+# static-constructor array, undefined symbols. No hardware needed; CI runs it.
+tools/verify-firmware.sh build/nucleo-f767zi
+
+# Other ARM presets are toolchain-only: no arm_cm4 backend or F3 Discovery
+# board exists yet, so configuring stops with a message naming what does.
 cmake --preset=stm32f3_discovery
 ```
 
@@ -114,8 +122,10 @@ cd py/host-emulator && uv run host-emulator
 | Python integration tests | ✅ Working |
 | Docker/DevContainer | ✅ Working |
 | CI/CD | ✅ Working |
-| ARM cross-compile toolchain | 🚧 Toolchain/presets only |
-| Hardware boards (STM32, nRF52) | 📋 Planned |
+| ARM cross-compile (Cortex-M7) | ✅ Working |
+| STM32F767ZI Nucleo: GPIO, EXTI, SysTick | ✅ Working |
+| STM32F767ZI Nucleo: UART, I2C | 🚧 Placeholders that return an error |
+| Other boards (STM32F3, nRF52) | 📋 Planned |
 
 ## Resources
 
