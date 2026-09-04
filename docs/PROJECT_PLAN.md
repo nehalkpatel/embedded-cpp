@@ -92,7 +92,9 @@ is the open part.
       hardware board exists: optional accessors
       (`std::expected<mcu::I2CController&, Error>`) vs. capability mix-ins vs.
       compile-time board traits. Deferred from Milestone 2 deliberately — with
-      one board there was nothing to design against.
+      one board there was nothing to design against. Entangled with #37: an
+      accessor that can report "this peripheral did not come up" is what the
+      factory-based fixes there need.
 - [ ] Additional example application exercising more complex behavior
 - [ ] Cross-board validation: blinky runs on both boards unmodified
 

@@ -38,6 +38,13 @@ class I2CBus final : public I2CController {
 
   /// @brief Enable the peripheral and configure its pins. Called by the board;
   /// SendData and ReceiveData report kInvalidState until it has run.
+  ///
+  /// That the board must call this is a convention, not something the type
+  /// enforces -- and unlike Uart, mcu::I2CController has no Init(), so nothing
+  /// in board::Board's shape hints that the call is required. See issue #37.
+  ///
+  /// The bus runs at 100 kHz; making the speed a board-supplied parameter is
+  /// issue #38.
   [[nodiscard]] auto Init() -> std::expected<void, common::Error>;
 
   [[nodiscard]] auto SendData(std::uint16_t address,
