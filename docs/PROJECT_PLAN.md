@@ -71,6 +71,11 @@ unreachable (git history preserves them, and CubeMX regenerates them fresher).
 
 **Tasks**:
 - [ ] STM32F3 Discovery support (`arm_cm4` backend + board directory)
+- [ ] Revisit `board::Board`'s all-or-nothing interface now that a second
+      hardware board exists: optional accessors
+      (`std::expected<mcu::I2CController&, Error>`) vs. capability mix-ins vs.
+      compile-time board traits. Deferred from Milestone 2 deliberately — with
+      one board there was nothing to design against.
 - [ ] Additional example application exercising more complex behavior
 - [ ] Cross-board validation: blinky runs on both boards unmodified
 

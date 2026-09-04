@@ -15,7 +15,15 @@ auto NucleoF767ZiBoard::Init() -> std::expected<void, common::Error> {
   // .data was copied. What is left is everything that needs a working C++
   // runtime -- starting with the tick that mcu::Delay is built on.
   mcu::InitSysTick();
-  return {};
+
+  // The button is externally pulled down on this board (UM1974), so it needs
+  // no internal pull: it reads low at rest and high while pressed.
+  return user_led_1_.Configure(mcu::PinDirection::kOutput)
+      .and_then(
+          [this] { return user_led_2_.Configure(mcu::PinDirection::kOutput); })
+      .and_then([this] {
+        return user_button_1_.Configure(mcu::PinDirection::kInput);
+      });
 }
 
 auto NucleoF767ZiBoard::UserLed1() -> mcu::OutputPin& { return user_led_1_; }

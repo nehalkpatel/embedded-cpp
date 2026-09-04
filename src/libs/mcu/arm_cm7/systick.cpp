@@ -27,6 +27,10 @@ extern "C" auto SysTick_Handler() -> void { g_ticks = g_ticks + 1; }
 
 auto Millis() -> std::uint32_t { return g_ticks; }
 
+auto SysTickRunning() -> bool {
+  return (SysTick->CTRL & SysTick_CTRL_ENABLE_Msk) != 0U;
+}
+
 auto InitSysTick() -> void { SysTick_Config(kSystemCoreClockHz / kTickRateHz); }
 
 }  // namespace mcu
