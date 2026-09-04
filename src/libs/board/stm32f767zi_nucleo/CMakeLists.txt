@@ -12,8 +12,8 @@ target_link_libraries(nucleo_board
 # each application directly: pulling them out of a static archive depends on
 # link-order symbol resolution and breaks under --gc-sections and LTO, and a
 # vector table nothing references is exactly what --gc-sections removes.
-add_library(platform_entry OBJECT main.cpp startup.s)
-target_link_libraries(platform_entry PRIVATE project_options app board nucleo_board)
+add_library(platform_entry OBJECT main.cpp startup.s syscalls.cpp)
+target_link_libraries(platform_entry PRIVATE project_options app board nucleo_board arm_cm7_mcu)
 
 set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/stm32f767zi.ld")
 

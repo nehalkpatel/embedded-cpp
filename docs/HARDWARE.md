@@ -107,9 +107,35 @@ expect **25**. Each ON is a full ON→OFF→ON cycle, which is *two* toggles of
 200 ms each — so 50 would mean the delay is running at half its intended
 length, not that it is correct.
 
-`Uart1()` and `I2C1()` are still placeholders that return
-`Error::kInvalidOperation`, so `uart_echo` and `i2c_demo` link and run but
-fail at their first peripheral call. See `unimplemented_peripherals.hpp`.
+`uart_echo` is the second: it greets over the ST-LINK virtual COM port and
+echoes what you type, toggling LD1 per byte received.
+
+```bash
+st-flash --reset write build/nucleo-f767zi/bin/Debug/uart_echo.bin 0x8000000
+screen /dev/ttyACM0 115200      # or: picocom -b 115200 /dev/ttyACM0
+```
+
+`printf` and friends also reach this port: the board's `_write` (see
+`syscalls.cpp`) retargets stdout and stderr to USART3, expanding `\n` to CRLF.
+Output written before `Uart1().Init()` is discarded rather than blocking.
+
+`I2C1()` is still a placeholder that returns `Error::kInvalidOperation`, so
+`i2c_demo` links and runs but fails at its first peripheral call. See
+`unimplemented_peripherals.hpp`.
+
+### A note on allocation in interrupt handlers
+
+`uart_echo`'s receive handler builds a `std::vector` — that is, it allocates,
+in interrupt context. newlib-nano ships `__malloc_lock` as a no-op, so this
+would re-enter the allocator whenever an interrupt arrived while the main
+context was inside `malloc`, corrupting the arena in a way that surfaces as a
+fault somewhere unrelated much later. `syscalls.cpp` overrides both lock
+functions to mask interrupts around the allocator, which makes the pattern
+safe here.
+
+The handler also calls `Send()`, which busy-waits for the transmitter. At
+115200 baud that is roughly 87 µs per byte spent inside an ISR. Fine for an
+echo demo; not a pattern to copy into anything with latency requirements.
 
 ## Clock configuration
 

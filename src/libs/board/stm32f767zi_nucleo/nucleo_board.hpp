@@ -7,6 +7,7 @@
 #include "libs/board/stm32f767zi_nucleo/unimplemented_peripherals.hpp"
 #include "libs/common/error.hpp"
 #include "libs/mcu/arm_cm7/gpio_pin.hpp"
+#include "libs/mcu/arm_cm7/usart.hpp"
 #include "libs/mcu/i2c.hpp"
 #include "libs/mcu/pin.hpp"
 #include "libs/mcu/uart.hpp"
@@ -38,10 +39,18 @@ class NucleoF767ZiBoard final : public Board {
   mcu::GpioPin user_button_1_{pin_map::kUserButton1.port,
                               pin_map::kUserButton1.pin};
 
-  // Placeholders until each peripheral's hardware implementation lands. See
+  mcu::Usart uart_1_{mcu::UsartId::kUsart3,
+                     {
+                         .tx_port = pin_map::kUart1Tx.port,
+                         .tx_pin = pin_map::kUart1Tx.pin,
+                         .rx_port = pin_map::kUart1Rx.port,
+                         .rx_pin = pin_map::kUart1Rx.pin,
+                         .alternate_function = pin_map::kUart1AlternateFunction,
+                     }};
+
+  // Placeholder until the I2C implementation lands. See
   // unimplemented_peripherals.hpp.
   UnimplementedI2CController i2c_1_;
-  UnimplementedUart uart_1_;
 };
 
 }  // namespace board

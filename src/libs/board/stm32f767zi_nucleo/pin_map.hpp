@@ -30,11 +30,11 @@ constexpr PinLocation kUserButton1{mcu::GpioPort::kC, 13};
 // output shows up on /dev/ttyACM0. Alternate function 7.
 constexpr PinLocation kUart1Tx{mcu::GpioPort::kD, 8};
 constexpr PinLocation kUart1Rx{mcu::GpioPort::kD, 9};
-constexpr std::uint32_t kUart1AlternateFunction = 7;
+constexpr std::uint8_t kUart1AlternateFunction = 7;
 
 // I2C1 on the Arduino connector: D15 (SCL) and D14 (SDA). Alternate function 4.
 constexpr PinLocation kI2C1Scl{mcu::GpioPort::kB, 8};
 constexpr PinLocation kI2C1Sda{mcu::GpioPort::kB, 9};
-constexpr std::uint32_t kI2C1AlternateFunction = 4;
+constexpr std::uint8_t kI2C1AlternateFunction = 4;
 
 }  // namespace board::pin_map

@@ -1,6 +1,5 @@
 #include "libs/mcu/arm_cm7/gpio_pin.hpp"
 
-#include <cstdint>
 #include <expected>
 #include <functional>
 #include <utility>
@@ -14,29 +13,17 @@
 
 namespace mcu {
 
-namespace {
-
-constexpr std::uint32_t kModeInput = 0b00;
-constexpr std::uint32_t kModeOutput = 0b01;
-constexpr std::uint32_t kModeFieldWidth = 2;
-
-}  // namespace
-
 auto GpioPin::Configure(PinDirection direction)
     -> std::expected<void, common::Error> {
-  // Before the port clock is running, every register here reads as zero and
-  // ignores writes, without faulting.
-  EnablePortClock(port_);
-
-  const std::uint32_t shift = pin_ * kModeFieldWidth;
-  const std::uint32_t mode =
-      direction == PinDirection::kOutput ? kModeOutput : kModeInput;
-
-  auto* registers = PortRegisters(port_);
-  auto moder = registers->MODER;
-  moder &= ~(0b11U << shift);
-  moder |= mode << shift;
-  registers->MODER = moder;
+  // ConfigurePin enables the port clock first, which matters: before it is
+  // running every register here reads as zero and ignores writes, silently.
+  ConfigurePin(port_, pin_,
+               {
+                   .mode = direction == PinDirection::kOutput ? PinMode::kOutput
+                                                              : PinMode::kInput,
+                   .speed = PinSpeed::kLow,
+                   .pull = PinPull::kNone,
+               });
 
   direction_ = direction;
   configured_ = true;
