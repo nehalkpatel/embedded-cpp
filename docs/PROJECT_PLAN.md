@@ -49,16 +49,26 @@ systems through:
 
 **Goal**: First physical board (STM32F7 Nucleo)
 
-The repository currently carries only the ARM toolchain files and configure
-presets; the vendor HAL trees that briefly lived in-tree were removed while
-unreachable (git history preserves them, and CubeMX regenerates them fresher).
+The backend, the board and a linked firmware image exist; the drivers are
+written against CMSIS register definitions rather than the Cube HAL, so the
+clock ordering and bit layouts stay visible in the code. Hardware verification
+is the open part.
 
 **Tasks**:
-- [ ] Implement the `arm_cm7` MCU backend (`src/libs/mcu/arm_cm7/`)
-- [ ] Implement the STM32F7 Nucleo board directory (pin maps, GPIO init,
-      interrupt wiring) against the vendor HAL
-- [ ] Verify blinky builds, flashes, and runs on the physical board
-- [ ] Document hardware setup: pin mapping tables, flashing, debugging
+- [x] Implement the `arm_cm7` MCU backend (`src/libs/mcu/arm_cm7/`)
+- [x] Implement the STM32F7 Nucleo board directory (pin map, GPIO, EXTI,
+      SysTick) against CMSIS register definitions
+- [x] Cross-compile verification without hardware: image layout, entry point,
+      static-constructor array, undefined symbols, no allocation on interrupt
+      paths (`tools/verify-firmware.sh`, run in CI)
+- [x] Document hardware setup: pin mapping tables, flashing, debugging
+      (`docs/HARDWARE.md`)
+- [ ] Verify blinky flashes and runs on the physical board
+- [ ] USART3 to the ST-LINK virtual COM port, replacing the placeholder
+- [ ] I2C1 on PB8/PB9, replacing the placeholder
+- [ ] Replace `nosys.specs` with real newlib syscalls once there is a UART to
+      retarget `_write` to, and a `_sbrk` bounded by the linker script's
+      `__heap_limit`
 
 **Success Criteria**:
 - Blinky runs on a physical STM32F7 Nucleo board
@@ -90,9 +100,11 @@ unreachable (git history preserves them, and CubeMX regenerates them fresher).
 
 ## Current Priorities
 
-1. **Complete STM32F7 Nucleo board** (Milestone 2) — proves hardware
-   portability, builds on the completed host foundation
-2. **STM32F3 Discovery board** (Milestone 3) — proves multi-board portability
+1. **Verify blinky on the physical F767ZI**, then USART3 and I2C1
+   (Milestone 2) — the backend and board exist and the image is verified by
+   cross-build; what remains needs the board in hand
+2. **STM32F3 Discovery board** (Milestone 3) — proves multi-board portability,
+   and is the first data point for narrowing `board::Board`
 3. **Additional example applications** — more engaging demonstrations
 
 ## Technical Debt & Improvements
@@ -101,13 +113,38 @@ unreachable (git history preserves them, and CubeMX regenerates them fresher).
 - [ ] Add hardware setup guides and architecture diagrams
 - [ ] Optimize Docker layer caching
 - [ ] Add release builds to CI
-- [ ] Cross-compilation verification in CI (once an ARM backend exists)
 - [ ] Host emulator: GUI visualization, richer I2C device models, timing
       simulation
 - [ ] Wire up Python test coverage if it earns its keep (pytest-cov was
       removed while unused)
 
 ## Decision Log
+
+### 2026-09-04: First hardware backend (arm_cm7 + F767ZI Nucleo)
+
+- Chose CMSIS device headers over the Cube HAL. The 30k lines of register
+  #defines are a mechanical transcription of RM0410 and teach nothing, but
+  RCC enable ordering, the MODER/OTYPER/AFR layout and the EXTI/SYSCFG/NVIC
+  chain are exactly what `HAL_GPIO_Init()` hides -- and full CubeF7 is ~1 GB
+  of middleware for a project that wants the registers visible
+- No public header in the backend names a vendor type. CMSIS defines `I2C1`,
+  `USART3` and hundreds of other bare identifiers as macros; the first one to
+  bite rewrote `board::Board::I2C1()` into a syntax error. Pins name their
+  port with `mcu::GpioPort` instead, and `cmsis.hpp` is included only from
+  .cpp files
+- Wrote the linker script rather than recovering the Ac6 one from history:
+  that file forbids redistribution, sizes RAM at 320K (F746 numbers, not the
+  F767ZI's 512K), and discards every section of libc.a, libm.a and libgcc.a
+- Kept `startup.s` from history (ST, BSD-3) for its 110-entry vector table,
+  with the contradictory `.fpu softvfp` removed
+- Stayed on the distro's `gcc-arm-none-eabi` 13.2. Verified that every
+  portable header and app source compiles at `-std=c++23`; libstdc++ 13's
+  missing `<print>` affects only two host-only translation units
+- `-fno-exceptions` is now real, and cross-build-only: the host entry point
+  is an exception boundary by design because cppzmq throws
+- Deferred the PLL, the caches and the ART accelerator. Each can break
+  working peripherals, and each deserves a known-good baseline to regress
+  against
 
 ### 2026-08-29: Simplification pass
 - Codebase-wide review against the project's educational goals; the themes:

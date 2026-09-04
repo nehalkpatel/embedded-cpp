@@ -113,3 +113,72 @@ jobs:
           path: |
             build/host/ccov/**/*
           if-no-files-found: ignore
+
+  arm-cross-build:
+    name: ARM Cross-Build (Nucleo F767ZI)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # The same image, and the same GHA cache the host job populates, so the
+      # apt/toolchain layers are a cache hit rather than a second build.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build dev image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: embedded-cpp-docker:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Both configurations, deliberately. Release is the one that matters
+      # here: -Os -flto with --gc-sections is where a missing KEEP on the
+      # vector table or a garbage-collected weak interrupt handler shows up,
+      # and neither is visible in a Debug build.
+      - name: Cross-build (Debug)
+        run: >
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm
+          --user "$(id -u):$(id -g)" embedded-cpp-dev
+          cmake --workflow --preset nucleo-f767zi-debug
+
+      - name: Cross-build (Release)
+        run: >
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm
+          --user "$(id -u):$(id -g)" embedded-cpp-dev
+          cmake --workflow --preset nucleo-f767zi-release
+
+      # Everything about a firmware image that can be checked without a board:
+      # the vector table's address, the entry point and its Thumb bit, a
+      # non-empty .init_array, no undefined symbols, and no allocation on the
+      # interrupt-handler paths. Same script a developer runs locally.
+      - name: Verify firmware images
+        run: >
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm
+          --user "$(id -u):$(id -g)" embedded-cpp-dev
+          tools/verify-firmware.sh build/nucleo-f767zi
+
+      # Recorded, not gated. A size budget is worth having once there are
+      # enough data points to know what normal looks like; picking a threshold
+      # now would only be a number to argue with.
+      - name: Firmware size report
+        run: >
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm
+          --user "$(id -u):$(id -g)" embedded-cpp-dev
+          sh -c 'arm-none-eabi-size -A build/nucleo-f767zi/bin/*/*.elf'
+
+      - name: Upload firmware
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-nucleo-f767zi
+          path: |
+            build/nucleo-f767zi/bin/**/*.elf
+            build/nucleo-f767zi/bin/**/*.bin
+            build/nucleo-f767zi/bin/**/*.hex
+            build/nucleo-f767zi/**/*.map
+          if-no-files-found: ignore
