@@ -112,8 +112,24 @@ echoes what you type, toggling LD1 per byte received.
 
 ```bash
 st-flash --reset write build/nucleo-f767zi/bin/Debug/uart_echo.bin 0x8000000
-screen /dev/ttyACM0 115200      # or: picocom -b 115200 /dev/ttyACM0
+picocom -b 115200 --imap lfcrlf,crcrlf /dev/ttyACM0
 ```
+
+Two things about reading that terminal, both of which look like faults and are
+not:
+
+- **Terminal emulators default to local echo off**, so what you type is not
+  displayed. Every character on screen came from the board. Typing `hello` and
+  seeing `hello` once means all five made the round trip — seeing it *twice*
+  would mean something is echoing twice.
+- **The greeting will often appear twice.** `st-flash --reset` boots the board
+  and its greeting sits in the ST-LINK's USB buffer with nobody attached;
+  opening the port then toggles DTR, resetting the board, so you get the
+  buffered greeting and a fresh one.
+
+`--imap` is worth the typing: the board sends bytes verbatim, so the greeting's
+bare `\n` walks the cursor diagonally and an echoed Enter (a bare CR) makes
+later output overwrite the same line.
 
 `printf` and friends also reach this port: the board's `_write` (see
 `syscalls.cpp`) retargets stdout and stderr to USART3, expanding `\n` to CRLF.
