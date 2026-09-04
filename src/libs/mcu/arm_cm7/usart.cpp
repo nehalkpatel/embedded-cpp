@@ -212,6 +212,23 @@ auto Usart::Send(std::span<const std::byte> data)
   }
 
   auto* registers = Registers(id_);
+
+  // Send must be atomic with respect to its own receive handler. A handler
+  // that echoes -- which is exactly what uart_echo does -- calls Send from
+  // interrupt context, and if that preempts a Send already in progress the two
+  // byte streams interleave on the wire. Worse, the outer Send's next TDR
+  // write clears TC, so the inner one's completion wait can outlast the byte
+  // it was waiting for.
+  //
+  // Masking just this USART's interrupt, rather than all of them, keeps the
+  // window narrow: other peripherals keep interrupting, and a byte arriving
+  // meanwhile still sets RXNE, so it is delivered as soon as the flag is
+  // restored rather than lost. Called from the handler itself this is a no-op,
+  // which is correct -- an interrupt cannot preempt itself.
+  const bool rx_interrupt_was_enabled =
+      (registers->CR1 & USART_CR1_RXNEIE) != 0U;
+  registers->CR1 &= ~USART_CR1_RXNEIE;
+
   for (const auto value : data) {
     while ((registers->ISR & USART_ISR_TXE) == 0U) {
     }
@@ -222,6 +239,10 @@ auto Usart::Send(std::span<const std::byte> data)
   // register. Without this, returning from Send and immediately resetting or
   // reconfiguring the peripheral truncates the final character.
   while ((registers->ISR & USART_ISR_TC) == 0U) {
+  }
+
+  if (rx_interrupt_was_enabled) {
+    registers->CR1 |= USART_CR1_RXNEIE;
   }
   return {};
 }

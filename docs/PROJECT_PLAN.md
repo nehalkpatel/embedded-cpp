@@ -72,7 +72,8 @@ is the open part.
       USART3, `_sbrk` bounded by the linker script's `__heap_limit`, and
       `__malloc_lock` overridden so an allocating interrupt handler cannot
       re-enter the allocator
-- [ ] Verify `uart_echo` over the virtual COM port on hardware
+- [x] Verify `uart_echo` over the virtual COM port on hardware — greeting
+      and per-character echo confirmed at 115200 (2026-09-04)
 
 **Success Criteria**:
 - Blinky runs on a physical STM32F7 Nucleo board
