@@ -48,7 +48,23 @@ code — older V2-1 firmware can accept the write and discard it.
 Alternatives, both installed in the dev image:
 
 ```bash
-st-flash write build/nucleo-f767zi/bin/Debug/blinky.bin 0x8000000
+st-info --probe   # expect chipid 0x451, dev-type STM32F76x_F77x
+st-flash --reset write build/nucleo-f767zi/bin/Debug/blinky.bin 0x8000000
+```
+
+`--reset` is not optional. Without it `st-flash` writes and verifies happily,
+reports "Go to Thumb mode", and leaves the core halted -- so a correct image
+looks exactly like a broken one. The `0x8000000` is likewise mandatory: a raw
+binary carries no load address. The `.hex` does, if you would rather not type
+it:
+
+```bash
+st-flash --reset --format ihex write build/nucleo-f767zi/bin/Debug/blinky.hex
+```
+
+Or via OpenOCD, whose `reset` verb covers the same ground:
+
+```bash
 openocd -f board/st_nucleo_f7.cfg \
         -c "program build/nucleo-f767zi/bin/Debug/blinky.elf verify reset exit"
 ```
