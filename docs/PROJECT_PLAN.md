@@ -63,8 +63,8 @@ is the open part.
       paths (`tools/verify-firmware.sh`, run in CI)
 - [x] Document hardware setup: pin mapping tables, flashing, debugging
       (`docs/HARDWARE.md`)
-- [x] Verify blinky flashes and runs on the physical board — LD1 toggles
-      and B1 latches LD2 from an EXTI handler, from unmodified
+- [x] Verify blinky flashes and runs on the physical board — LD1 toggles at a
+      measured 200 ms and B1 latches LD2 from an EXTI handler, from unmodified
       `blinky.cpp` (2026-09-04)
 - [ ] USART3 to the ST-LINK virtual COM port, replacing the placeholder
 - [ ] I2C1 on PB8/PB9, replacing the placeholder
