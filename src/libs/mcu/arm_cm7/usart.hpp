@@ -33,6 +33,10 @@ struct UsartPins {
 
 /// @brief Blocking USART, with an optional receive interrupt.
 ///
+/// Like every peripheral here, this is constructed inert and made real by a
+/// separate call -- Init(), which the application makes. Nothing enforces
+/// that; see issue #37.
+///
 /// Send and Receive poll the status register; there is no transmit buffering,
 /// so Send returns once the last byte has left the shift register and the line
 /// is idle. That is the honest shape for this peripheral until there is a

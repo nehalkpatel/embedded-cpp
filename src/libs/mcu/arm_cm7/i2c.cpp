@@ -27,7 +27,8 @@ namespace {
 ///   SCLDEL = 0x4    -> (4+1) x 250 ns = 1.25 us    data setup
 ///
 /// 5.00 + 4.00 us plus rise and fall gives a ~10 us period: 100 kHz.
-/// Raising the core clock invalidates this constant.
+/// Raising the core clock invalidates this constant. Issue #38 covers turning
+/// this into a table the board selects from, rather than one hardcoded rate.
 constexpr std::uint32_t kTiming100kHzAt16MHz = 0x3042'0F13U;
 
 /// A transfer that makes no progress must fail rather than spin forever: a
