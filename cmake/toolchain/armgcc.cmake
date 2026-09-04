@@ -44,7 +44,17 @@ set(CMAKE_ASM_OPTIONS "-x assembler-with-cpp")
 set(CMAKE_C_FLAGS_INIT "${CMAKE_COMMON_FLAGS}")
 set(CMAKE_CXX_FLAGS_INIT "${CMAKE_COMMON_FLAGS}")
 set(CMAKE_ASM_FLAGS_INIT "${CMAKE_COMMON_FLAGS} ${CMAKE_ASM_OPTIONS}")
-set(CMAKE_EXE_LINKER_FLAGS_INIT "--specs=nano.specs -Wl,--gc-sections,-print-memory-usage,--no-warn-rwx-segments")
+# nano.specs selects newlib-nano; nosys.specs supplies stub implementations of
+# the syscalls it expects (_sbrk, _write, _close, ...) so a board backend links
+# before it has written its own. Note _sbrk is not optional even in a design
+# that never calls new: a polymorphic class's vtable references its deleting
+# destructor, which references operator delete. A board replaces nosys with a
+# real syscalls translation unit once it has a UART to write to.
+set(CMAKE_EXE_LINKER_FLAGS_INIT "--specs=nano.specs --specs=nosys.specs -Wl,--gc-sections,-print-memory-usage,--no-warn-rwx-segments")
+
+# Firmware images, not host executables. Makes blinky.elf and blinky.bin
+# unambiguous in the build tree and in flashing instructions.
+set(CMAKE_EXECUTABLE_SUFFIX ".elf")
 
 set(CMAKE_C_FLAGS_DEBUG_INIT "-O0")
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-O0")

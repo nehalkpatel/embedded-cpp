@@ -64,6 +64,17 @@
       "cacheVariables": {
         "EMBEDDED_CPP_BOARD": "stm32f3_discovery"
       }
+    },
+    {
+      "name": "nucleo-f767zi",
+      "displayName": "STM32F767ZI Nucleo",
+      "description": "Cross-compile for the STM32F767ZI Nucleo (Cortex-M7)",
+      "inherits": [
+        "arm-cm7"
+      ],
+      "cacheVariables": {
+        "EMBEDDED_CPP_BOARD": "stm32f767zi_nucleo"
+      }
     }
   ],
   "buildPresets": [
@@ -101,6 +112,18 @@
       "description": "Host build (RelWithDebInfo) using Ninja",
       "inherits": "host",
       "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "nucleo-f767zi-debug",
+      "displayName": "STM32F767ZI Nucleo (Debug)",
+      "configurePreset": "nucleo-f767zi",
+      "configuration": "Debug"
+    },
+    {
+      "name": "nucleo-f767zi-release",
+      "displayName": "STM32F767ZI Nucleo (Release)",
+      "configurePreset": "nucleo-f767zi",
+      "configuration": "Release"
     }
   ],
   "testPresets": [
@@ -201,6 +224,34 @@
         {
           "type": "test",
           "name": "host-relwithdebinfo"
+        }
+      ]
+    },
+    {
+      "name": "nucleo-f767zi-debug",
+      "displayName": "STM32F767ZI Nucleo Debug (configure + build)",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "nucleo-f767zi"
+        },
+        {
+          "type": "build",
+          "name": "nucleo-f767zi-debug"
+        }
+      ]
+    },
+    {
+      "name": "nucleo-f767zi-release",
+      "displayName": "STM32F767ZI Nucleo Release (configure + build)",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "nucleo-f767zi"
+        },
+        {
+          "type": "build",
+          "name": "nucleo-f767zi-release"
         }
       ]
     }
