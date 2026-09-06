@@ -75,7 +75,11 @@ auto EnablePeripheralClock(I2CId id) -> void {
   const std::uint32_t start = Millis();
   while ((registers->ISR & flag) == 0U) {
     if ((registers->ISR & I2C_ISR_NACKF) != 0U) {
-      registers->ICR = I2C_ICR_NACKCF | I2C_ICR_STOPCF;
+      // Clear only NACKF. Autoend generates the STOP itself in response to the
+      // NACK, and FinishTransfer is what waits for and clears the resulting
+      // STOPF -- clearing it here would leave that wait with nothing to
+      // observe, burning the whole transfer timeout on every failed transfer.
+      registers->ICR = I2C_ICR_NACKCF;
       return std::unexpected(common::Error::kOperationFailed);
     }
     if ((Millis() - start) > kTransferTimeoutMs) {
