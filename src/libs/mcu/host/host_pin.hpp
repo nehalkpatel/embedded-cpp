@@ -9,10 +9,19 @@
 
 namespace mcu {
 
+/// @brief One emulated pin, mirrored to the Python host emulator.
+///
+/// The direction is a constructor argument, mirroring the hardware backends:
+/// there is no window in which a pin exists but has no direction. Configure()
+/// stays -- BidirectionalPin requires it and a pin's direction really is
+/// switchable at run time -- but it is no longer a step anyone can forget.
+///
+/// Unlike mcu::GpioPin this touches no hardware at construction; the emulator
+/// learns a pin's direction from the messages that follow.
 class HostPin final : public BidirectionalPin, public Receiver {
  public:
-  explicit HostPin(std::string name, Transport& transport)
-      : name_{std::move(name)}, transport_{transport} {}
+  HostPin(std::string name, Transport& transport, PinDirection direction)
+      : name_{std::move(name)}, transport_{transport}, direction_{direction} {}
   ~HostPin() override = default;
   HostPin(const HostPin&) = delete;
   HostPin(HostPin&&) = delete;
@@ -39,7 +48,7 @@ class HostPin final : public BidirectionalPin, public Receiver {
 
   const std::string name_;
   Transport& transport_;
-  PinDirection direction_{PinDirection::kOutput};
+  PinDirection direction_;
   PinState state_{PinState::kHighZ};
   PinTransition transition_{PinTransition::kBoth};
   std::function<void()> handler_;

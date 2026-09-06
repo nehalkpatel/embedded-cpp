@@ -33,9 +33,15 @@ struct UsartPins {
 
 /// @brief Blocking USART, with an optional receive interrupt.
 ///
-/// Like every peripheral here, this is constructed inert and made real by a
-/// separate call -- Init(), which the application makes. Nothing enforces
-/// that; see issue #37.
+/// Alone among the peripherals here, this is constructed inert and made real by
+/// a separate call. Two things keep it that way. Only the application knows the
+/// UartConfig it wants, so the board cannot supply one -- and Init() validates
+/// that config and can fail, which a constructor has no way to report. GpioPin
+/// and I2CBus have neither problem, so they configure themselves at
+/// construction and cannot be reached before they are live.
+///
+/// Send, Receive and SetRxHandler therefore still report kInvalidState until
+/// Init() has run.
 ///
 /// Send and Receive poll the status register; there is no transmit buffering,
 /// so Send returns once the last byte has left the shift register and the line

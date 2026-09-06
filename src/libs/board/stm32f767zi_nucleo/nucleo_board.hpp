@@ -21,8 +21,23 @@ namespace board {
 /// namespace-scope object in main.cpp, so its constructor runs from
 /// __libc_init_array before main().
 ///
-/// Constructing a GpioPin touches no registers, which is what makes that safe
-/// -- the pins record where they are, and Init() is what configures them.
+/// Constructing a peripheral configures it, which is what makes this list a
+/// description of the hardware rather than a set of promises Init() has to
+/// keep. Reset_Handler copies .data, zeroes .bss and calls SystemInit before
+/// __libc_init_array, and RCC is live out of reset, so a peripheral constructor
+/// can bring its own clock up. Three invariants hold that up, and a new
+/// peripheral has to satisfy all three before it can be a member here:
+///
+///   1. Bring-up must not fail. A constructor cannot report an error. If a
+///      peripheral has to poll a status bit that can time out, it needs a
+///      separate call -- see mcu::Usart, which stays two-phase for this reason
+///      as well as because only the application knows its UartConfig.
+///   2. Bring-up must not call mcu::Delay. InitSysTick() runs from Init(),
+///      after main(), so a constructor that waited on the tick would hang.
+///   3. This board must stay the only object with a dynamic initializer.
+///      Construction order within it is declaration order and well defined;
+///      order across translation units is not. `.init_array` holding one entry
+///      besides crtbegin's is what that looks like in the map file.
 class NucleoF767ZiBoard final : public Board {
  public:
   [[nodiscard]] auto Init() -> std::expected<void, common::Error> override;
@@ -34,10 +49,16 @@ class NucleoF767ZiBoard final : public Board {
   [[nodiscard]] auto Uart1() -> mcu::Uart& override;
 
  private:
-  mcu::GpioPin user_led_1_{pin_map::kUserLed1.port, pin_map::kUserLed1.pin};
-  mcu::GpioPin user_led_2_{pin_map::kUserLed2.port, pin_map::kUserLed2.pin};
+  mcu::GpioPin user_led_1_{pin_map::kUserLed1.port, pin_map::kUserLed1.pin,
+                           mcu::PinDirection::kOutput};
+  mcu::GpioPin user_led_2_{pin_map::kUserLed2.port, pin_map::kUserLed2.pin,
+                           mcu::PinDirection::kOutput};
+
+  // The button is externally pulled down on this board (UM1974), so it needs
+  // no internal pull: it reads low at rest and high while pressed.
   mcu::GpioPin user_button_1_{pin_map::kUserButton1.port,
-                              pin_map::kUserButton1.pin};
+                              pin_map::kUserButton1.pin,
+                              mcu::PinDirection::kInput};
 
   mcu::Usart uart_1_{mcu::UsartId::kUsart3,
                      {
@@ -55,7 +76,12 @@ class NucleoF767ZiBoard final : public Board {
                          .sda_port = pin_map::kI2C1Sda.port,
                          .sda_pin = pin_map::kI2C1Sda.pin,
                          .alternate_function = pin_map::kI2C1AlternateFunction,
-                     }};
+                     },
+                     // The driver brings the bus up on the pins' internal
+                     // pull-ups, which it notes are weak (~40k) and good for
+                     // 100 kHz over short wiring. Going faster is a decision
+                     // for whoever adds external resistors.
+                     mcu::I2CSpeed::kStandard100kHz};
 };
 
 }  // namespace board

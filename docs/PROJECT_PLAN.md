@@ -92,9 +92,9 @@ is the open part.
       hardware board exists: optional accessors
       (`std::expected<mcu::I2CController&, Error>`) vs. capability mix-ins vs.
       compile-time board traits. Deferred from Milestone 2 deliberately — with
-      one board there was nothing to design against. Entangled with #37: an
-      accessor that can report "this peripheral did not come up" is what the
-      factory-based fixes there need.
+      one board there was nothing to design against. No longer entangled with
+      #37: peripherals now configure themselves at construction, so there is no
+      "did not come up" state for an accessor to report.
 - [ ] Additional example application exercising more complex behavior
 - [ ] Cross-board validation: blinky runs on both boards unmodified
 
@@ -128,6 +128,43 @@ is the open part.
       removed while unused)
 
 ## Decision Log
+
+### 2026-09-06: Peripheral configuration moved into the constructor (#37, #38)
+
+- `mcu::GpioPin` and `mcu::I2CBus` now configure the hardware as they are
+  constructed. `configured_`/`initialized_` and the eight `kInvalidState`
+  guards they gated are gone, and `NucleoF767ZiBoard`'s member list is now a
+  description of the board rather than a set of promises `Init()` has to keep.
+  `Init()` is left with `InitSysTick()`, which needs the NVIC and so genuinely
+  cannot run before `main()`.
+- #37 assumed a constructor could not touch registers, because the board is a
+  namespace-scope object. That turned out not to hold. `Reset_Handler` copies
+  `.data`, zeroes `.bss` and calls `SystemInit` *before* `__libc_init_array`;
+  `SystemInit` only enables the FPU and sets VTOR; no code here configures
+  clocks at all (the F767 runs on HSI at 16 MHz out of reset, which every
+  timing constant already assumes); and RCC is live from reset, with each
+  driver enabling its own peripheral clock first. Two comments in the tree
+  stated that ordering backwards and were corrected.
+- Rejected the alternatives #37 listed. A factory with a private constructor
+  (options 1/2) was the right answer *given* the no-registers-in-constructors
+  rule, but once that rule proved unnecessary it was machinery guarding a state
+  that no longer exists — and it forced `std::optional` members, which model a
+  hardware absence that cannot happen on a fixed board. Option 3's friend
+  declaration enforces who constructs, not who configures. Option 4's readiness
+  gate became vacuous: declaring the member *is* the bring-up.
+- Three invariants now hold this up, documented on `NucleoF767ZiBoard`:
+  bring-up must not fail, must not call `mcu::Delay` (SysTick is not up yet),
+  and this board must stay the only object with a dynamic initializer.
+  `mcu::Usart` violates the first and stays two-phase, which also suits it:
+  only the application knows its `UartConfig`.
+- I2C bus speed became a constructor argument with a derived `TIMINGR` table
+  (#38), deliberately undefaulted so a board has to name the rate its wiring
+  can carry.
+- `arm_cm7` gained its first test. Its public headers name no vendor type, so
+  `test_peripheral_contract.cpp` compiles on the host whichever backend is
+  selected and asserts the contract — that a pin cannot be constructed without
+  a direction, and a bus without a speed. It proves the types, not the register
+  writes; those still need the board in hand.
 
 ### 2026-09-04: First hardware backend (arm_cm7 + F767ZI Nucleo)
 

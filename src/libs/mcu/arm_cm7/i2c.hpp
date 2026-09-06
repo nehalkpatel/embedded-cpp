@@ -16,6 +16,14 @@ namespace mcu {
 /// it. `kI2C1` is a distinct token and safe.
 enum class I2CId : std::uint8_t { kI2C1, kI2C2, kI2C3, kI2C4 };
 
+/// @brief How fast the bus runs.
+///
+/// A property of the bus, not of a link: every device on a shared bus has to
+/// agree, and the achievable rate depends on pull-up strength, trace length and
+/// the slowest device present. All of that is board knowledge, which is why the
+/// board names it and mcu::I2CController does not carry it.
+enum class I2CSpeed : std::uint8_t { kStandard100kHz = 1, kFast400kHz };
+
 /// @brief Where an I2C instance's two pins are, and their alternate function.
 struct I2CPins {
   GpioPort scl_port;
@@ -34,18 +42,11 @@ struct I2CPins {
 /// writes and reads as two separate transactions.
 class I2CBus final : public I2CController {
  public:
-  I2CBus(I2CId id, const I2CPins& pins) : id_(id), pins_(pins) {}
-
-  /// @brief Enable the peripheral and configure its pins. Called by the board;
-  /// SendData and ReceiveData report kInvalidState until it has run.
-  ///
-  /// That the board must call this is a convention, not something the type
-  /// enforces -- and unlike Uart, mcu::I2CController has no Init(), so nothing
-  /// in board::Board's shape hints that the call is required. See issue #37.
-  ///
-  /// The bus runs at 100 kHz; making the speed a board-supplied parameter is
-  /// issue #38.
-  [[nodiscard]] auto Init() -> std::expected<void, common::Error>;
+  /// Constructing the bus brings it up: this enables the peripheral clock,
+  /// configures the pins and programs TIMINGR, so an I2CBus that exists is one
+  /// that works. The board supplies the speed because the wiring, not the
+  /// application, is what determines the rate the bus can carry.
+  I2CBus(I2CId bus_id, const I2CPins& pins, I2CSpeed speed);
 
   [[nodiscard]] auto SendData(std::uint16_t address,
                               std::span<const std::byte> data)
@@ -58,7 +59,6 @@ class I2CBus final : public I2CController {
  private:
   I2CId id_;
   I2CPins pins_;
-  bool initialized_ = false;
 };
 
 }  // namespace mcu

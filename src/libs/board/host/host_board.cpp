@@ -22,9 +22,12 @@ auto HostBoard::Init() -> std::expected<void, common::Error> {
   }
   zmq_transport_ = std::move(transport_result.value());
 
-  user_led_1_ = std::make_unique<mcu::HostPin>("LED 1", *zmq_transport_);
-  user_led_2_ = std::make_unique<mcu::HostPin>("LED 2", *zmq_transport_);
-  user_button_1_ = std::make_unique<mcu::HostPin>("Button 1", *zmq_transport_);
+  user_led_1_ = std::make_unique<mcu::HostPin>("LED 1", *zmq_transport_,
+                                               mcu::PinDirection::kOutput);
+  user_led_2_ = std::make_unique<mcu::HostPin>("LED 2", *zmq_transport_,
+                                               mcu::PinDirection::kOutput);
+  user_button_1_ = std::make_unique<mcu::HostPin>("Button 1", *zmq_transport_,
+                                                  mcu::PinDirection::kInput);
   uart_1_ = std::make_unique<mcu::HostUart>("UART 1", *zmq_transport_);
   i2c_1_ = std::make_unique<mcu::HostI2CController>("I2C 1", *zmq_transport_);
 
@@ -33,13 +36,13 @@ auto HostBoard::Init() -> std::expected<void, common::Error> {
       std::ref(*uart_1_),     std::ref(*i2c_1_),
   };
 
-  return user_led_1_->Configure(mcu::PinDirection::kOutput)
-      .and_then([this]() {
-        return user_led_2_->Configure(mcu::PinDirection::kOutput);
-      })
-      .and_then([this]() {
-        return user_button_1_->Configure(mcu::PinDirection::kInput);
-      });
+  // No Configure() chain: the pins were given their direction above. What is
+  // left here is what genuinely cannot happen at construction -- the transport
+  // has to connect first, and that can fail, which a constructor could not
+  // report. That is why this board builds its peripherals in Init() while
+  // NucleoF767ZiBoard holds them as members: an emulated peripheral depends on
+  // a socket, a real one only on registers that are always there.
+  return {};
 }
 auto HostBoard::UserLed1() -> mcu::OutputPin& { return *user_led_1_; }
 auto HostBoard::UserLed2() -> mcu::OutputPin& { return *user_led_2_; }
