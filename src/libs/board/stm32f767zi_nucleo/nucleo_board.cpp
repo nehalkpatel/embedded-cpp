@@ -11,22 +11,15 @@
 namespace board {
 
 auto NucleoF767ZiBoard::Init() -> std::expected<void, common::Error> {
-  // The core is already configured: SystemInit ran from Reset_Handler, before
-  // .data was copied. What is left is everything that needs a working C++
-  // runtime -- starting with the tick that mcu::Delay is built on.
+  // The core is already configured: SystemInit ran from Reset_Handler, and the
+  // pins and the I2C bus configured themselves as this object was constructed.
+  // What is left is everything that cannot happen before main() -- which is
+  // just the tick that mcu::Delay is built on, since it needs the NVIC.
+  //
+  // The USART is absent on purpose: mcu::Uart::Init is the application's to
+  // call, because only the application knows the UartConfig it wants.
   mcu::InitSysTick();
-
-  // The button is externally pulled down on this board (UM1974), so it needs
-  // no internal pull: it reads low at rest and high while pressed.
-  return user_led_1_.Configure(mcu::PinDirection::kOutput)
-      .and_then(
-          [this] { return user_led_2_.Configure(mcu::PinDirection::kOutput); })
-      .and_then([this] {
-        return user_button_1_.Configure(mcu::PinDirection::kInput);
-      })
-      // I2C has no Init() in the portable interface -- unlike Uart, which the
-      // application configures itself -- so the board brings the bus up here.
-      .and_then([this] { return i2c_1_.Init(); });
+  return {};
 }
 
 auto NucleoF767ZiBoard::UserLed1() -> mcu::OutputPin& { return user_led_1_; }

@@ -12,17 +12,23 @@ namespace mcu {
 
 /// @brief One STM32 GPIO pin.
 ///
-/// Construction only records where the pin is; it touches no registers, so a
-/// board can hold pins as members and have them constructed before the clock
-/// tree is up. Configure() is what makes the pin real, and every operation
-/// before it returns kInvalidState rather than writing into a dead register
-/// block.
+/// Constructing a pin configures it: the constructor enables the port clock and
+/// programs the pin, so there is no window in which an unconfigured GpioPin
+/// exists and no operation has to ask whether there is one.
 ///
-/// The split is deliberate; that nothing enforces the second half of it is
-/// not. Every peripheral in this backend has the same shape. See issue #37.
+/// That is safe even though a board holds its pins as namespace-scope members.
+/// Reset_Handler copies .data, zeroes .bss and calls SystemInit before
+/// __libc_init_array, RCC is live out of reset, and ConfigurePin enables its
+/// own port clock before touching anything else. See the invariants on
+/// board::NucleoF767ZiBoard before adding a peripheral that needs more.
+///
+/// The direction can still be changed at run time -- that is what makes this a
+/// BidirectionalPin -- so operations that require a particular direction still
+/// check for it. That check is about what the pin is right now, not about
+/// whether anyone remembered to set it up.
 class GpioPin final : public BidirectionalPin {
  public:
-  GpioPin(GpioPort port, std::uint32_t pin) : port_(port), pin_(pin) {}
+  GpioPin(GpioPort port, std::uint32_t pin, PinDirection direction);
 
   [[nodiscard]] auto Configure(PinDirection direction)
       -> std::expected<void, common::Error> override;
@@ -37,12 +43,16 @@ class GpioPin final : public BidirectionalPin {
       -> std::expected<void, common::Error> override;
 
  private:
+  /// Program the pin for a direction. Shared by the constructor and Configure,
+  /// which is why it returns void rather than the expected Configure owes its
+  /// caller: there is nothing here that can fail.
+  auto ApplyDirection(PinDirection direction) -> void;
+
   [[nodiscard]] auto Mask() const -> std::uint32_t { return 1U << pin_; }
 
   GpioPort port_;
   std::uint32_t pin_;
-  PinDirection direction_ = PinDirection::kInput;
-  bool configured_ = false;
+  PinDirection direction_;
 };
 
 }  // namespace mcu

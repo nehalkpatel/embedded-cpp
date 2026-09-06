@@ -14,3 +14,19 @@ if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${EMBEDDED_CPP_MCU}")
     "Available: ${available}. See CLAUDE.md.")
 endif()
 add_subdirectory(${EMBEDDED_CPP_MCU})
+
+# The hardware backend has no tests of its own: cross builds run no CTest and
+# have no googletest. But the arm_cm7 public headers deliberately name no vendor
+# type, so the contract they encode compiles -- and can be asserted -- on the
+# host, whichever backend is selected. add_host_unit_test comes from the host
+# backend's CMakeLists, and CMake functions are global once defined.
+#
+# include(GoogleTest) again here rather than relying on the host backend's: it
+# sets the discovery script path as a directory-scoped variable, so without it
+# gtest_discover_tests silently registers a _NOT_BUILT placeholder instead of
+# the tests.
+if(BUILD_TESTING AND EMBEDDED_CPP_MCU STREQUAL "host")
+  include(GoogleTest)
+  add_host_unit_test(test_peripheral_contract
+    arm_cm7/test_peripheral_contract.cpp mcu)
+endif()

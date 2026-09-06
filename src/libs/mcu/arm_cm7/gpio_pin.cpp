@@ -13,8 +13,12 @@
 
 namespace mcu {
 
-auto GpioPin::Configure(PinDirection direction)
-    -> std::expected<void, common::Error> {
+GpioPin::GpioPin(GpioPort port, std::uint32_t pin, PinDirection direction)
+    : port_(port), pin_(pin), direction_(direction) {
+  ApplyDirection(direction);
+}
+
+auto GpioPin::ApplyDirection(PinDirection direction) -> void {
   // ConfigurePin enables the port clock first, which matters: before it is
   // running every register here reads as zero and ignores writes, silently.
   ConfigurePin(port_, pin_,
@@ -26,14 +30,15 @@ auto GpioPin::Configure(PinDirection direction)
                });
 
   direction_ = direction;
-  configured_ = true;
+}
+
+auto GpioPin::Configure(PinDirection direction)
+    -> std::expected<void, common::Error> {
+  ApplyDirection(direction);
   return {};
 }
 
 auto GpioPin::Get() -> std::expected<PinState, common::Error> {
-  if (!configured_) {
-    return std::unexpected(common::Error::kInvalidState);
-  }
   // IDR, not ODR, for both directions: it reports what the pad is actually at,
   // so a shorted or externally driven output reads as what it really is rather
   // than as what it was told to be.
@@ -42,9 +47,6 @@ auto GpioPin::Get() -> std::expected<PinState, common::Error> {
 }
 
 auto GpioPin::SetHigh() -> std::expected<void, common::Error> {
-  if (!configured_) {
-    return std::unexpected(common::Error::kInvalidState);
-  }
   if (direction_ != PinDirection::kOutput) {
     return std::unexpected(common::Error::kInvalidOperation);
   }
@@ -56,9 +58,6 @@ auto GpioPin::SetHigh() -> std::expected<void, common::Error> {
 }
 
 auto GpioPin::SetLow() -> std::expected<void, common::Error> {
-  if (!configured_) {
-    return std::unexpected(common::Error::kInvalidState);
-  }
   if (direction_ != PinDirection::kOutput) {
     return std::unexpected(common::Error::kInvalidOperation);
   }
@@ -67,9 +66,6 @@ auto GpioPin::SetLow() -> std::expected<void, common::Error> {
 }
 
 auto GpioPin::Toggle() -> std::expected<void, common::Error> {
-  if (!configured_) {
-    return std::unexpected(common::Error::kInvalidState);
-  }
   if (direction_ != PinDirection::kOutput) {
     return std::unexpected(common::Error::kInvalidOperation);
   }
@@ -86,9 +82,6 @@ auto GpioPin::Toggle() -> std::expected<void, common::Error> {
 auto GpioPin::SetInterruptHandler(std::function<void()> handler,
                                   PinTransition transition)
     -> std::expected<void, common::Error> {
-  if (!configured_) {
-    return std::unexpected(common::Error::kInvalidState);
-  }
   if (direction_ != PinDirection::kInput) {
     return std::unexpected(common::Error::kInvalidOperation);
   }

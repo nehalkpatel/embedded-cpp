@@ -32,6 +32,11 @@ class OutputPin : public virtual InputPin {
   [[nodiscard]] virtual auto Toggle() -> std::expected<void, common::Error> = 0;
 };
 
+/// @brief A pin whose direction is a runtime property.
+///
+/// Configure() changes the direction of a pin that is already live; it is not a
+/// setup step a backend can leave undone. Backends give a pin its initial
+/// direction at construction, so an unconfigured pin cannot be obtained.
 class BidirectionalPin : public virtual InputPin, public virtual OutputPin {
  public:
   ~BidirectionalPin() override = default;
