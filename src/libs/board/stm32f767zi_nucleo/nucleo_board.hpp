@@ -32,8 +32,11 @@ namespace board {
 ///      peripheral has to poll a status bit that can time out, it needs a
 ///      separate call -- see mcu::Usart, which stays two-phase for this reason
 ///      as well as because only the application knows its UartConfig.
-///   2. Bring-up must not call mcu::Delay. InitSysTick() runs from Init(),
-///      after main(), so a constructor that waited on the tick would hang.
+///   2. Bring-up must not talk to anything across a wire. mcu::Delay is fine
+///      -- before the tick it falls back to a cycle-counter spin -- but a
+///      *timeout* is not: Millis() is frozen until Init() starts the tick, so
+///      a bounded wait cannot end and the drivers refuse one this early. That
+///      makes off-chip bring-up Init()'s job. See docs/BOOT_FLOW.md.
 ///   3. This board must stay the only object with a dynamic initializer.
 ///      Construction order within it is declaration order and well defined;
 ///      order across translation units is not. `.init_array` holding one entry

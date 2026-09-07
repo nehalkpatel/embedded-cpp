@@ -45,8 +45,10 @@ Application (apps/)  →  Board (libs/board/)  →  MCU (libs/mcu/)  →  Platfo
 ```
 
 - **apps/**: Example applications (blinky, uart_echo, i2c_demo)
-- **libs/mcu/**: Hardware abstractions (Pin, UART, I2C, Delay) with host emulation
-- **libs/board/**: Board-specific implementations (host today; hardware boards planned)
+- **libs/mcu/**: Hardware abstractions (Pin, UART, I2C, Delay), with a host
+  emulation backend and a Cortex-M7 one
+- **libs/board/**: Board-specific implementations (the host emulator and the
+  STM32F767ZI Nucleo)
 - **py/host-emulator/**: Python hardware simulator for desktop testing
 
 ## Build Commands
@@ -103,7 +105,7 @@ cd py/host-emulator && uv run host-emulator
 | Compilers | Clang 18 (host), ARM GCC (embedded) |
 | Testing | Google Test, pytest |
 | IPC | ZeroMQ + JSON |
-| Targets | Host emulation (hardware targets planned) |
+| Targets | Host emulation, STM32F767ZI Nucleo (Cortex-M7) |
 
 ## Code Quality
 
@@ -123,9 +125,18 @@ cd py/host-emulator && uv run host-emulator
 | Docker/DevContainer | ✅ Working |
 | CI/CD | ✅ Working |
 | ARM cross-compile (Cortex-M7) | ✅ Working |
-| STM32F767ZI Nucleo: GPIO, EXTI, SysTick | ✅ Working |
-| STM32F767ZI Nucleo: UART, I2C | 🚧 Placeholders that return an error |
+| STM32F767ZI Nucleo: GPIO, EXTI, SysTick | ✅ Verified on hardware |
+| STM32F767ZI Nucleo: UART (USART3 on the ST-LINK VCP) | ✅ Verified on hardware |
+| STM32F767ZI Nucleo: I2C | ✅ Implemented, not yet verified on hardware |
 | Other boards (STM32F3, nRF52) | 📋 Planned |
+
+## Documentation
+
+- [docs/BOOT_FLOW.md](docs/BOOT_FLOW.md) — how a board comes up, and which
+  stage a new peripheral belongs to
+- [docs/HARDWARE.md](docs/HARDWARE.md) — flashing, debugging and the pin map
+- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) — milestones, and a decision log
+  recording why things are the way they are
 
 ## Resources
 

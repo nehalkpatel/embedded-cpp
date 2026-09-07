@@ -129,6 +129,40 @@ is the open part.
 
 ## Decision Log
 
+### 2026-09-07: Boot flow named in two stages, split on fallibility
+
+- Wrote `docs/BOOT_FLOW.md`. The stage a peripheral belongs to is decided by
+  **what can fail**, not by what is convenient: on-chip bring-up is register
+  writes against hardware soldered into the die, so it cannot fail and lives in
+  a constructor; off-chip bring-up is I/O across a wire, where absence and
+  silence are normal outcomes, so it needs somewhere that can report one --
+  `Board::Init()`.
+- The structure this describes already existed; what was missing was the
+  contract. `board::Board` now states it where a reader meets it.
+- Corrected a claim made in the 2026-09-06 entry above. `mcu::Delay` *does*
+  work before the tick -- it falls back to a `DWT->CYCCNT` spin -- so
+  "bring-up must not call mcu::Delay" was wrong. The real boundary is narrower
+  and sharper: `Millis()` is frozen until `InitSysTick()`, so a *bounded* wait
+  can never end. Since every real bus transfer needs a timeout, stage 1 may
+  wait but may not talk.
+- That was a live latent hang, not just a doc error. `I2CBus`'s flag wait and
+  `Usart::Receive` compared against a frozen `Millis()` with no guard, so a
+  stuck bus before the tick would have spun forever. Both now refuse with
+  `kInvalidState`. Unreachable today -- both are called only after
+  `Board::Init()` -- and reachable the moment anything talks to a device during
+  bring-up, which is exactly what stage 2 invites.
+- Rejected, for now, an init-level registry in the style of Zephyr's
+  `PRE_KERNEL_1`/`POST_KERNEL`. With one board and no off-chip devices it would
+  be a framework guarding a state that has not occurred. Its trigger is written
+  down instead: two off-chip devices with an ordering constraint between them.
+- Deferred a reset-valid timebase (`Micros()` on `DWT->CYCCNT`, #44), which would
+  make timeouts work in every stage and dissolve the boundary entirely. Worth
+  doing when a stage-1 peripheral needs a bounded wait, and not before.
+- Known gaps recorded rather than solved: `common::Error` has no payload, so
+  `Board::Init()` cannot name which device failed (#43); there is nowhere to report a
+  bring-up failure to, since the console is a stage-3 resource; and an RTOS
+  will want `SysTick` for itself.
+
 ### 2026-09-06: Peripheral configuration moved into the constructor (#37, #38)
 
 - `mcu::GpioPin` and `mcu::I2CBus` now configure the hardware as they are
