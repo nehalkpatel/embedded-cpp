@@ -102,6 +102,14 @@ auto EnablePeripheralClock(I2CId id) -> void {
 /// missing device, which is worth telling apart from a wedged bus.
 [[nodiscard]] auto WaitForFlag(I2C_TypeDef* registers, std::uint32_t flag)
     -> std::expected<void, common::Error> {
+  // Millis() does not advance until the board starts the tick, so the timeout
+  // below could never fire and a bus held low would spin forever. Refuse
+  // instead: a transfer this early is a boot-order mistake, not a bus fault.
+  // See docs/BOOT_FLOW.md -- talking to a device is stage 2 work.
+  if (!SysTickRunning()) {
+    return std::unexpected(common::Error::kInvalidState);
+  }
+
   const std::uint32_t start = Millis();
   while ((registers->ISR & flag) == 0U) {
     if ((registers->ISR & I2C_ISR_NACKF) != 0U) {

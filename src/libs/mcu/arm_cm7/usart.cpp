@@ -255,6 +255,12 @@ auto Usart::Receive(std::span<std::byte> buffer, std::uint32_t timeout_ms)
   if (buffer.empty()) {
     return 0U;
   }
+  // A bounded wait needs a running tick: Millis() is frozen until the board
+  // starts it, so the timeout below would never fire. Waiting forever is still
+  // allowed, since that asks for no timeout in the first place.
+  if (timeout_ms != 0 && !SysTickRunning()) {
+    return std::unexpected(common::Error::kInvalidState);
+  }
 
   auto* registers = Registers(id_);
   const std::uint32_t start = Millis();
