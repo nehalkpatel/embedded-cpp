@@ -155,11 +155,11 @@ is the open part.
   `PRE_KERNEL_1`/`POST_KERNEL`. With one board and no off-chip devices it would
   be a framework guarding a state that has not occurred. Its trigger is written
   down instead: two off-chip devices with an ordering constraint between them.
-- Deferred a reset-valid timebase (`Micros()` on `DWT->CYCCNT`), which would
+- Deferred a reset-valid timebase (`Micros()` on `DWT->CYCCNT`, #44), which would
   make timeouts work in every stage and dissolve the boundary entirely. Worth
   doing when a stage-1 peripheral needs a bounded wait, and not before.
 - Known gaps recorded rather than solved: `common::Error` has no payload, so
-  `Board::Init()` cannot name which device failed; there is nowhere to report a
+  `Board::Init()` cannot name which device failed (#43); there is nowhere to report a
   bring-up failure to, since the console is a stage-3 resource; and an RTOS
   will want `SysTick` for itself.
 

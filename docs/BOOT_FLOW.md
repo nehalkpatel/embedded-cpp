@@ -106,7 +106,7 @@ on-chip makes a constructor *possible*, not mandatory.
 Named because they are load-bearing for what comes next, not because they block
 anything today.
 
-- **`Board::Init()` cannot say which device failed.** It returns
+- **`Board::Init()` cannot say which device failed** (#43). It returns
   `std::expected<void, common::Error>`, and `common::Error` carries no payload.
   With one off-chip device that is tolerable; with four it is not. This needs
   solving before stage 2 has real occupants.
@@ -125,7 +125,7 @@ anything today.
 
 Deliberately written down so the next step is a decision rather than a drift.
 
-- **A timebase valid from reset** — building `Micros()` on `DWT->CYCCNT`, which
+- **A timebase valid from reset** (#44) — building `Micros()` on `DWT->CYCCNT`, which
   runs from reset and needs no interrupt — would make timeouts work in every
   stage and remove the hard boundary above. Worth doing when a stage-1
   peripheral genuinely needs a bounded wait. It is a timeout source, not an
